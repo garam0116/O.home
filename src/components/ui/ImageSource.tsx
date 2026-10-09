@@ -76,6 +76,7 @@ export function useImageSource(onSelect: (url: string) => void) {
   const handlers = {
     onDropCapture: (event: React.DragEvent<HTMLElement>) => {
       if (event.target instanceof Element && event.target.closest('.modal-ov')?.querySelector('[data-image-source-modal]')) return;
+      if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]:not([contenteditable="false"])')) return;
       if (event.dataTransfer.files.length) return;
       const url = imageHttpUrl(event.dataTransfer.getData('text/plain') || event.dataTransfer.getData('text/uri-list'));
       if (!url) return;
@@ -85,6 +86,7 @@ export function useImageSource(onSelect: (url: string) => void) {
     },
     onPasteCapture: (event: React.ClipboardEvent<HTMLElement>) => {
       if (event.target instanceof Element && event.target.closest('.modal-ov')?.querySelector('[data-image-source-modal]')) return;
+      if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]:not([contenteditable="false"])')) return;
       const url = imageHttpUrl(event.clipboardData.getData('text/plain'));
       if (!url) return;
       event.preventDefault();
