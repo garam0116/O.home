@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { putBlob } from '@/lib/blobStore';
 import { useToast } from '@/components/ui/Toast';
+import { useImageSource } from '@/components/ui/ImageSource';
 
 /** 로컬 모드용 — 파일을 그대로 본문에 심는다 (서버가 없어 올릴 곳이 없을 때) */
 function toDataUrl(f: File): Promise<string> {
@@ -36,7 +37,7 @@ export function RichEditor({ value, onChange, placeholder }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const editor = useEditor({
-    extensions: [StarterKit, Image],
+    extensions: [StarterKit, Image.configure({ HTMLAttributes: { referrerpolicy: 'no-referrer' } })],
     content: value || '<p></p>',
     immediatelyRender: false,
     editorProps: {
@@ -44,6 +45,7 @@ export function RichEditor({ value, onChange, placeholder }: {
     },
     onUpdate: ({ editor: e }) => onChange(e.getHTML()),
   });
+  const imageSource = useImageSource(url => editor?.chain().focus().setImage({ src: url }).run());
 
   // 외부 값이 완전히 바뀐 경우(탭 전환) 동기화
   useEffect(() => {
@@ -98,6 +100,8 @@ export function RichEditor({ value, onChange, placeholder }: {
         <span className="re-sep" />
         <TBtn title={busy ? '올리는 중…' : '이미지 올리기'} label={busy ? '⏳' : '🖼'}
           onClick={() => { if (!busy) fileRef.current?.click(); }} />
+        <TBtn title="이미지 주소로 넣기" label="🔗 이미지 주소로 넣기"
+          onClick={() => imageSource.open()} />
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; void insertImage(f); }} />
         {/* 실행 취소·다시 실행은 모바일에서 숨김 — 툴바가 두 줄로 넘어가 본문 영역을 침범 (v1.9 사용자 확정)
@@ -109,10 +113,11 @@ export function RichEditor({ value, onChange, placeholder }: {
         </span>
       </div>
       {/* 플레이스홀더는 본문 영역 기준으로 — 툴바가 두 줄이 돼도 안 밀림 (v1.9 사용자 발견) */}
-      <div className="re-body">
+      <div className="re-body" tabIndex={0} {...imageSource.handlers}>
         <EditorContent editor={editor} />
         {placeholder && editor.isEmpty && <div className="re-ph">{placeholder}</div>}
       </div>
+      {imageSource.element}
     </div>
   );
 }
