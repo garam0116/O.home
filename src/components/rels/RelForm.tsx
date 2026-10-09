@@ -1,7 +1,7 @@
 ﻿'use client';
 // 자관 등록/수정 공용 폼 (4.5) — 유형(페어/다인) · 이름/본문 폰트 · 캐치프레이즈 · 공개범위 ·
 // 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭) · 등록 시 내 캐릭터 연동
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Character, Relation, Visibility, RelCpTag, RelMember, auMember, auStyle, fullShadow } from '@/lib/charStore';
 import { ColorField } from '@/components/ui/ColorField';
@@ -9,7 +9,7 @@ import { isValidSlug, slugify } from '@/lib/link';
 import { CP_LABEL } from '@/lib/relqStore';
 import { newId } from '@/lib/postStore';
 import { useFonts, deVarFamily } from '@/lib/fontStore';
-import { putBlob, getBlob, useBlobUrl } from '@/lib/blobStore';
+import { useBlobUrl } from '@/lib/blobStore';
 import { KInput, KSelect, KCheck, KStep } from '@/components/ui/Kit';
 import { CropEditor, CropValue, CropImg } from '@/components/ui/CropEditor';
 import { DragList } from '@/components/ui/DragList';
@@ -17,6 +17,7 @@ import { Lightbox } from '@/components/ui/Lightbox';
 import { useConfirmDelete } from '@/components/ui/Modal';
 import { fileDrop } from '@/lib/dnd';
 import { useToast } from '@/components/ui/Toast';
+import { useImageSource, resolveImageRef, type ImageSource } from '@/components/ui/ImageSource';
 
 export interface RelFormValue {
   slug?: string;             // 페이지 주소 /rels/{slug} (v1.9 — 신규 등록 시, 비우면 자동 id)
@@ -64,6 +65,17 @@ export interface RelFormValue {
 }
 
 interface FullDraft { ref?: string; file?: File; url?: string }
+
+function FullImageSource({ onSelect, children }: { onSelect: (url: string) => void; children: React.ReactNode }) {
+  const source = useImageSource(onSelect);
+  return (
+    <div tabIndex={0} {...source.handlers} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      {children}
+      <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 이미지 주소 붙여넣기</button>
+      {source.element}
+    </div>
+  );
+}
 
 /** 전신 미리보기 한 장 (v1.9 조작 개편 — 사용자 확정)
  *  · 드래그 = 위치 이동 (가로·세로)  · 휠 = 크기 (비율 유지)  · 우클릭 = 앞으로/뒤로 메뉴
@@ -196,6 +208,11 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const initHeaderCrop = auObj ? auObj.headerCrop : initial?.headerCrop;
   const [headerCrop, setHeaderCrop] = useState<CropValue | undefined>(initHeaderCrop);
   const [headerCropOpen, setHeaderCropOpen] = useState(false);
+  const headerSource = useImageSource(url => {
+    setHeaderFile(null); setHeaderUrl(url); setHeaderRemoved(false);
+    setHeaderCrop(undefined); setHeaderCropOpen(true);
+  });
+  useEffect(() => () => { if (headerUrl.startsWith('blob:')) URL.revokeObjectURL(headerUrl); }, [headerUrl]);
   // 페이지 테마 (v1.9 AU별) — AU 편집: 기존(base) 따라가기 또는 이 AU 전용 테마
   const [themeFollow, setThemeFollow] = useState<boolean>(auObj ? auObj.theme === undefined : false);
   const [themeMode, setThemeMode] = useState<'site' | 'custom'>(
@@ -291,6 +308,19 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
     });
   };
 
+  const artSource = useImageSource(url => {
+    if (!arts.length) { setThumbCrop(undefined); setCropOpen(true); }
+    setArts(prev => [...prev, { id: newId(), ref: url, url }]);
+  });
+  const blobUrls = useRef(new Set<string>());
+  useEffect(() => {
+    const current = new Set([...arts, ...Object.values(fulls)].map(a => a.url)
+      .filter((url): url is string => !!url?.startsWith('blob:')));
+    blobUrls.current.forEach(url => { if (!current.has(url)) URL.revokeObjectURL(url); });
+    blobUrls.current = current;
+  }, [arts, fulls]);
+  useEffect(() => () => { blobUrls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
+
   const addArts = (list: FileList | null) => {
     if (!list || list.length === 0) return;
     const items = Array.from(list).map(f => ({ id: newId(), url: URL.createObjectURL(f), file: f }));
@@ -307,7 +337,8 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       if (!isValidSlug(slug)) { toast('주소는 영문 소문자·숫자·하이픈만 쓸 수 있습니다'); return; }
       if (existingIds?.includes(slug)) { toast('이미 사용 중인 주소입니다 — 다른 주소를 입력해 주세요'); return; }
     }
-    const artIds = await Promise.all(arts.map(a => (a.file ? putBlob(a.file) : Promise.resolve(a.ref!))));
+    const artIds = await Promise.all(arts.map(a => (a.file ? resolveImageRef({ kind: 'file', file: a.file }) : Promise.resolve(a.ref!))));
+    const headerImage: ImageSource | undefined = headerFile ? { kind: 'file', file: headerFile } : headerUrl ? { kind: 'url', url: headerUrl } : undefined;
     onSave({
       // 수정에서 정한 주소는 별명으로 (v2.0) — 신규는 rels/new가 이 값을 id로 쓴다
       slug: slug.trim() || undefined,
@@ -316,7 +347,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       kind, visibility, fontId, bodyFontId,
       arts: artIds,
       thumbCrop,
-      headerImgId: headerFile ? await putBlob(headerFile) : (headerRemoved ? undefined : initHeaderId),
+      headerImgId: headerImage ? await resolveImageRef(headerImage) : (headerRemoved ? undefined : initHeaderId),
       headerCrop: headerRemoved ? undefined : headerCrop,
       headerRemoved,
       themeFollow,
@@ -343,7 +374,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       fulls: pairMembers.length
         ? Object.fromEntries(await Promise.all(pairMembers.map(async m => {
           const d = fulls[m.charId];
-          return [m.charId, d ? (d.file ? await putBlob(d.file) : d.ref) : undefined] as const;
+          return [m.charId, d ? (d.file ? await resolveImageRef({ kind: 'file', file: d.file }) : d.ref) : undefined] as const;
         })))
         : undefined,
       fullScales: pairMembers.length ? fullScales : undefined,
@@ -447,9 +478,11 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           onChange={e => { addArts(e.target.files); e.target.value = ''; }} />
         <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11, justifySelf: 'center' }}
           onClick={() => document.getElementById('relArtsF')?.click()}
+          {...artSource.handlers}
           {...fileDrop(fl => addArts(fl))}>
           ＋ ADD ART {arts.length === 0 && '(첫 장 등록 시 썸네일 크롭 지정)'}
         </button>
+        <button type="button" className="btn btn-ghost" onClick={() => artSource.open()}>🔗 이미지 주소 붙여넣기</button>
 
         {/* 전신 이미지 (v1.9) — 페어 좌/우 캐릭터, 미리보기에서 드래그=크기 · 클릭=앞으로 */}
         {pairMembers.length > 0 && (
@@ -463,7 +496,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 const d = fulls[m.charId];
                 const nm = memberNames?.[m.charId] ?? m.charId;
                 return (
-                  <div key={m.charId} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <FullImageSource key={m.charId} onSelect={url => setFulls(o => ({ ...o, [m.charId]: { ref: url, url } }))}>
                     <b style={{ fontSize: 12 }}>{nm}</b>
                     <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
                       {...fileDrop(fl => { const f = fl[0]; if (f) setFulls(o => ({ ...o, [m.charId]: { file: f, url: URL.createObjectURL(f) } })); })}>
@@ -479,7 +512,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                         const n = { ...o }; delete n[m.charId]; return n;
                       }))}>✕</span>
                     )}
-                  </div>
+                  </FullImageSource>
                 );
               })}
             </div>
@@ -566,6 +599,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
         </label>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ width: 200, aspectRatio: '3/1', borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+            tabIndex={0} {...headerSource.handlers}
             onClick={() => document.getElementById('relHeaderF')?.click()}
             {...fileDrop(fl => {
               const hf = fl[0];
@@ -593,6 +627,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
               }
               e.target.value = '';
             }} />
+          <button type="button" className="btn btn-ghost" onClick={() => headerSource.open()}>🔗 이미지 주소 붙여넣기</button>
           {(headerUrl || (!headerRemoved && initHeaderId)) && (
             <>
               <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
@@ -847,6 +882,8 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
         <Lightbox srcs={arts.map(a => a.url ?? a.ref ?? '')} index={lb} onClose={() => setLb(null)} />
       )}
       {del.element}
+      {artSource.element}
+      {headerSource.element}
     </div>
   );
 }
@@ -877,11 +914,7 @@ function FirstArtCrop({ open, item, crop, onClose, onApply }: {
   open: boolean; item: ArtItem; crop?: CropValue;
   onClose: () => void; onApply: (c: CropValue) => void;
 }) {
-  const [loadedUrl, setLoadedUrl] = useState('');
-  useEffect(() => {
-    if (item.url || !item.ref || !open) return;
-    getBlob(item.ref).then(b => { if (b) setLoadedUrl(URL.createObjectURL(b)); });
-  }, [item, open]);
+  const loadedUrl = useBlobUrl(item.ref);
   const src = item.url || loadedUrl;
   if (!src) return null;
   return <CropEditor open={open} src={src} aspect="4:3" initial={crop} onClose={onClose} onApply={onApply} />;
