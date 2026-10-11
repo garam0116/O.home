@@ -74,6 +74,7 @@ function RelEditInner() {
                 quote: v.quotes?.[m.charId] ?? m.quote,
                 nameSize: v.nameSizes?.[m.charId] ?? m.nameSize,
                 nameBold: v.nameBolds?.[m.charId] ?? m.nameBold,
+                nameFontId: v.nameFonts?.[m.charId] || undefined,
                 quoteColor: v.quoteColors?.[m.charId]?.fg ?? m.quoteColor,
                 quoteMarkColor: v.quoteColors?.[m.charId]?.mark ?? m.quoteMarkColor,
               }))
@@ -84,7 +85,7 @@ function RelEditInner() {
                 aus: r.aus.map(a => (a.id === auObj.id ? {
                   ...a, arts: v.arts, catchphrase: v.catchphrase,
                   ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
-                  hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
+                  hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog,
                   // AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름 그대로 쓰게 아예 지운다
                   name: v.auName?.trim() ? v.auName.trim() : undefined,
                   // AU별 폰트·전신 앞뒤 (v2.0 사용자 제보) — 원본이 아니라 이 AU에 담는다
@@ -108,6 +109,7 @@ function RelEditInner() {
                     quote: v.quotes?.[m.charId],
                     nameSize: v.nameSizes?.[m.charId],
                     nameBold: v.nameBolds?.[m.charId],
+                    nameFontId: v.nameFonts?.[m.charId] || undefined,
                     quoteColor: v.quoteColors?.[m.charId]?.fg,
                     quoteMarkColor: v.quoteColors?.[m.charId]?.mark,
                   }])),
@@ -127,7 +129,7 @@ function RelEditInner() {
                 logUrl: v.logUrl, lorebookUrl: v.lorebookUrl,
                 // 원본 섹션 숨김도 base AU에 저장 (v2.0 사용자 요청)
                 aus: r.aus.map(a => (a.id === 'base' ? {
-                  ...a, hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
+                  ...a, hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog,
                 } : a)),
                 ...(v.fulls
                   ? {
@@ -139,6 +141,7 @@ function RelEditInner() {
                       quote: v.quotes?.[m.charId] ?? m.quote,
                       nameSize: v.nameSizes?.[m.charId] ?? m.nameSize,
                       nameBold: v.nameBolds?.[m.charId] ?? m.nameBold,
+                      nameFontId: v.nameFonts?.[m.charId] || undefined,
                       quoteColor: v.quoteColors?.[m.charId]?.fg ?? m.quoteColor,
                       quoteMarkColor: v.quoteColors?.[m.charId]?.mark ?? m.quoteMarkColor,
                     })),

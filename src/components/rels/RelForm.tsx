@@ -64,11 +64,13 @@ export interface RelFormValue {
   quotes?: Record<string, string>;                              // 히어로 좌/우 한마디 문구 (v2.0)
   nameSizes?: Record<string, number>;                           // 멤버 카드 이름 크기 px (v2.0)
   nameBolds?: Record<string, boolean>;                          // 멤버 카드 이름 볼드 (v2.0 — 기본 켜짐)
+  nameFonts?: Record<string, string>;                           // 자관 안 멤버 이름 폰트
   quoteColors?: Record<string, { fg?: string; mark?: string }>; // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   fullFront?: string;                          // 앞에 보일 캐릭터 id
   auName?: string;           // AU별 자관명 (v2.0 사용자 요청 — AU 편집일 때만)
   qaHide?: boolean;          // 문답 답변 숨기기 (v2.0 사용자 요청)
   hideTimeline?: boolean;    // 섹션 숨김 — 원본/base 포함 AU별 (v2.0 사용자 요청)
+  hideQa?: boolean;
   hideRp?: boolean;
   hideLog?: boolean;
   pickedCharIds: string[];   // 등록 시 연동할 내 캐릭터 (수정 모드에선 빈 배열)
@@ -201,6 +203,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const auObj = auId ? initial?.aus.find(a => a.id === auId) : undefined;
   const sectionAu = auObj ?? initial?.aus.find(a => a.id === 'base');
   const [hideTimeline, setHideTimeline] = useState(!!sectionAu?.hideTimeline);
+  const [hideQa, setHideQa] = useState(!!sectionAu?.hideQa);
   const [hideRp, setHideRp] = useState(!!sectionAu?.hideRp);
   const [hideLog, setHideLog] = useState(!!sectionAu?.hideLog);
 
@@ -319,6 +322,8 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // 이름 볼드 (v2.0 사용자 요청) — 폰트에 따라 볼드가 어색한 경우가 있어 끌 수 있게. 기본은 볼드
   const [nameBolds, setNameBolds] = useState<Record<string, boolean>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameBold ?? true])));
+  const [nameFonts, setNameFonts] = useState<Record<string, string>>(
+    () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameFontId ?? ''])));
   // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   const [quoteColors, setQuoteColors] = useState<Record<string, { fg?: string; mark?: string }>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, { fg: mOf(m).quoteColor, mark: mOf(m).quoteMarkColor }])));
@@ -461,6 +466,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       auName: auObj ? auName.trim() : undefined,
       qaHide: qaHide || undefined,
       hideTimeline: hideTimeline || undefined,
+      hideQa: hideQa || undefined,
       hideRp: hideRp || undefined,
       hideLog: hideLog || undefined,
       fulls: pairMembers.length
@@ -474,6 +480,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       quotes: pairMembers.length ? quotes : undefined,
       nameSizes: pairMembers.length ? nameSizes : undefined,
       nameBolds: pairMembers.length ? nameBolds : undefined,
+      nameFonts: pairMembers.length ? nameFonts : undefined,
       quoteColors: pairMembers.length ? quoteColors : undefined,
       fullFront,
       pickedCharIds: picked,
@@ -759,6 +766,17 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   min={10} max={32} step={1} suffix="px" />
               </div>
             ))}
+            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인·문답</label>
+            {pairMembers.map((m, i) => (
+              <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{i === 0 ? '왼쪽' : '오른쪽'} · {memberNames?.[m.charId] ?? m.charId}</b>
+                <KSelect value={nameFonts[m.charId] ?? ''}
+                  onChange={v => setNameFonts(s => ({ ...s, [m.charId]: v }))}
+                  options={[{ value: '', label: '캐릭터 기본' }, ...fonts.map(f => ({
+                    value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span>,
+                  }))]} />
+              </div>
+            ))}
 
             {/* 히어로 대사 색 (페어, v1.9 사용자 요청) — 좌/우 캐릭터 대사 글씨색·따옴표색 */}
             <label className="k-label" style={{ margin: '10px 0 0' }}>대사 색 — 상단 좌/우 한마디</label>
@@ -1036,6 +1054,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
             <div style={{ display: 'grid', gap: 7 }}>
               <label className="k-label" style={{ margin: 0 }}>섹션 표시</label>
               <KCheck label="타임라인 숨김" checked={hideTimeline} onChange={setHideTimeline} />
+              <KCheck label="문답 숨김" checked={hideQa} onChange={setHideQa} />
               <KCheck label="역극 리스트 숨김" checked={hideRp} onChange={setHideRp} />
               <KCheck label="로그 리스트 숨김" checked={hideLog} onChange={setHideLog} />
             </div>

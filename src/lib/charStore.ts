@@ -154,6 +154,8 @@ export interface RelMember {
   nameBold?: boolean;
   /** 멤버 카드 이름 크기 px (v2.0) — 기본 17. 카드 폭이 좁아 이름마다 알맞은 크기가 다르다 */
   nameSize?: number;
+  /** 자관 안에서 쓸 이 캐릭터의 이름 폰트 — 미지정이면 캐릭터 프로필 폰트(char.fontId) */
+  nameFontId?: string;
   quoteColor?: string;           // 히어로 대사 글씨색 (페어, v1.9 — 기본 #d7dae0)
   quoteMarkColor?: string;       // 히어로 대사 따옴표색 (기본 포인트 소프트)
 }
@@ -228,6 +230,8 @@ export interface RelAuMember {
   fullOffY?: number;
   nameSize?: number;
   nameBold?: boolean;
+  /** 자관 안에서 쓸 이 캐릭터의 이름 폰트 — 미지정이면 캐릭터 프로필 폰트(char.fontId) */
+  nameFontId?: string;
   quoteColor?: string;
   quoteMarkColor?: string;
   /** 멤버 카드 얼굴칸 위치 — AU마다 따로 (v2.0 사용자 제보 — 원본에서 바꾸면 AU도 같이 바뀌었다).
@@ -443,7 +447,7 @@ const parseRelDate = (dateStr?: string): Date | undefined => {
   return target;
 };
 
-/** 디데이 계산은 시간대 영향을 받지 않도록 UTC 날짜 단위로 계산한다 */
+/** 디데이 계산은 UTC 날짜 단위로, D-Day 위젯 plusOne처럼 시작일을 1일로 센다 */
 export function relDday(dateStr?: string, now = new Date()): string | undefined {
   const target = parseRelDate(dateStr);
   if (!target) return undefined;
@@ -451,7 +455,7 @@ export function relDday(dateStr?: string, now = new Date()): string | undefined 
   today.setUTCFullYear(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   today.setUTCHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - target.getTime()) / 86400000);
-  return `D${days < 0 ? `-${Math.abs(days)}` : `+${days}`}`;
+  return `D${days < 0 ? `-${Math.abs(days)}` : `+${days + 1}`}`;
 }
 
 /** 디데이 날짜를 영문 월 표기로 표시한다 */
