@@ -58,7 +58,7 @@ export default function RelNewPage() {
             members, thumbClass: '',
             illustMode: v.kind === 'pair' ? 'duo' : 'one',
             aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase,
-              hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog }],
+              hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog }],
             timeline: [], questions: [],
           };
           setRels([...rels, rel]);

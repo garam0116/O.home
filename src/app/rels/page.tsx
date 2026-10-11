@@ -70,7 +70,7 @@ export default function RelsPage() {
                   {r.name}
                   {r.visibility === 'member' && <span className="pill" style={{ marginLeft: 6 }}>멤버</span>}
                   {/* 디데이는 자관명 옆에 표시 (v2.0 사용자 요청) */}
-                  {dday && <span className="rel-dday" style={{ marginLeft: 6, color: r.ddayColor }}>{dday}</span>}
+                  {dday && <span className="rel-dday" style={{ marginLeft: 6 }}>{dday}</span>}
                 </b>
                 {(priv || memberLocked) && <span>
                   {priv ? '관리자에게만 표시됨' : '로그인 시 열람 가능'}
