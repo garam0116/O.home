@@ -297,6 +297,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // 전신 이미지 (v1.9 — 페어 · 수정 모드) — AU 편집이면 그 AU의 전신
   const pairMembers = !isNew && (initial!.kind ? initial!.kind === 'pair' : initial!.members.length === 2)
     ? initial!.members.slice(0, 2) : [];
+  const fontMembers = initial?.members ?? [];
   const [fulls, setFulls] = useState<Record<string, FullDraft>>(() => {
     const o: Record<string, FullDraft> = {};
     for (const m of pairMembers) {
@@ -323,7 +324,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const [nameBolds, setNameBolds] = useState<Record<string, boolean>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameBold ?? true])));
   const [nameFonts, setNameFonts] = useState<Record<string, string>>(
-    () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameFontId ?? ''])));
+    () => Object.fromEntries(fontMembers.map(m => [m.charId, mOf(m).nameFontId ?? ''])));
   // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   const [quoteColors, setQuoteColors] = useState<Record<string, { fg?: string; mark?: string }>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, { fg: mOf(m).quoteColor, mark: mOf(m).quoteMarkColor }])));
@@ -480,7 +481,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       quotes: pairMembers.length ? quotes : undefined,
       nameSizes: pairMembers.length ? nameSizes : undefined,
       nameBolds: pairMembers.length ? nameBolds : undefined,
-      nameFonts: pairMembers.length ? nameFonts : undefined,
+      nameFonts: fontMembers.length ? nameFonts : undefined,
       quoteColors: pairMembers.length ? quoteColors : undefined,
       fullFront,
       pickedCharIds: picked,
@@ -766,18 +767,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   min={10} max={32} step={1} suffix="px" />
               </div>
             ))}
-            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인·문답</label>
-            {pairMembers.map((m, i) => (
-              <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{i === 0 ? '왼쪽' : '오른쪽'} · {memberNames?.[m.charId] ?? m.charId}</b>
-                <KSelect value={nameFonts[m.charId] ?? ''}
-                  onChange={v => setNameFonts(s => ({ ...s, [m.charId]: v }))}
-                  options={[{ value: '', label: '캐릭터 기본' }, ...fonts.map(f => ({
-                    value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span>,
-                  }))]} />
-              </div>
-            ))}
-
             {/* 히어로 대사 색 (페어, v1.9 사용자 요청) — 좌/우 캐릭터 대사 글씨색·따옴표색 */}
             <label className="k-label" style={{ margin: '10px 0 0' }}>대사 색 — 상단 좌/우 한마디</label>
             {pairMembers.map((m, i) => (
@@ -789,6 +778,21 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 <span className="cp-lb">따옴표</span>
                 <ColorField value={quoteColors[m.charId]?.mark ?? '#c96a73'}
                   onChange={hex => setQuoteColors(s => ({ ...s, [m.charId]: { ...s[m.charId], mark: hex } }))} />
+              </div>
+            ))}
+          </>
+        )}
+        {fontMembers.length > 0 && (
+          <>
+            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인·문답</label>
+            {fontMembers.map(m => (
+              <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{memberNames?.[m.charId] ?? m.charId}</b>
+                <KSelect value={nameFonts[m.charId] ?? ''}
+                  onChange={v => setNameFonts(s => ({ ...s, [m.charId]: v }))}
+                  options={[{ value: '', label: '캐릭터 기본' }, ...fonts.map(f => ({
+                    value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span>,
+                  }))]} />
               </div>
             ))}
           </>

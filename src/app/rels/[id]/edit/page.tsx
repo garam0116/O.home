@@ -65,7 +65,7 @@ function RelEditInner() {
             // (v2.0 사용자 발견: AU에서 고치면 다른 AU 페이지까지 같이 바뀌던 것.
             //  예전엔 이 줄이 auObj와 상관없이 늘 돌아서 자관 공통 members를 덮어썼다.
             //  AU 값은 아래 aus의 mset에 따로 담는다)
-            members: (!auObj && (v.fullScales || v.fullOffsets || v.quoteColors || v.quotes))
+            members: (!auObj && (v.fullScales || v.fullOffsets || v.quoteColors || v.quotes || v.nameFonts))
               ? r.members.map(m => ({
                 ...m,
                 fullScale: v.fullScales?.[m.charId] ?? m.fullScale,
@@ -146,7 +146,9 @@ function RelEditInner() {
                       quoteMarkColor: v.quoteColors?.[m.charId]?.mark ?? m.quoteMarkColor,
                     })),
                   }
-                  : {}),
+                  : v.nameFonts ? {
+                    members: r.members.map(m => ({ ...m, nameFontId: v.nameFonts?.[m.charId] || undefined })),
+                  } : {}),
               }),
           } : r)));
           toast('저장되었습니다');
