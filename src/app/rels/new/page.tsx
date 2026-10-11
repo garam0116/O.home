@@ -51,13 +51,14 @@ export default function RelNewPage() {
             headerImgId: v.headerImgId, headerCrop: v.headerCrop,
             themeMode: v.themeMode, themeColor: v.themeColor, themeTone: v.themeTone,
             illuBg: v.illuBg, illuOn: v.illuOn,
-            nameColor: v.nameColor, cpColor: v.cpColor, cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg,
+            nameColor: v.nameColor, cpColor: v.cpColor, ddayColor: v.ddayColor, cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg,
             nameShadowColor: v.nameShadowColor, nameShadow: v.nameShadow,
             headerBgG1: v.headerBgG1, headerBgG2: v.headerBgG2, headerBgAngle: v.headerBgAngle,
             pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle,
             members, thumbClass: '',
             illustMode: v.kind === 'pair' ? 'duo' : 'one',
-            aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase }],
+            aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase,
+              hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog }],
             timeline: [], questions: [],
           };
           setRels([...rels, rel]);

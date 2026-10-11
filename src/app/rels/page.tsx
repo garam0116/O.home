@@ -69,19 +69,17 @@ export default function RelsPage() {
                 <b>
                   {r.name}
                   {r.visibility === 'member' && <span className="pill" style={{ marginLeft: 6 }}>멤버</span>}
+                  {/* 디데이는 자관명 옆에 표시 (v2.0 사용자 요청) */}
+                  {dday && <span className="rel-dday" style={{ marginLeft: 6, color: r.ddayColor }}>{dday}</span>}
                 </b>
-                {(priv || memberLocked || dday) && <span className={dday && !priv && !memberLocked ? 'rel-dday' : undefined}>
-                  {priv ? '관리자에게만 표시됨'
-                    : memberLocked ? '로그인 시 열람 가능'
-                    : dday}
+                {(priv || memberLocked) && <span>
+                  {priv ? '관리자에게만 표시됨' : '로그인 시 열람 가능'}
                 </span>}
                 {(logUrl || lorebookUrl) && (
                   <div className="rel-card-links">
-                    {logUrl && <a href={logUrl} target={/^https?:\/\//i.test(logUrl) ? '_blank' : undefined}
-                      rel={/^https?:\/\//i.test(logUrl) ? 'noopener noreferrer' : undefined}
+                    {logUrl && <a href={logUrl}
                       onClick={e => e.stopPropagation()}>LOG</a>}
-                    {lorebookUrl && <a href={lorebookUrl} target={/^https?:\/\//i.test(lorebookUrl) ? '_blank' : undefined}
-                      rel={/^https?:\/\//i.test(lorebookUrl) ? 'noopener noreferrer' : undefined}
+                    {lorebookUrl && <a href={lorebookUrl}
                       onClick={e => e.stopPropagation()}>LOREBOOK</a>}
                   </div>
                 )}

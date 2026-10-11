@@ -157,7 +157,8 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
           }}>
             {char.name}
           </b>
-          <small>{[char.sub, noteOf(member)].filter(Boolean).join(' · ')}</small>
+          {/* 캐치프레이즈는 히어로 인용구에만 — 카드에는 연결 메모만 표시 (v2.0 사용자 요청) */}
+          {noteOf(member) && <small>{noteOf(member)}</small>}
         </div>
       </div>
       <div className="specs">
@@ -934,7 +935,7 @@ export default function RelDetailPage() {
         <div className="catch" style={{ color: auSt.cpColor }}>
           {au?.catchphrase || rel.catchphrase}
         </div>
-        {dday && ddayDateLabel && <div className="rel-dday-detail">
+        {dday && ddayDateLabel && <div className="rel-dday-detail" style={{ color: auSt.ddayColor }}>
           {dday.startsWith('D-') ? 'UNTIL' : 'SINCE'} {ddayDateLabel} · {dday}
         </div>}
         {isDuo && (pairSlots[1]?.quote || (!pairSlots[1] && sideSlotOf('r')?.quote)) && (
