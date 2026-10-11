@@ -157,7 +157,7 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
           }}>
             {char.name}
           </b>
-          {/* 캐치프레이즈는 히어로 인용구에만 — 카드에는 연결 메모만 표시 (v2.0 사용자 요청) */}
+          {char.sub && <small>{char.sub}</small>}
           {noteOf(member) && <small>{noteOf(member)}</small>}
         </div>
       </div>
@@ -244,9 +244,6 @@ function SideSlotCard({ slot }: { slot: RelSideSlot }) {
         <CroppedBlobImg fileRef={slot.imgId} crop={slot.crop} ph="" />
       </div>
       {slot.name && <b className="side-slot-name">{slot.name}</b>}
-      {slot.quote && <div className="side-slot-quote" style={{ color: slot.quoteColor, ['--q-mark' as string]: slot.quoteMarkColor }}>
-        {slot.quote}
-      </div>}
     </div>
   );
 }
