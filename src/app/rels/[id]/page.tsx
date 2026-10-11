@@ -148,10 +148,9 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
           <div className={`face ph ${char.thumbClass}`} />
         )}
         <div>
-          {/* 이름 폰트는 캐릭터 프로필에서 지정한 것을 그대로 쓰고,
-              크기는 이 자관에서 정한 값 (자관 수정의 「이름 크기」 — 기본 17px, v2.0) */}
+          {/* 자관 이름 폰트를 우선 쓰고, 미지정이면 캐릭터 프로필 폰트를 쓴다 */}
           <b style={{
-            fontFamily: familyOf(char.fontId), fontSize: member.nameSize ?? undefined,
+            fontFamily: familyOf(member.nameFontId ?? char.fontId), fontSize: member.nameSize ?? undefined,
             // 굵기는 끌 수 있다 (v2.0 사용자 요청) — 기본은 지금처럼 굵게(<b>)
             fontWeight: (member.nameBold ?? true) ? undefined : 400,
           }}>
@@ -773,6 +772,8 @@ export default function RelDetailPage() {
      오른쪽 카드에서 추가해도 무조건 왼쪽에 들어갔다. pairRight로 오른쪽에 둘 캐릭터를 지정한다. */
   // 한마디·대사 색·전신 위치는 AU마다 다를 수 있다 (v2.0) — 이 AU 값이 있으면 그것으로 갈아 끼운다
   const asAu = (m: RelMember | null) => (m && !isBaseAu ? auMember(m, au) : m);
+  const nameFontOf = (charId: string) =>
+    familyOf(asAu(rel.members.find(m => m.charId === charId) ?? null)?.nameFontId ?? charOf(charId)?.fontId);
   // 색·배경도 AU마다 따로 (v2.0 사용자 요청) — AU에 정해 둔 게 없으면 자관 기본이 그대로 나온다
   const auSt = auStyle(rel, au);
   const pairSlots: (RelMember | null)[] = isDuo
@@ -1038,12 +1039,12 @@ export default function RelDetailPage() {
                     {unreg ? (
                       /* AU 프로필 미등록 (v1.9) — 원본 프로필 대신 등록 안내 */
                       <>
-                        <b style={{ fontFamily: familyOf(findChar(chars, m.charId)?.fontId) }}>{findChar(chars, m.charId)?.name}</b>
+                        <b style={{ fontFamily: nameFontOf(m.charId) }}>{findChar(chars, m.charId)?.name}</b>
                         <small>이 AU의 프로필 미등록 — 눌러서 등록</small>
                       </>
                     ) : (
                       <>
-                        <b style={{ fontFamily: familyOf(c.fontId) }}>{c.name}</b><i>{c.sub}</i>
+                        <b style={{ fontFamily: nameFontOf(m.charId) }}>{c.name}</b><i>{c.sub}</i>
                         <small>{c.specs.slice(0, 3).map(s => s.value).join(' · ')}</small>
                         {(m.quote || noteOf(m) || m.keywords[0]) && (
                           <span className="ext">{m.quote || noteOf(m) || m.keywords[0]}</span>
@@ -1116,6 +1117,15 @@ export default function RelDetailPage() {
               {tab === 'tl'
                 ? <button className="btn btn-dark" style={{ height: 35, padding: '0 14px', fontSize: 11.5 }} data-tip="기록 추가" onClick={() => setTlOpen(true)}><span className="lb-pc">＋ ADD RECORD</span><span className="lb-m">＋</span></button>
                 : <>
+                  <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11.5 }}
+                    onClick={() => del.ask('QUESTIONS 섹션을 삭제하시겠습니까?', () => {
+                      patchAuData({ questions: [], qaPool: [], qaEnabled: false });
+                      setQaRows(qaRows.filter(r => !(r.relId === rel.id && r.auId === (au?.id ?? 'base'))));
+                      setTab('tl');
+                      setQaNo(null);
+                    }, '질문·답변이 함께 삭제되며 복구할 수 없습니다.')}>
+                    <span className="lb-pc">QUESTIONS 섹션 삭제</span><span className="lb-m">삭제</span>
+                  </button>
                   <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11.5 }} data-tip="질문 리스트 추가" onClick={() => setQsetOpen(true)}><span className="lb-pc">＋ 질문 리스트</span><span className="lb-m">≡</span></button>
                   {/* 되돌리기는 오른쪽 질문 리스트에서 우클릭 (v2.0 사용자 요청) — 여기엔 건너뛰기만 */}
                   {curQa && (
@@ -1174,7 +1184,7 @@ export default function RelDetailPage() {
                   return (
                     <div key={j} className={`tl-say ${sideOf(s.charId)}`}
                       style={{ ['--cc' as string]: rgbTriple(c?.color ?? '#5d636d') }}>
-                      <div className="who" style={{ fontFamily: familyOf(c?.fontId) }}>{c?.name}</div>
+                      <div className="who" style={{ fontFamily: nameFontOf(s.charId) }}>{c?.name}</div>
                       <div className="bub">{s.text}</div>
                     </div>
                   );
@@ -1218,7 +1228,7 @@ export default function RelDetailPage() {
                         }}>
                         {/* 같은 캐릭터가 연달아 답하면 이름을 한 번만 (v2.0 사용자 요청) */}
                         {curAnswers[i - 1]?.charId !== a.charId && (
-                          <div className="who" style={{ fontFamily: familyOf(c?.fontId) }}>{c?.name}</div>
+                          <div className="who" style={{ fontFamily: nameFontOf(a.charId) }}>{c?.name}</div>
                         )}
                         <div className="bub" {...(a.note ? { 'data-note': a.note } : {})}>{a.text}</div>
                       </div>
@@ -1240,7 +1250,7 @@ export default function RelDetailPage() {
                         }
                       }}>
                         <CharFace c={charOf(qaChar ?? answerableIds[0])} className="f" />
-                        <small style={{ fontFamily: familyOf(charOf(qaChar ?? answerableIds[0])?.fontId) }}>
+                        <small style={{ fontFamily: nameFontOf(qaChar ?? answerableIds[0]) }}>
                           {charOf(qaChar ?? answerableIds[0])?.name}{answerableIds.length > 1 ? ' ▾' : ''}
                         </small>
                         {qaPickPos && createPortal(
@@ -1251,7 +1261,7 @@ export default function RelDetailPage() {
                                 <div key={cid} style={{ display: 'flex', gap: 8, alignItems: 'center' }}
                                   onClick={e2 => { e2.stopPropagation(); setQaChar(cid); setQaPickPos(null); }}>
                                   <CharFace c={c} style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0 }} />
-                                  <span style={{ fontFamily: familyOf(c?.fontId) }}>{c?.name}</span>
+                                  <span style={{ fontFamily: nameFontOf(cid) }}>{c?.name}</span>
                                 </div>
                               );
                             })}
