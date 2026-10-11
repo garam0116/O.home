@@ -83,6 +83,7 @@ function RelEditInner() {
               ? {
                 aus: r.aus.map(a => (a.id === auObj.id ? {
                   ...a, arts: v.arts, catchphrase: v.catchphrase,
+                  ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
                   // AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름 그대로 쓰게 아예 지운다
                   name: v.auName?.trim() ? v.auName.trim() : undefined,
                   // AU별 폰트·전신 앞뒤 (v2.0 사용자 제보) — 원본이 아니라 이 AU에 담는다
@@ -120,7 +121,9 @@ function RelEditInner() {
                 } : a)),
               }
               : {
-                catchphrase: v.catchphrase, arts: v.arts, thumbId: v.arts[0], thumbCrop: v.thumbCrop,
+                catchphrase: v.catchphrase, arts: v.arts, thumbId: v.thumbId, thumbCrop: v.thumbCrop,
+                ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
+                logUrl: v.logUrl, lorebookUrl: v.lorebookUrl,
                 ...(v.fulls
                   ? {
                     members: r.members.map(m => ({

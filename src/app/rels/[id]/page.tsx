@@ -9,11 +9,11 @@ import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/ThemeProvider';
 import { useLocalList, newId } from '@/lib/postStore';
 import {
-  Relation, REL_SEED, Character, CHAR_SEED, RelMember, QaEntry, QaAnswer, TlItem, findChar, Visibility, CharGrant,
+  Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, QaEntry, QaAnswer, TlItem, findChar, Visibility, CharGrant,
   auMember, auStyle, fullShadow, hasRelGrant,
   RelAu, RelCpTag, charWithAu, charGrant,
   QaAnswerRow, QA_KEY, QA_SEED, MergedAnswer, answersFor,
-  findByKey, charPath,
+  findByKey, charPath, relDday, relDdayDate,
 } from '@/lib/charStore';
 import { RelQuestionSet, RELQ_SEED, RELQ_KEY, CP_LABEL } from '@/lib/relqStore';
 import { putBlob } from '@/lib/blobStore';
@@ -31,6 +31,7 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -235,6 +236,20 @@ function EmptyCard({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void }) 
   );
 }
 
+function SideSlotCard({ slot }: { slot: RelSideSlot }) {
+  return (
+    <div className="panel side-slot-card">
+      <div className="side-slot-image">
+        <CroppedBlobImg fileRef={slot.imgId} crop={slot.crop} ph="" />
+      </div>
+      {slot.name && <b className="side-slot-name">{slot.name}</b>}
+      {slot.quote && <div className="side-slot-quote" style={{ color: slot.quoteColor, ['--q-mark' as string]: slot.quoteMarkColor }}>
+        {slot.quote}
+      </div>}
+    </div>
+  );
+}
+
 export default function RelDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -419,6 +434,13 @@ export default function RelDetailPage() {
   const auQaPool = (isBaseAu ? rel?.qaPool : au?.qaPool) ?? [];   // 대기 질문 풀 (v1.9)
   const auCpTag: RelCpTag | undefined = au?.cp ?? rel?.cp;
   const qaOn = (isBaseAu ? rel?.qaEnabled : au?.qaEnabled) ?? auQuestions.length > 0;
+  const showTimeline = !au?.hideTimeline;
+  const showQa = qaOn && !au?.hideQa;
+  const showTimelinePanel = showTimeline || showQa || (isAdmin && !qaOn && !au?.hideQa);
+  const ddayDate = au?.ddayDate ?? rel?.ddayDate;
+  const dday = relDday(ddayDate);
+  const ddayDateLabel = relDdayDate(ddayDate);
+  const freeBlocks = (isBaseAu ? rel?.freeBlocks : au?.freeBlocks) ?? rel?.freeBlocks ?? [];
   const curQa: QaEntry | undefined = auQuestions.find(q => q.no === (qaNo ?? auQuestions[0]?.no));
   /** 질문 하나의 답변 — 옛 자관 안의 것 + 따로 저장된 것 (v2.0). 화면·수정·삭제는 이 목록의 순번을 쓴다 */
   const answersOf = (no: number): MergedAnswer[] =>
@@ -473,9 +495,15 @@ export default function RelDetailPage() {
     return auCharKey ? `${base}?au=${encodeURIComponent(auCharKey)}` : base;
   };
   const sideOf = (cid: string) => (isDuo && rel?.members[1]?.charId === cid ? 'r' : 'l');
+  const sideSlotOf = (side: 'l' | 'r') =>
+    (!isBaseAu && au?.sideSlots?.[side]) || rel?.sideSlots?.[side];
 
-  // AU 전환으로 QUESTIONS 섹션이 없는 AU에 오면 타임라인 탭으로 (v1.9)
-  useEffect(() => { if (!qaOn && tab === 'qa') setTab('tl'); }, [qaOn, tab]);
+  // 숨김 설정이 바뀌어 선택 중인 탭이 없어지면 표시 가능한 쪽으로 전환한다.
+  useEffect(() => {
+    if ((!showQa && tab === 'qa') || (!showTimeline && tab === 'tl')) {
+      setTab(showTimeline ? 'tl' : showQa ? 'qa' : 'tl');
+    }
+  }, [showQa, showTimeline, tab]);
 
   const qaFiltered = useMemo(
     () => auQuestions.filter(q => !qaQuery || q.q.includes(qaQuery) || String(q.no).includes(qaQuery)),
@@ -882,11 +910,11 @@ export default function RelDetailPage() {
         ]} />
 
       <div className="rel-hero">
-        {isDuo && pairSlots[0] && (
+        {isDuo && (pairSlots[0]?.quote || (!pairSlots[0] && sideSlotOf('l')?.quote)) && (
           <div className="quote l" style={{
-            color: pairSlots[0].quoteColor,
-            ['--q-mark' as string]: pairSlots[0].quoteMarkColor,
-          } as React.CSSProperties}>{pairSlots[0].quote}</div>
+            color: pairSlots[0] ? pairSlots[0].quoteColor : sideSlotOf('l')?.quoteColor,
+            ['--q-mark' as string]: pairSlots[0] ? pairSlots[0].quoteMarkColor : sideSlotOf('l')?.quoteMarkColor,
+          } as React.CSSProperties}>{pairSlots[0] ? pairSlots[0].quote : sideSlotOf('l')?.quote}</div>
         )}
         {/* CP/NCP 뱃지 — 자관명 위 가운데 (v2.0 사용자 요청) · 색은 자관 수정에서 */}
         {auCpTag && (
@@ -906,11 +934,14 @@ export default function RelDetailPage() {
         <div className="catch" style={{ color: auSt.cpColor }}>
           {au?.catchphrase || rel.catchphrase}
         </div>
-        {isDuo && pairSlots[1] && (
+        {dday && ddayDateLabel && <div className="rel-dday-detail">
+          {dday.startsWith('D-') ? 'UNTIL' : 'SINCE'} {ddayDateLabel} · {dday}
+        </div>}
+        {isDuo && (pairSlots[1]?.quote || (!pairSlots[1] && sideSlotOf('r')?.quote)) && (
           <div className="quote r" style={{
-            color: pairSlots[1].quoteColor,
-            ['--q-mark' as string]: pairSlots[1].quoteMarkColor,
-          } as React.CSSProperties}>{pairSlots[1].quote}</div>
+            color: pairSlots[1] ? pairSlots[1].quoteColor : sideSlotOf('r')?.quoteColor,
+            ['--q-mark' as string]: pairSlots[1] ? pairSlots[1].quoteMarkColor : sideSlotOf('r')?.quoteMarkColor,
+          } as React.CSSProperties}>{pairSlots[1] ? pairSlots[1].quote : sideSlotOf('r')?.quote}</div>
         )}
       </div>
 
@@ -923,7 +954,8 @@ export default function RelDetailPage() {
                 onFaceCrop={ref => setFaceEdit({ charId: pairSlots[0]!.charId, ref, crop: pairSlots[0]!.faceCrop })}
                 onGo={() => router.push(charHref(pairSlots[0]!.charId))}
                 onRemove={() => removeMember(pairSlots[0]!.charId)} />
-            : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+            : sideSlotOf('l') ? <SideSlotCard slot={sideSlotOf('l')!} />
+              : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
           <div className={`rel-center ${single ? 'one-mode' : ''}`}
             style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line-dark)' }}>
             {/* 전신 — 등록 이미지(AU별 우선) + 크기/앞뒤는 자관 수정의 미리보기에서 (v1.9) */}
@@ -985,7 +1017,8 @@ export default function RelDetailPage() {
                 onFaceCrop={ref => setFaceEdit({ charId: pairSlots[1]!.charId, ref, crop: pairSlots[1]!.faceCrop })}
                 onGo={() => router.push(charHref(pairSlots[1]!.charId))}
                 onRemove={() => removeMember(pairSlots[1]!.charId)} />
-            : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+            : sideSlotOf('r') ? <SideSlotCard slot={sideSlotOf('r')!} />
+              : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
         </div>
       ) : (
         /* 다인 자관 — 프로토타입 multi-body: 좌 멤버 리스트(430px) + 우 그룹 일러 */
@@ -1062,16 +1095,16 @@ export default function RelDetailPage() {
       )}
 
       {/* 타임라인 / 페어 문답 탭 (v1.8) */}
-      <div className={`panel timeline ${!isDuo ? 'multi' : ''}`} style={{ fontFamily: familyOf(auBodyFont) }}>
+      {showTimelinePanel && <div className={`panel timeline ${!isDuo ? 'multi' : ''}`} style={{ fontFamily: familyOf(auBodyFont) }}>
         <div className="rel-tabs">
-          <button className={tab === 'tl' ? 'on' : ''} onClick={() => setTab('tl')}><span className="lb-pc">TIMELINE</span><span className="lb-m">T</span></button>
+          {showTimeline && <button className={tab === 'tl' ? 'on' : ''} onClick={() => setTab('tl')}><span className="lb-pc">TIMELINE</span><span className="lb-m">T</span></button>}
           {/* QUESTIONS 섹션은 ＋로 추가해야 생김 (v1.9) — 처음에는 타임라인만 */}
-          {qaOn && <button className={tab === 'qa' ? 'on' : ''} onClick={() => setTab('qa')}><span className="lb-pc">QUESTIONS</span><span className="lb-m">Q</span></button>}
-          {isAdmin && !qaOn && (
+          {showQa && <button className={tab === 'qa' ? 'on' : ''} onClick={() => setTab('qa')}><span className="lb-pc">QUESTIONS</span><span className="lb-m">Q</span></button>}
+          {isAdmin && !qaOn && !au?.hideQa && (
             <button data-tip="QUESTIONS 섹션 추가" style={{ color: 'var(--faint)', fontSize: 14, padding: '0 6px' }}
               onClick={() => setQsetOpen(true)}>＋</button>
           )}
-          {isAdmin && (
+          {isAdmin && ((tab === 'tl' && showTimeline) || (tab === 'qa' && showQa)) && (
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
               {/* 이 줄의 버튼은 홈 공통 버튼과 같은 세로 크기(35px)로 — 탭 줄에서만 작아 보이던 것 */}
               {tab === 'tl' && auTimeline.length > 1 && (
@@ -1108,7 +1141,7 @@ export default function RelDetailPage() {
           )}
         </div>
 
-        {tab === 'tl' ? (
+        {tab === 'tl' && showTimeline ? (
           tlSort ? (
             /* 정렬 모드 — 드래그앤드롭으로 순서 변경 (4.5) */
             <DragList
@@ -1153,7 +1186,7 @@ export default function RelDetailPage() {
             {auTimeline.length === 0 && <p className="hint">타임라인이 비어 있습니다 — 우상단 [＋ ADD RECORD]로 추가</p>}
           </div>
           )
-        ) : (
+        ) : tab === 'qa' && showQa ? (
           <div className="qa-wrap">
             <div className="qa-today">
               {curQa ? (
@@ -1264,8 +1297,15 @@ export default function RelDetailPage() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+        ) : null}
+      </div>}
+
+      {freeBlocks.map(block => (
+        <section key={block.id} className="panel rel-free-block">
+          {block.title && <h3>{block.title}</h3>}
+          <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
+        </section>
+      ))}
 
       {/* 역극 · 로그 연동 리스트 (4.5) — 역극: 내 참여 방 + 공개 전환된 완결 방.
           AU마다 숨길 수 있다 (v2.0 사용자 요청 — AU 관리의 체크박스). 둘 다 숨기면 칸 자체가 없다 */}
@@ -1459,11 +1499,15 @@ export default function RelDetailPage() {
                 )}
               </div>
               {/* 상세 하단의 연동 리스트 숨김 (v2.0 사용자 요청) — 이 AU를 보는 동안만 적용 */}
-              <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <KCheck label={<span style={{ fontSize: 11.5 }}>역극 리스트 숨김</span>} checked={!!a.hideRp}
                   onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideRp: v || undefined } : x)) })} />
                 <KCheck label={<span style={{ fontSize: 11.5 }}>로그 리스트 숨김</span>} checked={!!a.hideLog}
                   onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideLog: v || undefined } : x)) })} />
+                <KCheck label={<span style={{ fontSize: 11.5 }}>타임라인 숨김</span>} checked={!!a.hideTimeline}
+                  onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideTimeline: v || undefined } : x)) })} />
+                <KCheck label={<span style={{ fontSize: 11.5 }}>문답 숨김</span>} checked={!!a.hideQa}
+                  onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideQa: v || undefined } : x)) })} />
               </div>
             </div>
           ))}
