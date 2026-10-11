@@ -3,14 +3,14 @@
 // 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭) · 등록 시 내 캐릭터 연동
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, Relation, Visibility, RelCpTag, RelMember, auMember, auStyle, fullShadow } from '@/lib/charStore';
+import { Character, Relation, Visibility, RelCpTag, RelMember, RelSideSlot, auMember, auStyle, fullShadow } from '@/lib/charStore';
 import { ColorField } from '@/components/ui/ColorField';
 import { isValidSlug, slugify } from '@/lib/link';
 import { CP_LABEL } from '@/lib/relqStore';
 import { newId } from '@/lib/postStore';
 import { useFonts, deVarFamily } from '@/lib/fontStore';
 import { useBlobUrl } from '@/lib/blobStore';
-import { KInput, KSelect, KCheck, KStep } from '@/components/ui/Kit';
+import { KInput, KTextarea, KSelect, KCheck, KStep } from '@/components/ui/Kit';
 import { CropEditor, CropValue, CropImg } from '@/components/ui/CropEditor';
 import { DragList } from '@/components/ui/DragList';
 import { Lightbox } from '@/components/ui/Lightbox';
@@ -28,7 +28,13 @@ export interface RelFormValue {
   fontId: string;
   bodyFontId: string;
   arts: string[];            // 첫 장 = 대표 = 리스트 썸네일 원본
+  thumbId?: string;
   thumbCrop?: CropValue;
+  ddayDate?: string;
+  sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
+  freeBlocks?: { id: string; title?: string; html: string }[];
+  logUrl?: string;
+  lorebookUrl?: string;
   headerImgId?: string;      // 헤더 이미지 (v1.5 — 풀폭 블러 + 페이드아웃)
   headerCrop?: CropValue;    // 헤더 위치 크롭 (원본 무손실)
   headerRemoved?: boolean;   // 헤더 제거 상태 (v1.9 — AU 편집에서 "없음 명시" 저장용)
@@ -65,6 +71,7 @@ export interface RelFormValue {
 }
 
 interface FullDraft { ref?: string; file?: File; url?: string }
+interface RelImageDraft extends FullDraft { crop?: CropValue }
 
 function FullImageSource({ onSelect, children }: { onSelect: (url: string) => void; children: React.ReactNode }) {
   const source = useImageSource(onSelect);
@@ -167,6 +174,13 @@ function ArtThumb({ item, crop }: { item: ArtItem; crop?: CropValue }) {
   return <CropImg src={src} crop={crop} />;
 }
 
+function RelDraftPreview({ draft, crop }: { draft?: RelImageDraft; crop?: CropValue }) {
+  const loaded = useBlobUrl(draft?.ref);
+  const src = draft?.url ?? loaded;
+  if (!src) return <div className="ph" style={{ width: '100%', height: '100%' }} />;
+  return <CropImg src={src} crop={crop ?? draft?.crop} />;
+}
+
 export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSave, onCancel }: {
   initial: Relation | null;          // null = 신규 등록
   auId?: string;                     // AU 편집 모드 (v1.9) — 아트·캐치프레이즈·전신이 이 AU의 것
@@ -199,6 +213,23 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   });
   const [thumbCrop, setThumbCrop] = useState<CropValue | undefined>(initial?.thumbCrop);
   const [cropOpen, setCropOpen] = useState(false);
+  const [thumbDraft, setThumbDraft] = useState<RelImageDraft | undefined>(() => {
+    const ref = initial?.thumbId && initial.thumbId !== initial.arts?.[0] ? initial.thumbId : undefined;
+    return ref ? { ref } : undefined;
+  });
+  const [thumbCropOpen, setThumbCropOpen] = useState(false);
+  const [ddayDate, setDdayDate] = useState(auObj?.ddayDate ?? (auObj ? '' : initial?.ddayDate ?? ''));
+  const [sideSlots, setSideSlots] = useState<{ l?: RelSideSlot; r?: RelSideSlot }>(() =>
+    auObj?.sideSlots ?? (auObj ? {} : initial?.sideSlots ?? {}));
+  const [sideDrafts, setSideDrafts] = useState<{ l?: RelImageDraft; r?: RelImageDraft }>(() => {
+    const slots = auObj?.sideSlots ?? (auObj ? {} : initial?.sideSlots ?? {});
+    return { l: slots.l?.imgId ? { ref: slots.l.imgId, crop: slots.l.crop } : undefined,
+      r: slots.r?.imgId ? { ref: slots.r.imgId, crop: slots.r.crop } : undefined };
+  });
+  const [sideCropOpen, setSideCropOpen] = useState<'l' | 'r' | null>(null);
+  const [freeBlocks, setFreeBlocks] = useState(() => auObj?.freeBlocks ?? (auObj ? [] : initial?.freeBlocks ?? []));
+  const [logUrl, setLogUrl] = useState(initial?.logUrl ?? '');
+  const [lorebookUrl, setLorebookUrl] = useState(initial?.lorebookUrl ?? '');
   const [lb, setLb] = useState<number | null>(null);   // 아트 썸네일 클릭 → 원본 보기
   const [headerFile, setHeaderFile] = useState<File | null>(null);
   const [headerUrl, setHeaderUrl] = useState('');
@@ -312,13 +343,25 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
     if (!arts.length) { setThumbCrop(undefined); setCropOpen(true); }
     setArts(prev => [...prev, { id: newId(), ref: url, url }]);
   });
+  const thumbSource = useImageSource(url => {
+    setThumbDraft({ ref: url, url });
+    setThumbCropOpen(true);
+  });
+  const leftSideSource = useImageSource(url => {
+    setSideDrafts(prev => ({ ...prev, l: { ref: url, url } }));
+    setSideCropOpen('l');
+  });
+  const rightSideSource = useImageSource(url => {
+    setSideDrafts(prev => ({ ...prev, r: { ref: url, url } }));
+    setSideCropOpen('r');
+  });
   const blobUrls = useRef(new Set<string>());
   useEffect(() => {
-    const current = new Set([...arts, ...Object.values(fulls)].map(a => a.url)
+    const current = new Set([...arts, ...Object.values(fulls), thumbDraft, ...Object.values(sideDrafts)].map(a => a?.url)
       .filter((url): url is string => !!url?.startsWith('blob:')));
     blobUrls.current.forEach(url => { if (!current.has(url)) URL.revokeObjectURL(url); });
     blobUrls.current = current;
-  }, [arts, fulls]);
+  }, [arts, fulls, thumbDraft, sideDrafts]);
   useEffect(() => () => { blobUrls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
 
   const addArts = (list: FileList | null) => {
@@ -330,6 +373,15 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
     });
   };
 
+  const setSideImage = (side: 'l' | 'r', file: File) => {
+    setSideDrafts(prev => ({ ...prev, [side]: { file, url: URL.createObjectURL(file) } }));
+    setSideCropOpen(side);
+  };
+
+  const updateSideSlot = (side: 'l' | 'r', patch: Partial<RelSideSlot>) => {
+    setSideSlots(prev => ({ ...prev, [side]: { ...prev[side], ...patch } }));
+  };
+
   const save = async () => {
     if (!name.trim()) { toast('자관 이름을 입력해 주세요'); return; }
     // 페이지 주소 (v1.9 / 수정도 가능 v2.0) — 유효성·중복 검사
@@ -338,6 +390,25 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       if (existingIds?.includes(slug)) { toast('이미 사용 중인 주소입니다 — 다른 주소를 입력해 주세요'); return; }
     }
     const artIds = await Promise.all(arts.map(a => (a.file ? resolveImageRef({ kind: 'file', file: a.file }) : Promise.resolve(a.ref!))));
+    const thumbId = thumbDraft
+      ? (thumbDraft.file ? await resolveImageRef({ kind: 'file', file: thumbDraft.file }) : thumbDraft.ref)
+      : undefined;
+    const savedSideSlots = await Promise.all((['l', 'r'] as const).map(async side => {
+      const slot = sideSlots[side];
+      const draft = sideDrafts[side];
+      const imgId = draft
+        ? (draft.file ? await resolveImageRef({ kind: 'file', file: draft.file }) : draft.ref)
+        : undefined;
+      const saved = {
+        ...slot,
+        imgId,
+        crop: draft?.crop,
+        name: slot?.name?.trim() || undefined,
+        quote: slot?.quote?.trim() || undefined,
+      };
+      return [side, Object.values(saved).some(value => value !== undefined && value !== '') ? saved : undefined] as const;
+    }));
+    const sideSlotValues = Object.fromEntries(savedSideSlots) as { l?: RelSideSlot; r?: RelSideSlot };
     const headerImage: ImageSource | undefined = headerFile ? { kind: 'file', file: headerFile } : headerUrl ? { kind: 'url', url: headerUrl } : undefined;
     onSave({
       // 수정에서 정한 주소는 별명으로 (v2.0) — 신규는 rels/new가 이 값을 id로 쓴다
@@ -346,7 +417,13 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       catchphrase: catchphrase.trim(),
       kind, visibility, fontId, bodyFontId,
       arts: artIds,
-      thumbCrop,
+      thumbId,
+      thumbCrop: thumbDraft ? thumbDraft.crop : thumbCrop,
+      ddayDate: ddayDate || undefined,
+      sideSlots: sideSlotValues.l || sideSlotValues.r ? sideSlotValues : undefined,
+      freeBlocks: freeBlocks.length ? freeBlocks : undefined,
+      logUrl: auObj ? undefined : (logUrl.trim() || undefined),
+      lorebookUrl: auObj ? undefined : (lorebookUrl.trim() || undefined),
       headerImgId: headerImage ? await resolveImageRef(headerImage) : (headerRemoved ? undefined : initHeaderId),
       headerCrop: headerRemoved ? undefined : headerCrop,
       headerRemoved,
@@ -483,6 +560,97 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           ＋ ADD ART {arts.length === 0 && '(첫 장 등록 시 썸네일 크롭 지정)'}
         </button>
         <button type="button" className="btn btn-ghost" onClick={() => artSource.open()}>🔗 이미지 주소 붙여넣기</button>
+
+        {!auObj && (
+          <div style={{ display: 'grid', gap: 7 }}>
+            <label className="k-label" style={{ margin: 0 }}>리스트 썸네일</label>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ width: 120, aspectRatio: '4/3', borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)' }}>
+                {thumbDraft
+                  ? <RelDraftPreview draft={thumbDraft} crop={thumbDraft.crop} />
+                  : arts[0] ? <ArtThumb item={arts[0]} crop={thumbCrop} />
+                  : <div className="ph" style={{ width: '100%', height: '100%' }} />}
+              </div>
+              <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
+                {...fileDrop(fl => { const f = fl[0]; if (f) {
+                  setThumbDraft({ file: f, url: URL.createObjectURL(f) }); setThumbCropOpen(true);
+                } })}>
+                {thumbDraft ? '교체' : '↑ 업로드'}
+                <input type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) {
+                    setThumbDraft({ file: f, url: URL.createObjectURL(f) }); setThumbCropOpen(true);
+                  } }} />
+              </label>
+              <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                onClick={() => thumbSource.open()}>🔗 주소</button>
+              {thumbDraft && <>
+                <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                  onClick={() => setThumbCropOpen(true)}>✂ 크롭</button>
+                <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                  onClick={() => setThumbDraft(undefined)}>제거</button>
+              </>}
+            </div>
+            <p className="hint" style={{ margin: 0 }}>따로 지정하지 않으면 첫 번째 아트를 목록 썸네일로 사용합니다.</p>
+          </div>
+        )}
+
+        {kind === 'pair' && (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <label className="k-label" style={{ margin: 0 }}>양옆 세로컷 · 인용구</label>
+            {(['l', 'r'] as const).map(side => {
+              const draft = sideDrafts[side];
+              const source = side === 'l' ? leftSideSource : rightSideSource;
+              return (
+                <div key={side} style={{ display: 'grid', gridTemplateColumns: '96px 1fr', gap: 10, padding: 10, border: '1px solid var(--line)', borderRadius: 9 }}>
+                  <div style={{ width: 96, aspectRatio: '3/4', borderRadius: 7, overflow: 'hidden', position: 'relative' }}>
+                    <RelDraftPreview draft={draft} />
+                  </div>
+                  <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>
+                    <b style={{ fontSize: 11.5 }}>{side === 'l' ? '왼쪽' : '오른쪽'} · 멤버가 없을 때 표시</b>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                      <label className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
+                        {...fileDrop(fl => { const f = fl[0]; if (f) setSideImage(side, f); })}>
+                        {draft ? '교체' : '↑ 업로드'}
+                        <input type="file" accept="image/*" style={{ display: 'none' }}
+                          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setSideImage(side, f); }} />
+                      </label>
+                      <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }}
+                        onClick={() => source.open()}>🔗 주소</button>
+                      {draft && <>
+                        <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }}
+                          onClick={() => setSideCropOpen(side)}>✂ 크롭</button>
+                        <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }}
+                          onClick={() => {
+                            setSideDrafts(prev => ({ ...prev, [side]: undefined }));
+                            updateSideSlot(side, { imgId: undefined, crop: undefined });
+                          }}>이미지 제거</button>
+                      </>}
+                    </div>
+                    {(sideSlots[side] || draft) && (
+                      <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5, justifySelf: 'start' }}
+                        onClick={() => {
+                          setSideDrafts(prev => ({ ...prev, [side]: undefined }));
+                          setSideSlots(prev => ({ ...prev, [side]: undefined }));
+                        }}>자리 설정 지우기</button>
+                    )}
+                    <KInput placeholder="이름 (선택)" value={sideSlots[side]?.name ?? ''}
+                      onChange={e => updateSideSlot(side, { name: e.target.value })} />
+                    <KInput placeholder="인용구 (선택)" value={sideSlots[side]?.quote ?? ''}
+                      onChange={e => updateSideSlot(side, { quote: e.target.value })} />
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className="cp-lb">글씨</span>
+                      <ColorField value={sideSlots[side]?.quoteColor ?? '#d7dae0'}
+                        onChange={value => updateSideSlot(side, { quoteColor: value })} />
+                      <span className="cp-lb">따옴표</span>
+                      <ColorField value={sideSlots[side]?.quoteMarkColor ?? '#c96a73'}
+                        onChange={value => updateSideSlot(side, { quoteMarkColor: value })} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* 전신 이미지 (v1.9) — 페어 좌/우 캐릭터, 미리보기에서 드래그=크기 · 클릭=앞으로 */}
         {pairMembers.length > 0 && (
@@ -672,6 +840,18 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           <div style={{ display: 'grid', gap: 9 }}>
             <KInput placeholder="자관 이름" value={name} onChange={e => setName(e.target.value)}
               style={{ fontFamily: familyOf(fontId), letterSpacing: '.1em' }} />
+            <div>
+              <label className="k-label" style={{ marginBottom: 5 }}>디데이 날짜</label>
+              <KInput type="date" value={ddayDate} onChange={e => setDdayDate(e.target.value)} />
+              {auObj && <p className="hint" style={{ margin: '5px 0 0' }}>비우면 자관 기본 디데이를 사용합니다.</p>}
+            </div>
+            {!auObj && (
+              <div style={{ display: 'grid', gap: 7 }}>
+                <label className="k-label" style={{ margin: 0 }}>게시판 링크</label>
+                <KInput placeholder="LOG URL" value={logUrl} onChange={e => setLogUrl(e.target.value)} />
+                <KInput placeholder="LOREBOOK URL" value={lorebookUrl} onChange={e => setLorebookUrl(e.target.value)} />
+              </div>
+            )}
             {/* AU별 자관명 (v2.0 사용자 요청) — 이 AU를 볼 때만 쓰는 이름. 비우면 위 이름 그대로 */}
             {auObj && (
               <div>
@@ -699,6 +879,31 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 )}
               </div>
             )}
+            <div>
+              <label className="k-label" style={{ marginBottom: 5 }}>하단 HTML 프리 스페이스</label>
+              <p className="hint" style={{ margin: '0 0 8px' }}>입력한 HTML은 출력 시 안전하게 정리됩니다.</p>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {freeBlocks.map((block, index) => (
+                  <div key={block.id} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 8, display: 'grid', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                      <KInput placeholder="블록 제목 (선택)" value={block.title ?? ''}
+                        onChange={e => setFreeBlocks(items => items.map((item, i) => i === index ? { ...item, title: e.target.value } : item))} />
+                      <button type="button" className="btn btn-ghost" disabled={index === 0}
+                        onClick={() => setFreeBlocks(items => { const next = [...items]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}>↑</button>
+                      <button type="button" className="btn btn-ghost" disabled={index === freeBlocks.length - 1}
+                        onClick={() => setFreeBlocks(items => { const next = [...items]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>↓</button>
+                      <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => items.filter((_, i) => i !== index))}>✕</button>
+                    </div>
+                    <KTextarea placeholder="<p>HTML</p>" value={block.html}
+                      onChange={e => setFreeBlocks(items => items.map((item, i) => i === index ? { ...item, html: e.target.value } : item))}
+                      style={{ minHeight: 90, fontFamily: 'monospace' }} />
+                  </div>
+                ))}
+                <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => [...items, { id: newId(), title: '', html: '' }])}>
+                  ＋ 블록 추가
+                </button>
+              </div>
+            </div>
             <KInput placeholder="캐치프레이즈" value={catchphrase} onChange={e => setCatchphrase(e.target.value)} />
             {/* 자관명·캐치프레이즈 글씨색 (v1.9 사용자 요청) — 기본은 테마색. AU마다 따로 정할 수 있다 (v2.0) */}
             {(
@@ -877,12 +1082,28 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           onClose={() => setCropOpen(false)}
           onApply={c => { setThumbCrop(c); setCropOpen(false); }} />
       )}
+      {thumbCropOpen && thumbDraft && (
+        <RelDraftCrop open draft={thumbDraft} aspect="4:3"
+          onClose={() => setThumbCropOpen(false)}
+          onApply={crop => { setThumbDraft(prev => prev ? { ...prev, crop } : undefined); setThumbCropOpen(false); }} />
+      )}
+      {sideCropOpen && sideDrafts[sideCropOpen] && (
+        <RelDraftCrop open draft={sideDrafts[sideCropOpen]} aspect="3:4"
+          onClose={() => setSideCropOpen(null)}
+          onApply={crop => {
+            setSideDrafts(prev => ({ ...prev, [sideCropOpen]: { ...prev[sideCropOpen], crop } }));
+            setSideCropOpen(null);
+          }} />
+      )}
       {/* 아트 원본 보기 — 아직 저장 전 파일은 url, 저장된 것은 ref (Lightbox가 둘 다 처리) */}
       {lb !== null && (
         <Lightbox srcs={arts.map(a => a.url ?? a.ref ?? '')} index={lb} onClose={() => setLb(null)} />
       )}
       {del.element}
       {artSource.element}
+      {thumbSource.element}
+      {leftSideSource.element}
+      {rightSideSource.element}
       {headerSource.element}
     </div>
   );
@@ -918,4 +1139,13 @@ function FirstArtCrop({ open, item, crop, onClose, onApply }: {
   const src = item.url || loadedUrl;
   if (!src) return null;
   return <CropEditor open={open} src={src} aspect="4:3" initial={crop} onClose={onClose} onApply={onApply} />;
+}
+
+function RelDraftCrop({ open, draft, aspect, onClose, onApply }: {
+  open: boolean; draft?: RelImageDraft; aspect: '3:4' | '4:3'; onClose: () => void; onApply: (crop: CropValue) => void;
+}) {
+  const loaded = useBlobUrl(draft?.ref);
+  const src = draft?.url ?? loaded;
+  if (!open || !src) return null;
+  return <CropEditor open src={src} aspect={aspect} initial={draft?.crop} onClose={onClose} onApply={onApply} />;
 }

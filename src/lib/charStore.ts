@@ -316,6 +316,15 @@ export function fullShadow(color?: string, strength?: number, geom = '0 8px 18px
   return `drop-shadow(${geom} rgba(${r},${g},${b},${a}))`;
 }
 
+export interface RelSideSlot {
+  imgId?: string;
+  crop?: import('@/components/ui/CropEditor').CropValue;
+  quote?: string;
+  quoteColor?: string;
+  quoteMarkColor?: string;
+  name?: string;
+}
+
 export interface RelAu {
   id: string;
   label: string;
@@ -348,6 +357,11 @@ export interface RelAu {
    *  원본(base)의 설정은 aus의 base 항목에 담긴다 */
   hideRp?: boolean;
   hideLog?: boolean;
+  hideTimeline?: boolean;
+  hideQa?: boolean;
+  ddayDate?: string;
+  sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
+  freeBlocks?: { id: string; title?: string; html: string }[];
 }
 
 export interface Relation {
@@ -386,6 +400,11 @@ export interface Relation {
   pageBgAngle?: number;
   thumbId?: string;              // 리스트 썸네일 (IndexedDB, 4:3 크롭)
   thumbCrop?: import("@/components/ui/CropEditor").CropValue;
+  ddayDate?: string;             // 디데이 기준일 (YYYY-MM-DD)
+  sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
+  freeBlocks?: { id: string; title?: string; html: string }[];
+  logUrl?: string;
+  lorebookUrl?: string;
   members: RelMember[];          // 2인 = 좌/우, 3인+ = 다인 리스트
   visibility: Visibility;
   thumbClass: string;
@@ -407,6 +426,36 @@ export interface Relation {
    *  **화면에서 가리는 것일 뿐 완전한 차단이 아니다** — 답변은 공개로 저장돼 있어 주소를 직접
    *  다루는 사람에게는 보일 수 있다. 설정 화면에도 그대로 적어 둔다. */
   qaHide?: boolean;
+}
+
+const parseRelDate = (dateStr?: string): Date | undefined => {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return undefined;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const target = new Date(0);
+  target.setUTCFullYear(year, month - 1, day);
+  target.setUTCHours(0, 0, 0, 0);
+  if (target.getUTCFullYear() !== year || target.getUTCMonth() !== month - 1 || target.getUTCDate() !== day) return undefined;
+  return target;
+};
+
+/** 디데이 계산은 시간대 영향을 받지 않도록 UTC 날짜 단위로 계산한다 */
+export function relDday(dateStr?: string, now = new Date()): string | undefined {
+  const target = parseRelDate(dateStr);
+  if (!target) return undefined;
+  const today = new Date(0);
+  today.setUTCFullYear(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  today.setUTCHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - target.getTime()) / 86400000);
+  return `D${days < 0 ? `-${Math.abs(days)}` : `+${days}`}`;
+}
+
+/** 디데이 날짜를 영문 월 표기로 표시한다 */
+export function relDdayDate(dateStr?: string): string | undefined {
+  const date = parseRelDate(dateStr);
+  if (!date) return undefined;
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear();
+  return `${date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()} ${String(day).padStart(2, '0')}, ${year}`;
 }
 
 export const CHAR_SEED: Character[] = [];
