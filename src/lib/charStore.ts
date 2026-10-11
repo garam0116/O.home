@@ -258,6 +258,7 @@ export function auMember(m: RelMember, au?: RelAu): RelMember {
 export interface RelAuStyle {
   nameColor?: string;
   cpColor?: string;
+  ddayColor?: string;
   cpTagBg?: string;
   cpTagFg?: string;
   nameShadowColor?: string;
@@ -271,7 +272,7 @@ export interface RelAuStyle {
 export function auStyle(rel: Relation, au?: RelAu): RelAuStyle {
   const s = au?.style;
   const base: RelAuStyle = {
-    nameColor: rel.nameColor, cpColor: rel.cpColor,
+    nameColor: rel.nameColor, cpColor: rel.cpColor, ddayColor: rel.ddayColor,
     cpTagBg: rel.cpTagBg, cpTagFg: rel.cpTagFg,
     nameShadowColor: rel.nameShadowColor, nameShadow: rel.nameShadow,
     headerBgG1: rel.headerBgG1, headerBgG2: rel.headerBgG2, headerBgAngle: rel.headerBgAngle,
@@ -284,6 +285,9 @@ export function auStyle(rel: Relation, au?: RelAu): RelAuStyle {
   // 색 하나만 AU 값이고 나머지는 자관 값이면 어울리지 않는 조합이 나온다
   if (s.nameColor !== undefined || s.cpColor !== undefined) {
     out.nameColor = s.nameColor; out.cpColor = s.cpColor;
+  }
+  if (s.ddayColor !== undefined) {
+    out.ddayColor = s.ddayColor;
   }
   if (s.cpTagBg !== undefined || s.cpTagFg !== undefined) {
     out.cpTagBg = s.cpTagBg; out.cpTagFg = s.cpTagFg;
@@ -384,6 +388,7 @@ export interface Relation {
   illuOn?: string;               // 전신/일러 스위치 선택색 (미지정: 포인트색)
   nameColor?: string;            // 자관명(히어로 타이틀) 글씨색 (v1.9 — 미지정: 테마)
   cpColor?: string;              // 캐치프레이즈 글씨색 (미지정: 테마)
+  ddayColor?: string;            // 디데이 글씨색 — 미지정: 기존 var(--faint) (v2.0 사용자 요청)
   cpTagBg?: string;              // CP/NCP 뱃지 배경색 (v2.0 — 미지정: 기본 pill)
   cpTagFg?: string;              // CP/NCP 뱃지 글씨색 (v2.0)
   nameShadowColor?: string;      // 자관명 그림자 색 (v2.0 — 미지정: 검정)

@@ -1007,7 +1007,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rel-card .nm{padding:13px 16px;position:relative}
 .rel-card .nm b{font-family:var(--serif);font-size:calc(16px*var(--fs,1));letter-spacing:.18em;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rel-card .nm span{font-size:calc(11px*var(--fs,1));color:var(--faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rel-card .nm .rel-dday{letter-spacing:.08em}
+.rel-card .nm .rel-dday{display:inline;font-size:calc(11px*var(--fs,1));font-weight:400;color:var(--faint);letter-spacing:.08em}
 .rel-card-links{display:flex;gap:10px;margin-top:8px;font-size:10px;letter-spacing:.08em;color:var(--faint)}
 .rel-card-links a{color:inherit;text-decoration:none}
 .rel-card-links a:hover{color:var(--ink);text-decoration:underline}
@@ -1031,7 +1031,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
    같은 값만큼 들여써서 되돌린다 (v2.0 사용자 발견 — 「묘하게 가운데가 아닌」 원인 · 실측으로 값 확정) */
 .rel-hero h1{font-family:var(--serif);font-size:calc(64px*var(--fs,1));font-weight:600;letter-spacing:.3em;text-indent:.3em;text-shadow:0 4px 30px rgba(0,0,0,.6)}
 .rel-hero .catch{font-size:calc(11px*var(--fs,1));letter-spacing:.7em;text-indent:.7em;color:#b9bec7;margin-top:2px}
-.rel-dday-detail{margin-top:9px;color:var(--faint);font-size:calc(10px*var(--fs,1));letter-spacing:.14em}
+.rel-dday-detail{margin-top:9px;margin-bottom:10px;color:var(--faint);font-size:calc(10px*var(--fs,1));letter-spacing:.14em} /* 인용구와 간격 (v2.0 사용자 요청) */
 .rel-body{display:grid;grid-template-columns:320px 1fr 320px;gap:16px;margin-top:26px;align-items:start}
 /* 간단 프로필 카드 */
 .mini-prof{padding:0;overflow:hidden}

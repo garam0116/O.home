@@ -43,6 +43,7 @@ export interface RelFormValue {
   illuOn?: string;           // 전신/일러 스위치 선택색 (미지정: 포인트색)
   nameColor?: string;        // 자관명(히어로 타이틀) 글씨색 (v1.9 사용자 요청 — 미지정: 테마)
   cpColor?: string;          // 캐치프레이즈 글씨색 (미지정: 테마)
+  ddayColor?: string;        // 디데이 글씨색 (v2.0 사용자 요청 — 미지정: var(--faint))
   cpTagBg?: string;          // CP/NCP 뱃지 배경색 (v2.0 사용자 요청)
   cpTagFg?: string;          // CP/NCP 뱃지 글씨색
   nameShadowColor?: string;  // 자관명 그림자 색 (v2.0 사용자 요청)
@@ -67,6 +68,9 @@ export interface RelFormValue {
   fullFront?: string;                          // 앞에 보일 캐릭터 id
   auName?: string;           // AU별 자관명 (v2.0 사용자 요청 — AU 편집일 때만)
   qaHide?: boolean;          // 문답 답변 숨기기 (v2.0 사용자 요청)
+  hideTimeline?: boolean;    // 섹션 숨김 — 원본/base 포함 AU별 (v2.0 사용자 요청)
+  hideRp?: boolean;
+  hideLog?: boolean;
   pickedCharIds: string[];   // 등록 시 연동할 내 캐릭터 (수정 모드에선 빈 배열)
 }
 
@@ -195,6 +199,10 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const { fonts, familyOf } = useFonts();
   const isNew = !initial;
   const auObj = auId ? initial?.aus.find(a => a.id === auId) : undefined;
+  const sectionAu = auObj ?? initial?.aus.find(a => a.id === 'base');
+  const [hideTimeline, setHideTimeline] = useState(!!sectionAu?.hideTimeline);
+  const [hideRp, setHideRp] = useState(!!sectionAu?.hideRp);
+  const [hideLog, setHideLog] = useState(!!sectionAu?.hideLog);
 
   const [kind, setKind] = useState<'pair' | 'multi'>(initial?.kind ?? 'pair');
   const [name, setName] = useState(initial?.name ?? '');
@@ -261,6 +269,9 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const [txtCustom, setTxtCustom] = useState(!!(st?.nameColor || st?.cpColor));
   const [nameColor, setNameColor] = useState(st?.nameColor ?? '#e8eaee');
   const [cpColor, setCpColor] = useState(st?.cpColor ?? '#8a8f98');
+  // 디데이 글씨색은 별도로 지정 (v2.0 사용자 요청) — 미지정이면 기존 기본색
+  const [ddayCustom, setDdayCustom] = useState(!!st?.ddayColor);
+  const [ddayColor, setDdayColor] = useState(st?.ddayColor ?? '#8a8f98');
   // CP/NCP 뱃지 색 (v2.0 사용자 요청) — 미지정이면 기본 pill 색
   const [tagCustom, setTagCustom] = useState(!!(st?.cpTagBg || st?.cpTagFg));
   const [cpTagBg, setCpTagBg] = useState(st?.cpTagBg ?? '#eef0f2');
@@ -432,6 +443,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       illuOn: illuCustom ? illuOn : undefined,
       nameColor: txtCustom ? nameColor : undefined,
       cpColor: txtCustom ? cpColor : undefined,
+      ddayColor: ddayCustom ? ddayColor : undefined,
       nameShadowColor: shadowCustom ? nameShadowColor : undefined,
       nameShadow: shadowCustom ? nameShadow : undefined,
       headerBgG1: headerBgCustom ? headerBgG1 : undefined,
@@ -448,6 +460,9 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       cp,
       auName: auObj ? auName.trim() : undefined,
       qaHide: qaHide || undefined,
+      hideTimeline: hideTimeline || undefined,
+      hideRp: hideRp || undefined,
+      hideLog: hideLog || undefined,
       fulls: pairMembers.length
         ? Object.fromEntries(await Promise.all(pairMembers.map(async m => {
           const d = fulls[m.charId];
@@ -919,6 +934,16 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 )}
               </div>
             )}
+            {/* 디데이 글씨색 (v2.0 사용자 요청) — 자관명·캐치프레이즈와 따로 지정 */}
+            <div>
+              <KCheck label="디데이 색 직접 지정" checked={ddayCustom} onChange={setDdayCustom} />
+              {ddayCustom && (
+                <div className="cf-row" style={{ marginTop: 8 }}>
+                  <span className="cp-lb">디데이</span>
+                  <ColorField value={ddayColor} onChange={setDdayColor} />
+                </div>
+              )}
+            </div>
             {/* 그림자 (v2.0 사용자 요청) — 어떤 색으로 얼마나 진하게 깔릴지. 자관명과 전신에 함께 걸린다 */}
             {(
               <div>
@@ -1006,6 +1031,13 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   ? '이 페이지에 들어가면 홈페이지 전체 팔레트가 이 색 기준으로 전환되고, 벗어나면 원래 테마로 돌아옵니다'
                   : '이 페이지도 홈페이지 테마를 그대로 사용합니다'}
               </p>
+            </div>
+            {/* 섹션 표시 (v2.0 사용자 요청) — 원본 또는 편집 중인 AU에만 적용 */}
+            <div style={{ display: 'grid', gap: 7 }}>
+              <label className="k-label" style={{ margin: 0 }}>섹션 표시</label>
+              <KCheck label="타임라인 숨김" checked={hideTimeline} onChange={setHideTimeline} />
+              <KCheck label="역극 리스트 숨김" checked={hideRp} onChange={setHideRp} />
+              <KCheck label="로그 리스트 숨김" checked={hideLog} onChange={setHideLog} />
             </div>
             {/* 문답 답변 가리기 (v2.0 사용자 요청) — 방문자에게 답변 내용을 안 보이게.
                 자관 전체 설정이라 AU 편집에서는 두지 않는다 */}
