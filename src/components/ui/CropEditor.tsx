@@ -51,7 +51,7 @@ export function CropImg({ src, crop, alt }: { src: string; crop?: CropValue; alt
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt ?? ''} draggable={false} referrerPolicy="no-referrer"
+      <img src={src} alt={alt ?? ''} loading="lazy" decoding="async" draggable={false} referrerPolicy="no-referrer"
         onLoad={e => { const im = e.currentTarget; natRef.current = { w: im.naturalWidth, h: im.naturalHeight }; compute(); }}
         style={wide == null ? { opacity: 0 } : coverImgStyle(crop, wide)} />
     </div>

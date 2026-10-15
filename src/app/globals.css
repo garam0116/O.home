@@ -64,6 +64,11 @@ body::before{
   background-image:var(--bg-image,none);background-size:cover;background-position:center;
   filter:blur(var(--bg-blur,0px));pointer-events:none;
 }
+@media (hover:none) and (pointer:coarse){
+  body{background-attachment:scroll}
+  body::before{inset:0;filter:none}
+  body .topbar,body .bgm{backdrop-filter:none;-webkit-backdrop-filter:none}
+}
 button{font-family:inherit;cursor:var(--cur-pointer,pointer);border:none;background:none;color:inherit}
 /* 브라우저 기본이 pointer인 요소도 커스텀 커서 변수 경유 (5.1 v1.9) */
 a,select,summary{cursor:var(--cur-pointer,pointer)}
@@ -1556,6 +1561,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 제목 칸 안에서 태그를 오른쪽 끝에 (v2.0 사용자 요청 — 작성자 왼쪽).
    칸을 따로 만들면 행마다 그리드가 독립이라 작성자 열이 어긋난다 — 제목 칸 안에서 민다 */
 .brow .tcell{min-width:0;display:flex;align-items:center;gap:10px}
+.board-thumb{position:relative;flex-shrink:0;width:80px;aspect-ratio:16/9;border-radius:6px;overflow:hidden}
 .brow .tcell>b{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .brow .tags{flex-shrink:0;max-width:45%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:calc(10.5px*var(--fs,1))}
 .brow .tags i{font-style:normal;color:color-mix(in srgb,var(--accent) 65%,var(--faint));margin-left:7px}
@@ -1572,6 +1578,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 게시판 티켓형 스킨 (5.2 v1.9) — 왼쪽 16:9 썸네일 + 절취선 + 오른쪽 글 정보 */
 .bticket{display:grid;grid-template-columns:200px 1fr;background:var(--panel);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;cursor:var(--cur-pointer,pointer);box-shadow:var(--sh-sm);transition:.2s;position:relative}
 .bticket:hover{transform:translateY(-2px)}
+.bticket.no-thumb{grid-template-columns:1fr}
 .bticket .bt-thumb{position:relative;min-height:calc(200px*9/16);overflow:hidden;border-right:2px dashed var(--line)}
 .bticket .bt-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .bticket .bt-ph{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(135deg,#eceef1,#dfe2e7);font-family:var(--serif);font-size:calc(34px*var(--fs,1));color:var(--faint);letter-spacing:.1em}
@@ -1581,8 +1588,19 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .bticket .bt-meta{margin-top:auto;font-size:calc(11px*var(--fs,1));color:var(--faint);letter-spacing:.05em}
 @media(max-width:620px){
   .bticket{grid-template-columns:118px 1fr}
+  .bticket.no-thumb{grid-template-columns:1fr}
   .bticket .bt-thumb{min-height:calc(118px*9/16)}
   .bticket .bt-title{font-size:calc(14.5px*var(--fs,1))}
+}
+.board-post{padding:26px 28px}
+.board-comments-body{padding:16px 18px}
+@media(max-width:620px){
+  .board-detail>.panel{background:none;border:0;border-radius:0;box-shadow:none}
+  .board-post,.board-comments-body{padding:0}
+  .board-detail .cmt-input{padding-left:0;padding-right:0;background:none}
+  .brow{grid-template-columns:48px minmax(0,1fr) 64px;gap:8px;padding:12px}
+  .brow .dt{display:none}
+  .board-thumb{width:56px}
 }
 /* 본문 렌더 (MD/HTML 공통) */
 .post-body{font-size:calc(14.5px*var(--fs,1));line-height:1.85;color:#2c3037;word-break:break-word}

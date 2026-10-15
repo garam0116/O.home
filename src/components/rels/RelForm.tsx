@@ -931,9 +931,9 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                         onClick={() => setFreeBlocks(items => { const next = [...items]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>↓</button>
                       <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => items.filter((_, i) => i !== index))}>✕</button>
                     </div>
-                    <KTextarea placeholder="<p>HTML</p>" value={block.html}
+                    <KTextarea autoGrow={false} placeholder="<p>HTML</p>" value={block.html}
                       onChange={e => setFreeBlocks(items => items.map((item, i) => i === index ? { ...item, html: e.target.value } : item))}
-                      style={{ minHeight: 90, fontFamily: 'monospace' }} />
+                      style={{ height: 220, minHeight: 220, maxHeight: 220, overflowY: 'auto', resize: 'none', fontFamily: 'monospace' }} />
                   </div>
                 ))}
                 <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => [...items, { id: newId(), title: '', html: '' }])}>
