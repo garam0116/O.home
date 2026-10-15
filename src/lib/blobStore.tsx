@@ -191,23 +191,26 @@ export async function getBlob(id: string): Promise<Blob | null> {
 /* 세션 내 objectURL 캐시 (id → url) */
 const urlCache = new Map<string, string>();
 
+const isDirectUrl = (ref: string) =>
+  /^(https?:|data:|\/)/i.test(ref) || (!ref.includes(':') && /[/.]/.test(ref));
+
 /**
  * 파일 참조 → 표시 가능한 URL.
- * - http(s)/data: 는 그대로
+ * - http(s)/data: 및 상대 이미지 경로는 그대로
  * - blob: 은 새로고침 후 죽은 참조 → undefined (플레이스홀더 폴백)
  * - 그 외는 IndexedDB 파일 id로 간주해 로드
  */
 export function useBlobUrl(ref?: string): string | undefined {
   const [url, setUrl] = useState<string | undefined>(() => {
     if (!ref) return undefined;
-    if (/^(https?:|data:)/i.test(ref)) return ref;
+    if (isDirectUrl(ref)) return ref;
     if (ref.startsWith('blob:')) return undefined;
     return urlCache.get(ref);
   });
 
   useEffect(() => {
     if (!ref) { setUrl(undefined); return; }
-    if (/^(https?:|data:)/i.test(ref)) { setUrl(ref); return; }
+    if (isDirectUrl(ref)) { setUrl(ref); return; }
     if (ref.startsWith('blob:')) { setUrl(undefined); return; }
     if (urlCache.has(ref)) { setUrl(urlCache.get(ref)); return; }
     let alive = true;

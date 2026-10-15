@@ -362,8 +362,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async fetchAllSettings() {
-      const snap = await withLimit(getDocs(collection(db, 'settings')), 8000);
-      if (snap === TIMEOUT) throw new Error('사이트 설정을 읽는 시간이 초과되었습니다');
+      const snap = await getDocs(collection(db, 'settings'));
       const out: Record<string, unknown> = {};
       snap.docs.forEach(d => { out[d.id] = (d.data() as { value: unknown }).value; });
       return out;
