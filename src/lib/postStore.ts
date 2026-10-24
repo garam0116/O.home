@@ -1,7 +1,7 @@
 'use client';
 // 게시판·방명록 타입 + 공용 목록 저장소 훅
 // v2.0: 서버(Supabase) 연결이 있으면 DB, 없으면 localStorage — 화면 코드는 동일하다.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type { PostMode } from './sanitize';
 import { isServerMode } from './supabase';
 import { TABLE_OF, fetchList, syncList, subscribeTable } from './db';
@@ -92,6 +92,112 @@ export const BOARD_CATEGORIES = ['잡담', '설정', '합작', '기타'];
 
 export const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+type ListRow = { id?: string };
+const EMPTY_LIST = { rows: [] as ListRow[], loaded: false };
+type ListStore = {
+  snapshot: typeof EMPTY_LIST;
+  listeners: Set<() => void>;
+  subscription: (() => void) | null;
+  refCount: number;
+  inflight: Promise<void> | null;
+  reqId: number;
+  generation: number;
+  writes: number;
+  dirty: boolean;
+  debounce: ReturnType<typeof setTimeout> | null;
+  release: ReturnType<typeof setTimeout> | null;
+};
+const listStores = new Map<string, ListStore>();
+const getListStore = (table: string): ListStore => {
+  let store = listStores.get(table);
+  if (!store) {
+    store = {
+      snapshot: EMPTY_LIST, listeners: new Set(), subscription: null, refCount: 0,
+      inflight: null, reqId: 0, generation: 0, writes: 0, dirty: false,
+      debounce: null, release: null,
+    };
+    listStores.set(table, store);
+  }
+  return store;
+};
+const publishList = (store: ListStore, rows: ListRow[], loaded = store.snapshot.loaded) => {
+  store.snapshot = { rows, loaded };
+  store.listeners.forEach(notify => notify());
+};
+
+// 두 질의의 동시 알림·연속 변경을 합친다 — Supabase realtime에도 같은 디바운스를 적용한다.
+function scheduleList(table: string, store: ListStore) {
+  if (store.debounce) clearTimeout(store.debounce);
+  store.debounce = setTimeout(() => {
+    store.debounce = null;
+    void loadList(table, store);
+  }, 200);
+}
+
+function loadList(table: string, store: ListStore): Promise<void> {
+  if (store.inflight || store.writes) {
+    store.dirty = true;
+    return store.inflight ?? Promise.resolve();
+  }
+  store.dirty = false;
+  // 순번은 훅이 아니라 공유 목록에 둔다. 늦게 도착한 조회가 최신 낙관적 갱신을 덮지 못한다.
+  const id = ++store.reqId;
+  const request = fetchList<{ id: string }>(table)
+    .then(rows => { if (id === store.reqId) publishList(store, rows, true); })
+    .catch(() => { if (id === store.reqId) publishList(store, store.snapshot.rows, true); })
+    .finally(() => {
+      if (store.inflight !== request) return;   // 인증 변경 전 요청은 새 요청에 관여하지 않는다
+      store.inflight = null;
+      if (store.dirty && store.subscription) scheduleList(table, store);
+    });
+  store.inflight = request;
+  return request;
+}
+
+function retainList(table: string, store: ListStore, notify: () => void) {
+  store.listeners.add(notify);
+  if (store.release) { clearTimeout(store.release); store.release = null; }
+  if (store.refCount++ === 0) {
+    store.subscription ??= subscribeTable(table, () => scheduleList(table, store));
+    // 재진입은 캐시를 즉시 보여 주고 백그라운드 갱신. 진행 중 조회는 그대로 공유한다.
+    if (!store.inflight) void loadList(table, store);
+  }
+  return () => {
+    store.listeners.delete(notify);
+    if (--store.refCount) return;
+    // 페이지 왕복마다 연결을 다시 만들지 않도록 45초간 구독과 캐시를 유지한다.
+    store.release = setTimeout(() => {
+      store.release = null;
+      store.subscription?.();
+      store.subscription = null;
+      if (store.debounce) clearTimeout(store.debounce);
+      store.debounce = null;
+      store.dirty = false;
+    }, 45000);
+  };
+}
+
+/** 권한이 바뀌면 비공개 행을 남기지 않고, readSets도 새 사용자 기준으로 다시 만든다. */
+export function invalidateListCache() {
+  listStores.forEach((store, table) => {
+    ++store.reqId;
+    ++store.generation;
+    store.subscription?.();
+    store.subscription = null;
+    if (store.debounce) clearTimeout(store.debounce);
+    if (store.release) clearTimeout(store.release);
+    store.debounce = store.release = null;
+    store.inflight = null;
+    store.writes = 0;
+    store.dirty = false;
+    publishList(store, [], false);
+    if (store.refCount) {
+      store.subscription = subscribeTable(table, () => scheduleList(table, store));
+      void loadList(table, store);
+    }
+  });
+}
+
 /** 목록 저장소 훅 — 서버 모드면 DB, 아니면 localStorage (v2.0)
  *
  *  화면 코드는 예전 그대로 `[목록, 통째로 저장, 로드완료]`를 쓴다.
@@ -101,37 +207,19 @@ export const newId = () => Date.now().toString(36) + Math.random().toString(36).
 export function useLocalList<T extends { id?: string }>(key: string, seed: T[]): [T[], (next: T[]) => void, boolean] {
   const server = isServerMode() && !!TABLE_OF[key];
   const table = TABLE_OF[key];
+  const store = server ? getListStore(table) : null;
+  const generation = store?.generation;
+  const subscribe = useCallback((notify: () => void) =>
+    store ? retainList(table, store, notify) : () => {}, [store, table]);
+  const getSnapshot = useCallback(() => store?.snapshot ?? EMPTY_LIST, [store]);
+  const shared = useSyncExternalStore(subscribe, getSnapshot, () => EMPTY_LIST);
   // 서버 모드에선 시드를 화면에 내보내지 않는다 (v2.0 사용자 발견) — 서버 목록을 받아오기 전까지
   // 예시 데이터가 잠깐 보였다 사라지는 깜빡임의 원인이었다. 시드는 로컬 모드의 시작값일 뿐이고,
   // 서버 모드에서 시드를 기준으로 삼으면 저장할 때 없는 행을 지우려 드는 문제도 있었다.
   const [list, setList] = useState<T[]>(() => (server ? [] : seed));
   const [loaded, setLoaded] = useState(false);
-  const latest = useRef<T[]>(list);          // diff 기준이 되는 "DB에 있다고 아는" 상태
-  latest.current = list;
-  // 순번 — 서버 fetch가 여러 건 동시에 떠 있을 때, 늦게 시작한 것보다 먼저 도착한 낡은 결과가
-  // 화면을 덮어쓰지 않게 한다 (v2.0 사용자 발견 — "휴지통에 방금 넣은 게 새로고침해야 보임").
-  // 원인: 실시간 구독이 같은 변경에 두 번(로컬 반영 1회 · 서버 확정 1회) 반응해 fetch가 겹치면
-  // 나중에 시작했지만 먼저 끝난 요청이 있고, 그보다 늦게 끝나는 "시작은 먼저였던" 요청이 결과를
-  // 되돌려써 버릴 수 있다. 낙관적 갱신(update) 시점에도 순번을 올려 그 전에 나간 fetch는 전부
-  // 낡은 것으로 취급 — 막 반영한 내 변경을 이전 결과가 지우지 못하게 한다.
-  const reqId = useRef(0);
-
   useEffect(() => {
-    let alive = true;
-    if (server) {
-      const load = () => {
-        const id = ++reqId.current;
-        fetchList<T & { id: string }>(table)
-          .then(rows => {
-            if (!alive || id !== reqId.current) return;   // 그 사이 더 최신 요청이 있었으면 버림
-            setList(rows); latest.current = rows; setLoaded(true);
-          })
-          .catch(() => { if (alive) setLoaded(true); });
-      };
-      load();
-      const off = subscribeTable(table, load);   // 다른 사람이 쓰면 바로 반영
-      return () => { alive = false; off(); };
-    }
+    if (server) return;
     try {
       const raw = localStorage.getItem(key);
       if (raw) setList(JSON.parse(raw));
@@ -142,16 +230,17 @@ export function useLocalList<T extends { id?: string }>(key: string, seed: T[]):
       try { setList(JSON.parse(e.newValue)); } catch { /* 무시 */ }
     };
     window.addEventListener('storage', onStorage);
-    return () => { alive = false; window.removeEventListener('storage', onStorage); };
+    return () => { window.removeEventListener('storage', onStorage); };
   }, [key, server, table]);
 
   const update = useCallback((next: T[]) => {
-    const prev = latest.current;
-    // 이 시점 이전에 나간 fetch는 전부 낡은 것으로 표시 — 뒤늦게 도착해도 이 낙관적 갱신을 덮지 않는다
-    const id = ++reqId.current;
-    setList(next);            // 낙관적 반영 — 화면은 즉시 바뀐다
-    latest.current = next;
-    if (server) {
+    if (store) {
+      // 업로드 등을 기다리던 이전 계정의 콜백이 새 계정의 목록을 덮거나 삭제하지 못하게 한다.
+      if (generation !== store.generation) return;
+      const prev = store.snapshot.rows;
+      ++store.reqId;
+      ++store.writes;
+      publishList(store, next);   // 같은 컬렉션을 보는 모든 화면에 낙관적 반영
       syncList(table, prev as unknown as { id: string }[], next as unknown as { id: string }[], currentUserId())
         .catch(err => {
           // 실패하면 서버 상태로 되돌려 화면과 DB가 어긋난 채로 남지 않게 —
@@ -162,17 +251,19 @@ export function useLocalList<T extends { id?: string }>(key: string, seed: T[]):
               detail: { table, message: err instanceof Error ? err.message : String(err) },
             }));
           } catch { /* 무시 */ }
-          reqId.current = id;   // 이 복구 fetch는 유효한 최신 요청으로 인정
-          fetchList<T & { id: string }>(table)
-            .then(rows => { if (id === reqId.current) { setList(rows); latest.current = rows; } })
-            .catch(() => { /* 무시 */ });
+        })
+        .finally(() => {
+          if (generation !== store.generation) return;
+          // 저장 중 조회하면 이전 서버 값이 낙관적 결과를 지울 수 있다. 모두 끝난 뒤 복구·확인한다.
+          if (--store.writes === 0) scheduleList(table, store);
         });
       return;
     }
+    setList(next);
     try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* 무시 */ }
-  }, [key, server, table]);
+  }, [key, store, table, generation]);
 
-  return [list, update, loaded];
+  return [store ? shared.rows as T[] : list, update, store ? shared.loaded : loaded];
 }
 
 /* ---------- 시드 (데모) ---------- */
