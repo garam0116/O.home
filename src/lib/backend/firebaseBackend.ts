@@ -347,7 +347,22 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       let stopped = false;
       void readSets().then(sets => {
         if (stopped) return;
-        offs = sets.map(cs => onSnapshot(listQuery(coll, cs), () => onChange(), () => { /* 권한 없음 등은 무시 */ }));
+        offs = sets.map(cs => {
+          let first = true;
+          let pending = false;
+          return onSnapshot(listQuery(coll, cs), { includeMetadataChanges: true }, snap => {
+            // 첫 전체 결과는 fetchList가 가져온다. 로컬 반영 대신 서버 확정 때만 다시 읽는다.
+            // 메타데이터도 받아야 로컬 쓰기 확정(내용은 같고 pending만 해제됨)을 놓치지 않는다.
+            const initial = first;
+            first = false;
+            const confirmed = pending && !snap.metadata.hasPendingWrites;
+            pending = snap.metadata.hasPendingWrites;
+            if (initial || snap.metadata.hasPendingWrites || snap.metadata.fromCache) return;
+            // 초기 캐시의 서버 확인만으로는 재조회하지 않는다 (쓰기 확정 알림은 별도로 반영).
+            if (!confirmed && snap.docChanges().length === 0) return;
+            onChange();
+          }, () => { /* 권한 없음 등은 무시 */ });
+        });
       });
       return () => { stopped = true; offs.forEach(off => off()); offs = []; };
     },

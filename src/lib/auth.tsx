@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { backend, isServerMode } from './backend';
 import { setCurrentUserId } from './currentUser';
 import { getSetting, setSetting } from './settingStore';
+import { invalidateListCache } from './postStore';
 
 export type Role = 'admin' | 'member' | 'guest';
 
@@ -101,6 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const be = backend();
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);   // 확인이 끝났는지 (v2.0)
+
+  useEffect(() => {
+    // 로그인·로그아웃·관리자 승격 시 이전 권한의 목록과 실시간 질의를 재사용하지 않는다.
+    if (server && ready) invalidateListCache();
+  }, [server, ready, user?.id, user?.role]);
 
   useEffect(() => {
     if (!server || !be) {
