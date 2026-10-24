@@ -15,6 +15,7 @@ import type { BackendConfig, BackendKind } from './backend/types';
 export type { BackendConfig, BackendKind };
 
 const LS_KEY = 'ohome.server.v1';
+const FILE_CACHE_KEY = 'ohome.server.file.v1';
 const FILE_PATH = '/ohome.config.json';
 
 let cache: BackendConfig | null = null;
@@ -83,10 +84,36 @@ async function fileConfig(): Promise<BackendConfig | null> {
   } catch { return null; }
 }
 
+function savedFileConfig(): BackendConfig | null {
+  try { return normalize(JSON.parse(localStorage.getItem(FILE_CACHE_KEY) ?? 'null')); } catch { return null; }
+}
+
+async function refreshFileConfig(previous: BackendConfig): Promise<void> {
+  const file = await fileConfig();
+  if (!file) return;
+  try { localStorage.setItem(FILE_CACHE_KEY, JSON.stringify(file)); } catch { /* 무시 */ }
+  if (JSON.stringify(file) === JSON.stringify(previous)) return;
+  cache = file;
+  source = 'file';
+  if (typeof window !== 'undefined') window.location.reload();
+}
+
 /** 최종 설정 — 앱 시작 시 한 번 확정하고 이후에는 캐시 */
 export async function loadServerConfig(): Promise<BackendConfig | null> {
   if (loaded) return cache;
+  const saved = savedFileConfig();
+  if (saved) {
+    // 파일 설정은 공개 설정이므로 직전 값을 먼저 쓰고, 최신 파일은 뒤에서 확인한다.
+    cache = saved;
+    source = 'file';
+    loaded = true;
+    void refreshFileConfig(saved);
+    return cache;
+  }
   const file = await fileConfig();
+  if (file) {
+    try { localStorage.setItem(FILE_CACHE_KEY, JSON.stringify(file)); } catch { /* 무시 */ }
+  }
   const local = file ? null : localConfig();
   const env = file || local ? null : envConfig();
   cache = file ?? local ?? env;
