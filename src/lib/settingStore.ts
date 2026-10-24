@@ -11,8 +11,10 @@
 import { backend, isServerMode } from './backend';
 
 const cache = new Map<string, unknown>();
+const revisions = new Map<string, number>();
 let primed = false;
 const EVT = 'ohome-settings';
+const SNAPSHOT_KEY = 'ohome.settings.snapshot.v1';
 /** 서버 저장 실패 알림 — SettingSync가 받아 화면에 띄운다 */
 export const ERR_EVT = 'ohome-setting-error';
 
@@ -51,23 +53,54 @@ export async function primeSettings(): Promise<void> {
   primed = true;
   const be = backend();
   if (!be) return;
+  let hasSnapshot = false;
   try {
+    const snapshot = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) ?? 'null') as Record<string, unknown> | null;
+    if (snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)) {
+      for (const key of SETTING_KEYS) {
+        if (!LOCAL_ONLY.has(key) && snapshot[key] != null) cache.set(key, snapshot[key]);
+      }
+      hasSnapshot = true;
+    }
+  } catch { /* 무시 */ }
+  const refresh = async () => {
+    const startedAt = new Map(revisions);
     const all = await be.fetchAllSettings();
+    const changed: string[] = [];
     Object.entries(all).forEach(([k, v]) => {
+      if ((revisions.get(k) ?? 0) !== (startedAt.get(k) ?? 0)) return;
       // 기기 보관 전용 키는 서버 값이 남아 있어도 받지 않는다 (v2.0 포크 제보) —
       // 옛 백업 복원으로 서버에 올라간 알림 on/off가 매 접속마다 로컬 토글을 덮어썼다
       if (LOCAL_ONLY.has(k)) return;
       // null = 지워진 값(초기화가 그렇게 저장한다). 캐시에 담으면 화면이 기본값 대신
       // null을 받아 깨지므로 아예 없는 것으로 둔다.
       if (v == null) {
+        if (cache.has(k)) changed.push(k);
         cache.delete(k);
         try { localStorage.removeItem(k); } catch { /* 무시 */ }
         return;
       }
+      if (!cache.has(k) || JSON.stringify(cache.get(k)) !== JSON.stringify(v)) changed.push(k);
       cache.set(k, v);
       // 첫 페인트를 위해 로컬에도 사본을 둔다 (다음 방문 때 깜빡임 감소)
       try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 무시 */ }
     });
+    const snapshot: Record<string, unknown> = {};
+    SETTING_KEYS.forEach(k => {
+      if (!LOCAL_ONLY.has(k) && cache.has(k)) snapshot[k] = cache.get(k);
+    });
+    try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)); } catch { /* 무시 */ }
+    changed.forEach(k => {
+      try { window.dispatchEvent(new CustomEvent(EVT, { detail: k })); } catch { /* 무시 */ }
+    });
+  };
+  if (hasSnapshot) {
+    // 스냅샷으로 먼저 화면을 그리고, 최신 값은 기존 설정 구독 경로로 반영한다.
+    void refresh().catch(() => { /* 로컬 스냅샷으로 동작 */ });
+    return;
+  }
+  try {
+    await refresh();
   } catch {
     /* 규칙·네트워크 문제면 로컬 값으로 동작 */
   }
@@ -108,6 +141,7 @@ export function getRawSetting(key: string): string | null {
 
 /** 저장 — 캐시·로컬 사본·DB 순. DB 저장 실패는 조용히 무시(로컬은 남는다) */
 export function setSetting(key: string, value: unknown): void {
+  revisions.set(key, (revisions.get(key) ?? 0) + 1);
   cache.set(key, value);
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 무시 */ }
   if (isServerMode() && !LOCAL_ONLY.has(key)) {
@@ -126,6 +160,7 @@ export function setSetting(key: string, value: unknown): void {
 }
 
 export function removeSetting(key: string): void {
+  revisions.set(key, (revisions.get(key) ?? 0) + 1);
   cache.delete(key);
   try { localStorage.removeItem(key); } catch { /* 무시 */ }
   if (isServerMode() && !LOCAL_ONLY.has(key)) {
@@ -151,6 +186,7 @@ export async function pushLocalSettings(keys: string[]): Promise<number> {
       const raw = localStorage.getItem(k);
       if (raw == null) continue;
       await be.saveSetting(k, JSON.parse(raw));
+      revisions.set(k, (revisions.get(k) ?? 0) + 1);
       cache.set(k, JSON.parse(raw));
       n += 1;
     } catch { /* 개별 실패는 건너뜀 */ }

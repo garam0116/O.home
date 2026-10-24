@@ -14,11 +14,10 @@ import { visFloorOf } from '../visFloor';
 type FirebaseCfg = Extract<BackendConfig, { kind: 'firebase' }>;
 
 export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> {
-  const [{ initializeApp, getApps, getApp }, authMod, fsMod, stMod] = await Promise.all([
+  const [{ initializeApp, getApps, getApp }, authMod, fsMod] = await Promise.all([
     import('firebase/app'),
     import('firebase/auth'),
     import('firebase/firestore'),
-    import('firebase/storage'),
   ]);
 
   const app = getApps().length ? getApp() : initializeApp({
@@ -45,7 +44,12 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       return named ? fsMod.getFirestore(app, dbId) : fsMod.getFirestore(app);
     }
   })();
-  const storage = stMod.getStorage(app);
+  let storageMod: typeof import('firebase/storage') | undefined;
+  let storage: ReturnType<typeof import('firebase/storage').getStorage> | undefined;
+  const getStorage = async () => {
+    const st = storageMod ?? (storageMod = await import('firebase/storage'));
+    return { st, storage: (storage ??= st.getStorage(app)) };
+  };
 
   const {
     collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
@@ -68,19 +72,28 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     } catch { return null; }
   };
 
+  // 목록 조회가 auth 복원을 기다리지 않도록 백엔드 생성과 함께 복원을 시작한다.
+  const authReady = new Promise<typeof auth.currentUser>(resolve => {
+    let off = () => {};
+    off = authMod.onAuthStateChanged(auth, u => { off(); resolve(u); });
+  });
+
   // 목록을 읽을 때마다 meta/owner를 다시 읽지 않도록 (읽기 횟수도 요금이다)
-  let ownerCache: { uid?: string; admins?: string[] } | null | undefined;
-  const ownerNow = async () => {
-    if (ownerCache === undefined) ownerCache = await ownerInfo();
-    return ownerCache;
-  };
+  let ownerCache: Promise<{ uid?: string; admins?: string[] } | null> | undefined;
+  const ownerNow = () => (ownerCache ??= ownerInfo());
   const isAdminNow = async () => {
     const u = auth.currentUser;
     if (!u) return false;
     const own = await ownerNow();
     return own?.uid === u.uid || (own?.admins ?? []).includes(u.uid);
   };
-  authMod.onAuthStateChanged(auth, () => { ownerCache = undefined; });
+  let initialAuthState = true;
+  authMod.onAuthStateChanged(auth, () => {
+    if (initialAuthState) { initialAuthState = false; return; }
+    ownerCache = undefined;
+  });
+  void authReady;
+  void ownerNow();
 
   /**
    * 로그인 상태에 맞는 목록 질의 조건.
@@ -93,6 +106,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
    * 설치한 사람이 콘솔에서 색인을 추가해야 하기 때문 — 대신 받은 뒤 sort로 정렬한다.
    */
   const readSets = async (): Promise<Cons[][]> => {
+    await authReady;
     const u = auth.currentUser;
     if (!u) return [[where('visibility', '==', 'public')]];
     if (await isAdminNow()) return [[]];                    // 관리자는 전부
@@ -110,16 +124,15 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     let nickname = u.displayName || (u.email ? u.email.split('@')[0] : 'user');
     let avatarUrl: string | undefined;
     let avatarColor: string | undefined;
-    try {
-      const p = await getDoc(doc(db, 'profiles', u.uid));
-      if (p.exists()) {
-        const d = p.data() as { nickname?: string; avatarUrl?: string; avatarColor?: string };
-        nickname = d.nickname ?? nickname;
-        avatarUrl = d.avatarUrl;
-        avatarColor = d.avatarColor;
-      }
-    } catch { /* 규칙이 막으면 기본값 */ }
-    const own = await ownerInfo();
+    const profilePromise = getDoc(doc(db, 'profiles', u.uid))
+      .then(p => p.exists() ? p.data() as { nickname?: string; avatarUrl?: string; avatarColor?: string } : null)
+      .catch(() => null);
+    const [profile, own] = await Promise.all([profilePromise, ownerNow()]);
+    if (profile) {
+      nickname = profile.nickname ?? nickname;
+      avatarUrl = profile.avatarUrl;
+      avatarColor = profile.avatarColor;
+    }
     const isAdmin = !!own && (own.uid === u.uid || (own.admins ?? []).includes(u.uid));
     return {
       id: u.uid, nickname, role: isAdmin ? 'admin' : 'member',
@@ -173,7 +186,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
         }
         return fail({ message: `연결에 실패했습니다 — ${humanError(e)}` });
       }
-      const own = await ownerInfo();
+      const own = await ownerNow();
       const hasAdmin = !!own?.uid;
       return {
         ok: true, reachable: true, schema: true, hasAdmin,
@@ -184,9 +197,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
 
     async currentUser() {
       // 새로고침 직후 auth 복원을 기다린다
-      const u = await new Promise<typeof auth.currentUser>(res => {
-        const off = authMod.onAuthStateChanged(auth, x => { off(); res(x); });
-      });
+      const u = await authReady;
       return toUser(u);
     },
 
@@ -241,7 +252,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       const u = auth.currentUser;
       if (!u) return { ok: false, error: '로그인이 필요합니다.' };
       try {
-        const own = await ownerInfo();
+        const own = await ownerNow();
         if (own?.uid) return { ok: true };   // 이미 소유자 있음
         const r = await withLimit(setDoc(doc(db, 'meta', 'owner'), { uid: u.uid, admins: [u.uid], at: Date.now() }));
         if (r === TIMEOUT) return { ok: false, error: NO_REACH };
@@ -251,7 +262,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async listMembers() {
-      const own = await ownerInfo();
+      const own = await ownerNow();
       const admins = new Set([own?.uid, ...(own?.admins ?? [])].filter(Boolean) as string[]);
       const snap = await getDocs(collection(db, 'profiles'));
       return snap.docs.map(d => {
@@ -384,29 +395,32 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async uploadFile(blob, ext) {
+      const { st, storage } = await getStorage();
       const path = `ohome/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const r = stMod.ref(storage, path);
+      const r = st.ref(storage, path);
       // 경로가 업로드마다 고유하므로 내용이 바뀌지 않는다 — 길게 캐시해 재방문·엣지 캐시 이득을 본다
       // (지정하지 않으면 브라우저가 매번 다시 받아 먼 지역 버킷에서 지연이 그대로 드러남)
-      await stMod.uploadBytes(r, blob, {
+      await st.uploadBytes(r, blob, {
         contentType: blob.type || 'application/octet-stream',
         cacheControl: 'public, max-age=31536000, immutable',
       });
-      return await stMod.getDownloadURL(r);
+      return await st.getDownloadURL(r);
     },
 
     async listFiles() {
+      const { st, storage } = await getStorage();
       // 저장하는 주소가 다운로드 URL이므로 목록도 같은 형태로 돌려줘야 대조가 된다
-      const res = await stMod.listAll(stMod.ref(storage, 'ohome'));
+      const res = await st.listAll(st.ref(storage, 'ohome'));
       return Promise.all(res.items.map(async it => {
-        const [ref, meta] = await Promise.all([stMod.getDownloadURL(it), stMod.getMetadata(it)]);
+        const [ref, meta] = await Promise.all([st.getDownloadURL(it), st.getMetadata(it)]);
         return { ref, size: meta.size ?? 0 };
       }));
     },
 
     async deleteFile(ref) {
+      const { st, storage } = await getStorage();
       // Firebase SDK는 다운로드 URL로도 참조를 만들 수 있다
-      await stMod.deleteObject(stMod.ref(storage, ref));
+      await st.deleteObject(st.ref(storage, ref));
     },
 
     async deleteMember(id) {

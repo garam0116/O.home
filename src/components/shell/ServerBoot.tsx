@@ -15,8 +15,8 @@ export function ServerBoot({ children }: { children: React.ReactNode }) {
     let alive = true;
     const t = setTimeout(() => { if (alive) setSlow(true); }, 400);
     const warning = setTimeout(() => { if (alive) setDelayed(true); }, 8000);
-    // 백엔드 확정 → 사이트 설정(테마·메뉴·폰트…)을 한 번에 받아 캐시 → 그 다음에 화면을 그린다.
-    // 각 스토어가 렌더 중 동기적으로 설정을 읽기 때문에 순서가 중요하다.
+    // 백엔드 확정 → 설정 스냅샷이 있으면 즉시 사용하고, 없을 때만 서버 응답을 기다린다.
+    // 스토어는 렌더 중 동기적으로 설정을 읽으므로 첫 방문에는 순서가 중요하다.
     initSupabase()
       .then(() => primeSettings())
       .finally(() => { if (alive) { clearTimeout(t); clearTimeout(warning); setReady(true); } });
