@@ -8,6 +8,7 @@ import {
   useLocalList, BOARD_SEED, Post, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
+import { firstPostImage } from '@/lib/postBody';
 import {
   useBoardSettings, useBoards, badgeFor, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm,
 } from '@/lib/boardStore';
@@ -16,14 +17,6 @@ import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 
 const PER_PAGE = 10;
-
-/** 본문에서 첫 이미지 추출 — 티켓 스킨 썸네일용 (HTML img / MD 이미지) */
-function firstImage(body: string): string | null {
-  const html = /<img[^>]*src=["']([^"']+)["']/i.exec(body);
-  if (html) return html[1];
-  const md = /!\[[^\]]*\]\(([^)\s]+)/.exec(body);
-  return md ? md[1] : null;
-}
 
 function BoardInner() {
   const router = useRouter();
@@ -58,7 +51,7 @@ function BoardInner() {
         p.title.toLowerCase().includes(k) ||
         p.author.toLowerCase().includes(k) ||
         (p.tags ?? []).some(t => t.toLowerCase().includes(k)) ||   // 태그 검색 (v2.0 사용자 요청)
-        (!p.secret && p.body.toLowerCase().includes(k)));
+        (!p.secret && (p.excerpt ?? p.body ?? '').toLowerCase().includes(k)));
     }
     // 공지 상단 고정 + 최신순
     return list.sort((a, b) =>
@@ -104,7 +97,7 @@ function BoardInner() {
         <div style={board.fg ? { color: board.fg } : undefined}>
           {pageList.map(p => {
             // 대표 이미지(직접 선택 + 크롭) 우선, 없으면 본문 첫 이미지 (v1.9)
-            const thumb = canRead(p) ? (p.thumbSrc ?? firstImage(p.body)) : null;
+            const thumb = canRead(p) ? (p.thumbSrc ?? p.thumbAuto ?? firstPostImage(p.body ?? '')) : null;
             return (
               <div className={`bticket${thumb ? '' : ' no-thumb'}`} key={p.id} onClick={() => { if (canRead(p)) router.push(`/board/${p.id}`); }}>
                 {thumb && <div className="bt-thumb">

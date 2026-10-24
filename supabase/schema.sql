@@ -62,7 +62,8 @@ create trigger on_auth_user_created
 do $$
 declare t text;
 declare content_tables text[] := array[
-  'posts',        -- 게시판 글
+  'posts',        -- 게시판 글 목록
+  'post_bodies',  -- 게시판 본문 (목록과 분리 저장)
   'guestbook',    -- 방명록
   'characters',   -- 캐릭터
   'relations',    -- 자관
@@ -88,10 +89,15 @@ begin
         data        jsonb not null default '{}'::jsonb,
         author_id   uuid references auth.users(id) on delete set null,
         visibility  text not null default 'public',
+        editor_ids  text[] not null default '{}'::text[],
         sort        double precision not null default 0,
         created_at  timestamptz not null default now(),
         updated_at  timestamptz not null default now()
       )$f$, t);
+
+    execute format($f$
+      alter table public.%I add column if not exists editor_ids text[] not null default '{}'::text[]
+    $f$, t);
 
     execute format('alter table public.%I enable row level security', t);
     execute format('create index if not exists %I on public.%I (sort)', t || '_sort_idx', t);
@@ -115,12 +121,12 @@ begin
     execute format('drop policy if exists "update" on public.%I', t);
     execute format($p$
       create policy "update" on public.%I for update to authenticated
-        using (author_id = auth.uid() or public.is_admin())$p$, t);
+        using (author_id = auth.uid() or public.is_admin() or auth.uid()::text = any(editor_ids))$p$, t);
 
     execute format('drop policy if exists "delete" on public.%I', t);
     execute format($p$
       create policy "delete" on public.%I for delete to authenticated
-        using (author_id = auth.uid() or public.is_admin())$p$, t);
+        using (author_id = auth.uid() or public.is_admin() or auth.uid()::text = any(editor_ids))$p$, t);
   end loop;
 end $$;
 

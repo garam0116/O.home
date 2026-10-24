@@ -16,6 +16,9 @@ import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 import { FileDrop } from '@/components/ui/FileDrop';
 import { useBlobUrl } from '@/lib/blobStore';
 import { putThumbnail } from '@/lib/thumbnail';
+import { fetchPostBody, postSummary, savePostBody } from '@/lib/postBody';
+import { isServerMode } from '@/lib/backend';
+import { syncList } from '@/lib/db';
 
 /** 에디터가 다루지 못해 정리될 만한 태그·속성이 있는가 — 전환 경고 판단 (인트로와 같은 기준) */
 const hasRichHtml = (html: string) =>
@@ -53,6 +56,8 @@ function WriteInner() {
   const [thumbCrop, setThumbCrop] = useState<CropValue | undefined>(undefined);
   const [cropOpen, setCropOpen] = useState(false);
   const [thumbBusy, setThumbBusy] = useState(false);
+  const [bodyLoaded, setBodyLoaded] = useState(!editPid);
+  const [saving, setSaving] = useState(false);
   const thumbUrl = useBlobUrl(thumbSrc);
   // 본문 이미지 목록 — HTML <img> + Markdown 이미지
   const bodyImages = useMemo(() => {
@@ -62,14 +67,14 @@ function WriteInner() {
     return [...new Set(out)];
   }, [body]);
 
-  // 수정 모드 — 저장본 로드가 끝나면 폼을 한 번 채움 (본문은 저장 모드 그대로: md→Markdown, html→HTML)
-  const hydrated = useRef(false);
+  // 수정 모드 — 목록 요약과 별도 본문 문서에서 폼을 채운다.
   useEffect(() => {
-    if (!editPid || !postsLoaded || hydrated.current) return;
+    if (!editPid || !postsLoaded) return;
     const p = posts.find(x => x.id === editPid);
-    if (!p) return;
-    hydrated.current = true;
-    setTitle(p.title); setBody(p.body);
+    if (!p) { setBodyLoaded(true); return; }
+    let active = true;
+    setBodyLoaded(false);
+    setTitle(p.title);
     // 에디터로 쓴 글은 에디터로 다시 연다 — 예전에는 무조건 HTML 소스가 떠서
     // 에디터로 쓴 글을 수정하면 갑자기 태그가 보였다 (authored 없는 옛 글은 지금까지대로 HTML)
     setWriteMode(p.mode === 'md' ? 'md' : (p.authored === 'editor' ? 'editor' : 'html'));
@@ -78,8 +83,18 @@ function WriteInner() {
     setFoldType(p.fold?.type ?? 'none'); setFoldLabel(p.fold?.label ?? '');
     setTagsText((p.tags ?? []).join(', '));
     setThumbSrc(p.thumbSrc); setThumbCrop(p.thumbCrop);
+    if (!isServerMode()) {
+      setBody(p.body ?? '');
+      setBodyLoaded(true);
+    } else {
+      fetchPostBody(p.id)
+        .then(saved => { if (active) setBody(saved?.body ?? p.body ?? ''); })
+        .catch(() => { if (active) setBody(p.body ?? ''); })
+        .finally(() => { if (active) setBodyLoaded(true); });
+    }
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editPid, postsLoaded, posts]);
+  }, [editPid, postsLoaded]);
 
   const preview = useMemo(() => renderBody(writeMode === 'md' ? 'md' : 'html', body), [writeMode, body]);
 
@@ -91,42 +106,67 @@ function WriteInner() {
     );
   }
 
-  const post = () => {
-    if (thumbBusy) return;
+  const post = async () => {
+    if (thumbBusy || saving) return;
     if (!title.trim() || !body.trim()) { toast('제목과 내용을 입력해 주세요'); return; }
-    if (editing) {
-      // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/날짜/댓글/소속 게시판은 유지
-      if (editing.authorId !== user.id) { toast('수정은 작성자 본인만 할 수 있습니다'); return; }
-      setPosts(posts.map(p => (p.id === editing.id ? {
-        ...p,
-        title: title.trim(), body,
-        mode: writeMode === 'md' ? 'md' : 'html',
-        authored: writeMode === 'editor' ? 'editor' : undefined,
-        category,
-        secret, notice: isAdmin ? notice : p.notice,
+    setSaving(true);
+    try {
+      if (editing) {
+        // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/날짜/댓글/소속 게시판은 유지
+        if (editing.authorId !== user.id) { toast('수정은 작성자 본인만 할 수 있습니다'); return; }
+        const updated: Post = {
+          ...editing,
+          title: title.trim(), body,
+          mode: writeMode === 'md' ? 'md' : 'html',
+          authored: writeMode === 'editor' ? 'editor' : undefined,
+          category,
+          secret, notice: isAdmin ? notice : editing.notice,
+          tags: parseTags(tagsText),
+          fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
+          thumbSrc, thumbCrop,
+        };
+        const keepBodyPrivateUntilSaved = editing.secret && !updated.secret;
+        if (isServerMode()) {
+          await savePostBody(updated, user.id, keepBodyPrivateUntilSaved ? 'private' : undefined);
+        }
+        const stored = isServerMode() ? postSummary(updated) : updated;
+        const nextPosts = posts.map(p => (p.id === editing.id ? stored : p));
+        setPosts(nextPosts);
+        if (isServerMode()) {
+          await syncList('posts', posts, nextPosts, user.id);
+          if (keepBodyPrivateUntilSaved) await savePostBody(updated, user.id);
+        }
+        toast('수정되었습니다');
+        router.push(`/board/${editing.id}`);
+        return;
+      }
+      const p: Post = {
+        id: newId(), title: title.trim(), body,
+        mode: writeMode === 'md' ? 'md' : 'html', category,
+        author: user.nickname, authorId: user.id, date: new Date().toISOString(),
+        secret, notice: isAdmin && notice,
         tags: parseTags(tagsText),
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
+        comments: [],
+        boardId: board.id,   // 소속 게시판 (5.2 다중 게시판)
         thumbSrc, thumbCrop,
-      } : p)));
-      toast('수정되었습니다');
-      router.push(`/board/${editing.id}`);
-      return;
+      };
+      if (isServerMode()) await savePostBody(p, user.id);
+      const nextPosts = [isServerMode() ? postSummary(p) : p, ...posts];
+      setPosts(nextPosts);
+      if (isServerMode()) await syncList('posts', posts, nextPosts, user.id);
+      toast('등록되었습니다');
+      router.push(`/board/${p.id}`);
+    } catch (e) {
+      toast(`저장하지 못했습니다 — ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSaving(false);
     }
-    const p: Post = {
-      id: newId(), title: title.trim(), body,
-      mode: writeMode === 'md' ? 'md' : 'html', category,
-      author: user.nickname, authorId: user.id, date: new Date().toISOString(),
-      secret, notice: isAdmin && notice,
-      tags: parseTags(tagsText),
-      fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
-      comments: [],
-      boardId: board.id,   // 소속 게시판 (5.2 다중 게시판)
-      thumbSrc, thumbCrop,
-    };
-    setPosts([p, ...posts]);
-    toast('등록되었습니다');
-    router.push(`/board/${p.id}`);
   };
+
+  if (editPid && (!postsLoaded || !bodyLoaded)) {
+    return <section className="page"><p>글을 불러오는 중…</p></section>;
+  }
 
   return (
     <section className="page">
@@ -266,7 +306,9 @@ function WriteInner() {
           <div className="form-actions">
             <button className="btn btn-onbk"
               onClick={() => router.push(editing ? `/board/${editing.id}` : boardHref(board.id))}>CANCEL</button>
-            <button className="btn btn-accent" disabled={thumbBusy} onClick={post}>{editing ? 'SAVE' : 'POST'}</button>
+            <button className="btn btn-accent" disabled={thumbBusy || saving} onClick={post}>
+              {saving ? '저장 중…' : editing ? 'SAVE' : 'POST'}
+            </button>
           </div>
         </div>
       </div>

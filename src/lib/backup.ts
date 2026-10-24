@@ -29,7 +29,7 @@ export interface ResetGroup { key: string; label: string; desc?: string; keys: s
 
 /** 콘텐츠(메뉴별) — 초기화 체크박스 */
 export const RESET_CONTENT: ResetGroup[] = [
-  { key: 'board', label: '게시판 글', keys: ['ohome.board.v1'] },
+  { key: 'board', label: '게시판 글', keys: ['ohome.board.v1', 'ohome.postbody.v1'] },
   { key: 'guest', label: '방명록', keys: ['ohome.guest.v1'] },
   { key: 'chars', label: '캐릭터', keys: ['ohome.chars.v1'] },
   { key: 'rels', label: '자관', keys: ['ohome.rels.v1'] },
@@ -185,7 +185,10 @@ export async function resetGroups(selected: string[]): Promise<ResetReport> {
       if (coll) {
         try {
           const rows = await be.fetchList(coll);
-          if (rows.length) { await be.syncList(coll, rows, [], null); report.rows += rows.length; }
+          if (rows.length) {
+            await be.syncList(coll, rows, [], null);
+            if (coll !== 'post_bodies') report.rows += rows.length;
+          }
         } catch { report.failed.push(coll); }
       } else {
         try { await be.saveSetting(key, null); } catch { report.failed.push(key); }

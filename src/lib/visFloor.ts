@@ -20,6 +20,7 @@ import type { ListItem } from './backend/types';
 /** 컬렉션 → 그 목록이 걸린 메뉴. 섹션형은 종류만 주고 소속은 항목의 `secId`에서 읽는다 */
 const AREA: Record<string, { kind?: SectionKind; href?: string; board?: boolean }> = {
   posts: { board: true },              // 게시판은 섹션이 아니라 `?b=`로 갈린다
+  post_bodies: { board: true },        // 본문도 게시판의 메뉴 공개범위를 그대로 따른다
   gallery: { kind: 'gallery' },
   roadview: { kind: 'roadview' },
   trpg_logs: { kind: 'trpg' },

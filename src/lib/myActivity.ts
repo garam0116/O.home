@@ -19,7 +19,7 @@ export function collectMyItems(
     ...posts.filter(p => p.authorId === userId)
       .map(p => ({ kind: `${boardName(p)} 글`, text: p.title, date: p.date, href: `/board/${p.id}` })),
     ...posts.flatMap(p => [
-      ...p.comments,
+      ...(p.comments ?? []),
       ...cmtRows.filter(c => c.target === 'post' && c.targetId === p.id),
     ].filter(c => c.authorId === userId)
       .map(c => ({ kind: `${boardName(p)} 댓글`, text: c.text, date: c.date, href: `/board/${p.id}` }))),

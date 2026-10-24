@@ -1,6 +1,6 @@
 'use client';
 // 게시글 상세 (4.2) — 본문 렌더(격리 새니타이즈) · 접기 · 댓글+대댓글
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useHrefBlock } from '@/components/shell/MenuGuard';
 import { extraBoardHref } from '@/lib/menuStore';
@@ -17,6 +17,9 @@ import { GuestIdBar } from '@/components/ui/GuestId';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 import { pushNotif } from '@/lib/notifStore';
+import { fetchPostBody, deletePostBody } from '@/lib/postBody';
+import { isServerMode } from '@/lib/backend';
+import { syncList } from '@/lib/db';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
 
@@ -42,8 +45,27 @@ export default function BoardDetailPage() {
      **다른 early return보다 먼저 불러야 한다**(훅이므로 렌더마다 개수가 같아야 한다) */
   const bid = post?.boardId ?? MAIN_BOARD_ID;
   const blocked = useHrefBlock(post && (bid === MAIN_BOARD_ID ? '/board' : extraBoardHref(bid)));
-  // loaded 이후에만 본문 렌더 (SSR/하이드레이션 불일치 방지)
-  const html = useMemo(() => (post && loaded ? renderBody(post.mode, post.body) : ''), [post, loaded]);
+  const [bodyResult, setBodyResult] = useState<{ id: string; body: string } | null>(null);
+  useEffect(() => {
+    if (!loaded || !post || blocked) return;
+    const canReadBody = !post.secret || isAdmin || (!!post.authorId && post.authorId === user?.id);
+    if (!canReadBody) return;
+    let active = true;
+    if (!isServerMode()) {
+      setBodyResult({ id: post.id, body: post.body ?? '' });
+      return () => { active = false; };
+    }
+    setBodyResult(null);
+    fetchPostBody(post.id)
+      .then(body => { if (active) setBodyResult({ id: post.id, body: body?.body ?? post.body ?? '' }); })
+      .catch(() => { if (active) setBodyResult({ id: post.id, body: post.body ?? '' }); });
+    return () => { active = false; };
+  }, [loaded, post, blocked, isAdmin, user?.id]);
+  const loadedBody = post && bodyResult && bodyResult.id === post.id ? bodyResult.body : null;
+  // 목록에는 본문이 없으므로 상세에서 한 건을 읽은 뒤 렌더한다.
+  const html = useMemo(() =>
+    (post && loaded && loadedBody !== null ? renderBody(post.mode, loadedBody) : ''),
+  [post, loaded, loadedBody]);
 
   // 막힌 곳이면 여기서 되돌아간다 — 훅을 모두 부른 뒤여야 렌더마다 개수가 같다
   if (blocked) return blocked;
@@ -122,7 +144,7 @@ export default function BoardDetailPage() {
   const removeComment = (c: Comment) => {
     const gone = (x: { id: string; parentId?: string }) => x.id === c.id || x.parentId === c.id;
     if (cmtRows.some(gone)) setCmtRows(cmtRows.filter(x => !gone(x)));
-    if (post.comments.some(gone)) update({ comments: post.comments.filter(x => !gone(x)) });
+    if (post.comments?.some(gone)) update({ comments: post.comments.filter(x => !gone(x)) });
   };
   const roots = comments.filter(c => !c.parentId);
   const childrenOf = (pid: string) => comments.filter(c => c.parentId === pid);
@@ -185,8 +207,10 @@ export default function BoardDetailPage() {
               </div>
             </div>
           )}
-          <div className="post-body" style={post.fold && !open ? { minHeight: 120, filter: 'blur(6px)' } : undefined}
-            dangerouslySetInnerHTML={{ __html: html }} />
+          {loadedBody === null
+            ? <p className="post-body">본문을 불러오는 중…</p>
+            : <div className="post-body" style={post.fold && !open ? { minHeight: 120, filter: 'blur(6px)' } : undefined}
+              dangerouslySetInnerHTML={{ __html: html }} />}
         </div>
       </div>
 
@@ -229,8 +253,17 @@ export default function BoardDetailPage() {
       <ConfirmModal open={delAsk} title="글을 삭제하시겠습니까?" body="삭제한 글은 복구할 수 없습니다."
         onClose={() => setDelAsk(false)}
         buttons={[
-          { label: 'DELETE', kind: 'accent', onClick: () => {
-            setPosts(posts.filter(p => p.id !== post.id));
+          { label: 'DELETE', kind: 'accent', onClick: async () => {
+            const nextPosts = posts.filter(p => p.id !== post.id);
+            try {
+              if (isServerMode()) await syncList('posts', posts, nextPosts, user?.id ?? null);
+            } catch {
+              toast('글을 삭제하지 못했습니다 — 로그인 상태와 보안 규칙을 확인해 주세요');
+              return;
+            }
+            setPosts(nextPosts);
+            try { await deletePostBody(post.id); }
+            catch { toast('글은 삭제했지만 본문 정리에 실패했습니다 — 관리자에게 알려 주세요'); }
             // 글에 딸린 댓글도 함께 지운다 — 따로 저장되므로 남겨 두면 주인 없는 줄이 된다 (v2.0)
             setCmtRows(cmtRows.filter(c => !(c.target === 'post' && c.targetId === post.id)));
             router.push(boardHref(board.id));

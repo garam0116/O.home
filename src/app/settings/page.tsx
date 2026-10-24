@@ -58,6 +58,7 @@ import { CONTENT_COLLECTIONS } from '@/lib/backend/types';
 import { visFloorOf } from '@/lib/visFloor';
 import { validateConfig, configFileText, saveLocalConfig, parseFirebaseSnippet, serverConfig, serverConfigSource } from '@/lib/serverConfig';
 import { migrateTo, findOrphanFiles, isFileUrl } from '@/lib/transfer';
+import { migratePostBodies } from '@/lib/postBody';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
 
@@ -1568,17 +1569,41 @@ function CursorPane() {
 /** 데이터 백업 탭 (5.2) — 백업(데이터만/회원까지) · 복원 · 선택 초기화 (v1.9 사용자 확정) */
 function DataPane() {
   const toast = useToast();
+  const { user, isAdmin } = useAuth();
   const [busy, setBusy] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [resetOpen, setResetOpen] = useState(false);   // 초기화 항목 선택 모달 (v1.9)
   const [resetAsk, setResetAsk] = useState(false);     // 최종 확인
   const [picked, setPicked] = useState<string[]>([]);  // 선택한 초기화 그룹
   const [pushing, setPushing] = useState(false);       // 설정 서버 업로드 중 (v2.0)
+  const [postBodyMigrating, setPostBodyMigrating] = useState(false);
+  const [postBodyMigrationMsg, setPostBodyMigrationMsg] = useState('');
   const serverOn = isServerMode();
   // 서버에 아직 없는 로컬 설정 — 로컬로 먼저 꾸민 뒤 서버를 붙인 경우에만 생긴다.
   // 보통의 설치(연결 먼저)에서는 설정이 바뀔 때마다 서버로 나가므로 이 줄 자체가 뜨지 않는다.
   const [unsynced, setUnsynced] = useState<string[]>([]);
   useEffect(() => { setUnsynced(unsyncedSettingKeys()); }, []);
+
+  const migratePosts = async () => {
+    const be = backend();
+    if (!be || !isAdmin) { toast('관리자 계정으로 서버에 연결해 주세요'); return; }
+    setPostBodyMigrating(true);
+    setPostBodyMigrationMsg('게시글을 확인하는 중…');
+    try {
+      const result = await migratePostBodies(be, user?.id ?? null, (done, total) => {
+        setPostBodyMigrationMsg(`본문을 분리하는 중… (${done}/${total})`);
+      });
+      const message = `목록 경량화 완료 — 글 ${result.posts}건 확인 · 본문 ${result.bodies}건 분리`;
+      setPostBodyMigrationMsg(message);
+      toast(message);
+    } catch (e) {
+      const message = `중간에 멈췄습니다. 다시 실행하면 안전하게 재처리합니다 — ${e instanceof Error ? e.message : String(e)}`;
+      setPostBodyMigrationMsg(message);
+      toast(message);
+    } finally {
+      setPostBodyMigrating(false);
+    }
+  };
 
   // 사용하지 않는 이미지 정리 (v2.0) — 글을 지워도 저장소에는 파일이 남는다.
   // 같은 이미지를 다른 글이 쓰고 있을 수 있어 자동 삭제는 위험하므로, 훑어서 보여 주고 관리자가 지운다.
@@ -1749,6 +1774,20 @@ function DataPane() {
     <div className="set-sec">
       <h3>데이터 백업</h3>
       <div className="d">글·캐릭터·자관·역극 등 모든 데이터(JSON)와 이미지 전부를 zip 하나로 — 다른 브라우저/PC 이전용</div>
+
+      {serverOn && isAdmin && (
+        <div className="set-row" style={{ flexWrap: 'wrap' }}>
+          <div className="l"><b>목록 경량화(본문 분리)</b>
+            <small>기존 게시글 본문을 별도 문서로 옮겨 목록 조회량을 줄입니다 — 실행 전에 데이터 백업을 권장합니다</small></div>
+          <div style={{ display: 'grid', justifyItems: 'end', gap: 6 }}>
+            <button className="btn btn-ghost" style={{ padding: '9px 18px', opacity: postBodyMigrating ? 0.5 : 1 }}
+              disabled={postBodyMigrating} onClick={migratePosts}>
+              {postBodyMigrating ? '분리 중…' : '본문 분리 실행'}
+            </button>
+            {postBodyMigrationMsg && <small className="hint">{postBodyMigrationMsg}</small>}
+          </div>
+        </div>
+      )}
 
       {/* 로컬로 먼저 꾸민 뒤 서버를 붙인 경우에만 — 서버에 없는 설정이 남아 있을 때만 나타난다 (v2.0) */}
       {serverOn && unsynced.length > 0 && (

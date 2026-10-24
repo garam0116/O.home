@@ -66,7 +66,8 @@ create trigger on_auth_user_created
 do $$
 declare t text;
 declare content_tables text[] := array[
-  'posts',        -- 게시판 글
+  'posts',        -- 게시판 글 목록
+  'post_bodies',  -- 게시판 본문 (목록과 분리 저장)
   'guestbook',    -- 방명록
   'characters',   -- 캐릭터
   'relations',    -- 자관

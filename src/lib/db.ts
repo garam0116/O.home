@@ -14,6 +14,21 @@ export async function fetchList<T extends ListItem>(coll: string): Promise<T[]> 
   return be ? be.fetchList<T>(coll) : [];
 }
 
+export async function fetchItem<T extends ListItem>(coll: string, id: string): Promise<T | null> {
+  const be = backend();
+  return be ? be.fetchItem<T>(coll, id) : null;
+}
+
+export async function saveItem<T extends ListItem>(coll: string, item: T, uid: string | null): Promise<void> {
+  const be = backend();
+  if (be) await be.saveItem(coll, item, uid);
+}
+
+export async function deleteItem(coll: string, id: string): Promise<void> {
+  const be = backend();
+  if (be) await be.deleteItem(coll, id);
+}
+
 export async function syncList<T extends ListItem>(
   coll: string, prev: T[], next: T[], uid: string | null,
 ): Promise<void> {

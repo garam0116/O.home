@@ -37,6 +37,12 @@ export interface BackendCheck {
 }
 
 export interface ListItem { id: string; [k: string]: unknown }
+export interface ListItemWithMeta<T extends ListItem = ListItem> {
+  item: T;
+  authorId: string | null;
+  visibility: string;
+  editorIds: string[];
+}
 
 export interface Backend {
   kind: BackendKind;
@@ -61,6 +67,10 @@ export interface Backend {
 
   /* ---- 목록(콘텐츠) ---- */
   fetchList<T extends ListItem>(coll: string): Promise<T[]>;
+  fetchListWithMeta<T extends ListItem>(coll: string): Promise<ListItemWithMeta<T>[]>;
+  fetchItem<T extends ListItem>(coll: string, id: string): Promise<T | null>;
+  saveItem<T extends ListItem>(coll: string, item: T, uid: string | null): Promise<void>;
+  deleteItem(coll: string, id: string): Promise<void>;
   syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null): Promise<void>;
   /** 이미 저장된 행의 공개범위만 다시 계산해 덮어쓴다 (v2.0) — 메뉴를 비공개로 바꾼 뒤
    *  「글에도 적용」을 누르면 돈다. 내용(data)·순서(sort)는 건드리지 않는다. */
@@ -90,6 +100,8 @@ export interface Backend {
 /** 콘텐츠 컬렉션 이름 (localStorage 키 → 컬렉션/테이블) — 두 백엔드가 같은 이름을 쓴다 */
 export const COLLECTION_OF: Record<string, string> = {
   'ohome.board.v1': 'posts',
+  // 게시글 본문 — 목록과 분리 저장해 목록 조회에서 HTML·이미지를 받지 않는다.
+  'ohome.postbody.v1': 'post_bodies',
   'ohome.guest.v1': 'guestbook',
   'ohome.chars.v1': 'characters',
   'ohome.rels.v1': 'relations',

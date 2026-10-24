@@ -33,7 +33,7 @@ service cloud.firestore {
     function isContent(name) {
       return name in [
         'posts', 'guestbook', 'characters', 'relations', 'gallery', 'roadview',
-        'trpg_logs', 'trpg_chars', 'dotori', 'playlog', 'rp_rooms', 'threads',
+        'post_bodies', 'trpg_logs', 'trpg_log_bodies', 'trpg_chars', 'dotori', 'playlog', 'rp_rooms', 'threads',
         'diary', 'memos', 'commissions', 'applicants', 'moods'
       ];
     }
@@ -74,7 +74,10 @@ service cloud.firestore {
       // 수정·삭제: 작성자 본인 또는 관리자
       allow update, delete: if isContent(coll)
         && signedIn()
-        && (resource.data.authorId == request.auth.uid || isAdmin());
+        && (resource.data.authorId == request.auth.uid
+            || isAdmin()
+            || (resource.data.keys().hasAny(['editorIds'])
+                && request.auth.uid in resource.data.editorIds));
     }
   }
 }

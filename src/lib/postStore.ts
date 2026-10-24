@@ -35,6 +35,7 @@ export interface Comment {
 export const COMMENT_KEY = 'ohome.comments.v1';
 
 export interface CommentRow extends Comment {
+  [k: string]: unknown;
   targetId: string;                 // 달린 대상(글·로드뷰 항목·감상타래·방명록)의 id
   /** 대상 종류 — 같은 컬렉션을 나눠 쓴다 (thread·guest: v2.0 사용자 요청) */
   target: 'post' | 'road' | 'thread' | 'guest';
@@ -55,9 +56,10 @@ export function commentsFor(
 export type FoldType = 'spoiler' | 'adult' | 'custom';
 
 export interface Post {
+  [k: string]: unknown;
   id: string;
   title: string;
-  body: string;
+  body?: string;         // 서버 목록은 본문 분리 후 비어 있음 — 구버전 목록은 상세에서 폴백
   mode: PostMode;        // 렌더 방식 (md / html)
   /** 무엇으로 썼는지 (v2.0) — 에디터로 쓴 글을 수정할 때 HTML 소스가 뜨지 않게 기억한다.
    *  렌더는 mode로 하고, 이 값은 수정 화면을 어떤 모드로 열지에만 쓴다. */
@@ -69,12 +71,14 @@ export interface Post {
   secret: boolean;       // 비밀글
   notice: boolean;       // 공지 고정
   fold: { type: FoldType; label?: string } | null; // 스포일러/수위 접기 (6.2)
-  comments: Comment[];
+  comments?: Comment[];
   boardId?: string;      // 소속 게시판 (5.2 다중 게시판 — 없으면 기본 'main')
   /** 태그 (v2.0 사용자 요청) — 기본형 목록의 작성자 왼쪽에 나열되고 검색에 걸린다 */
   tags?: string[];
   thumbSrc?: string;     // 대표 이미지 — 저장소 참조 또는 본문 이미지 URL
   thumbCrop?: { x: number; y: number; scale: number };  // 대표 썸네일 크롭 (16:9)
+  thumbAuto?: string | null;  // 본문 첫 이미지 — 목록에서 본문을 읽지 않고 티켓 썸네일 표시
+  excerpt?: string;           // 검색용 본문 발췌 — 비밀글은 비움
 }
 
 export interface GuestEntry {

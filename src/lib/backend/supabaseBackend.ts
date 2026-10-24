@@ -3,12 +3,12 @@
 // 스키마·권한: supabase/schema.sql
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf,
+  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, ListItemWithMeta, diffList, metaOf,
 } from './types';
 import { visFloorOf } from '../visFloor';
 
 const BUCKET = 'ohome';
-const PROBE = ['profiles', 'site_settings', 'posts', 'characters'];
+const PROBE = ['profiles', 'site_settings', 'posts', 'post_bodies', 'characters'];
 
 export async function createSupabaseBackend(
   cfg: Extract<BackendConfig, { kind: 'supabase' }>,
@@ -132,6 +132,45 @@ export async function createSupabaseBackend(
         const row = r as { id: string; data: Record<string, unknown> };
         return { ...(row.data ?? {}), id: row.id } as T;
       });
+    },
+
+    async fetchListWithMeta<T extends ListItem>(coll: string): Promise<ListItemWithMeta<T>[]> {
+      const { data, error } = await sb.from(coll)
+        .select('id, data, sort, author_id, visibility, editor_ids').order('sort', { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map(r => {
+        const row = r as {
+          id: string; data: Record<string, unknown>; author_id: string | null;
+          visibility: string; editor_ids: string[] | null;
+        };
+        return {
+          item: { ...(row.data ?? {}), id: row.id } as T,
+          authorId: row.author_id,
+          visibility: row.visibility,
+          editorIds: row.editor_ids ?? [],
+        };
+      });
+    },
+
+    async fetchItem<T extends ListItem>(coll: string, id: string): Promise<T | null> {
+      const { data, error } = await sb.from(coll).select('id, data').eq('id', id).maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const row = data as { id: string; data: Record<string, unknown> };
+      return { ...(row.data ?? {}), id: row.id } as T;
+    },
+
+    async saveItem<T extends ListItem>(coll: string, item: T, uid: string | null) {
+      const { authorId, visibility, editorIds } = metaOf(item, uid, visFloorOf(coll, item));
+      const { error } = await sb.from(coll).upsert({
+        id: item.id, data: item, author_id: authorId, visibility, editor_ids: editorIds, sort: 0,
+      }, { onConflict: 'id' });
+      if (error) throw error;
+    },
+
+    async deleteItem(coll: string, id: string) {
+      const { error } = await sb.from(coll).delete().eq('id', id);
+      if (error) throw error;
     },
 
     async syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null) {

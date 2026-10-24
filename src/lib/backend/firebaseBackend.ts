@@ -7,7 +7,7 @@
 //  · 문서 = 항목 하나, 필드는 { data, authorId, visibility, sort }
 //  · 관리자 판정은 meta/owner 문서 — 첫 로그인 계정이 소유자로 등록된다(규칙이 1회만 허용)
 import {
-  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf,
+  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, ListItemWithMeta, diffList, metaOf,
 } from './types';
 import { visFloorOf } from '../visFloor';
 
@@ -292,6 +292,47 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
         seen.set(d.id, { sort: raw.sort ?? 0, item: { ...(raw.data ?? {}), id: d.id } as T });
       }));
       return [...seen.values()].sort((a, b) => a.sort - b.sort).map(v => v.item);
+    },
+
+    async fetchListWithMeta<T extends ListItem>(coll: string): Promise<ListItemWithMeta<T>[]> {
+      const sets = await readSets();
+      const snaps = await Promise.all(sets.map(cs => getDocsFromServer(listQuery(coll, cs))));
+      const seen = new Map<string, { sort: number; row: ListItemWithMeta<T> }>();
+      snaps.forEach(s => s.docs.forEach(d => {
+        if (seen.has(d.id)) return;
+        const raw = d.data() as {
+          data?: Record<string, unknown>; sort?: number; authorId?: string;
+          visibility?: string; editorIds?: string[];
+        };
+        seen.set(d.id, {
+          sort: raw.sort ?? 0,
+          row: {
+            item: { ...(raw.data ?? {}), id: d.id } as T,
+            authorId: raw.authorId ?? null,
+            visibility: raw.visibility ?? 'public',
+            editorIds: raw.editorIds ?? [],
+          },
+        });
+      }));
+      return [...seen.values()].sort((a, b) => a.sort - b.sort).map(v => v.row);
+    },
+
+    async fetchItem<T extends ListItem>(coll: string, id: string): Promise<T | null> {
+      const snap = await getDoc(doc(db, coll, id));
+      if (!snap.exists()) return null;
+      const raw = snap.data() as { data?: Record<string, unknown> };
+      return { ...(raw.data ?? {}), id: snap.id } as T;
+    },
+
+    async saveItem<T extends ListItem>(coll: string, item: T, uid: string | null) {
+      const { authorId, visibility, editorIds } = metaOf(item, uid, visFloorOf(coll, item));
+      await setDoc(doc(db, coll, item.id), {
+        data: item, authorId, visibility, editorIds, sort: 0, updatedAt: Date.now(),
+      });
+    },
+
+    async deleteItem(coll: string, id: string) {
+      await deleteDoc(doc(db, coll, id));
     },
 
     async syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null) {

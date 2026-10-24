@@ -213,9 +213,25 @@ export async function loadAll(
     return { files: fileCount, items };
   }
 
+  // 브라우저 저장은 본문을 분리하지 않는다 — 서버 백업을 로컬로 복원하면 글에 본문을 다시 합친다.
+  const localCollections = { ...collections };
+  const bodies = (localCollections.post_bodies ?? []) as (ListItem & { body?: string })[];
+  if (bodies.length) {
+    const byId = new Map(bodies.map(item => [item.id, item.body ?? '']));
+    const posts = (localCollections.posts ?? []) as ListItem[];
+    const postIds = new Set(posts.map(post => post.id));
+    localCollections.posts = posts.map(post => ({
+      ...post,
+      body: (post as ListItem & { body?: string }).body ?? byId.get(post.id) ?? '',
+    }));
+    const unmatched = bodies.filter(item => !postIds.has(item.id));
+    if (unmatched.length) localCollections.post_bodies = unmatched;
+    else delete localCollections.post_bodies;
+  }
+
   // 브라우저 저장 모드
   const keyOf = Object.fromEntries(Object.entries(COLLECTION_OF).map(([k, c]) => [c, k]));
-  Object.entries(collections).forEach(([coll, list]) => {
+  Object.entries(localCollections).forEach(([coll, list]) => {
     const key = keyOf[coll];
     if (!key) return;
     try { localStorage.setItem(key, JSON.stringify(list ?? [])); } catch { /* 무시 */ }
