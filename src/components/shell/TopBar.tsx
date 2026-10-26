@@ -294,6 +294,7 @@ export function TopBar() {
                   </button>
                 )}
                 <button onClick={() => { setMenuOpen(false); nav('/settings'); }}>환경설정</button>
+                <button onClick={() => { setMenuOpen(false); nav('/admin/posts'); }}>전체 게시글 관리</button>
               </>
             )}
             <button onClick={() => { setMenuOpen(false); logout(); }}>로그아웃</button>

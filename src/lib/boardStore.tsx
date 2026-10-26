@@ -1,5 +1,5 @@
 ﻿'use client';
-// 게시판 설정 (5.2 게시판 관리) — 말머리(카테고리) 목록 관리 + 뱃지(공지/비밀/접힘·말머리별) 색
+// 게시판 설정 (5.2 게시판 관리) — 시스템 뱃지 + 갤러리 분류·뱃지 색
 import { useCallback, useEffect, useState } from 'react';
 import { newId } from './postStore';
 import { MAIN_SEC } from './sectionStore';
@@ -13,11 +13,6 @@ export const DEFAULT_BOARD_SYSTEM: BoardBadge[] = [
   { id: 'fold', label: '접힘', bg: '#f2e6e7', border: '#d9b8bc', fg: '#a63a45' },
 ];
 
-/** 기본 말머리 — 목록 자체를 환경설정에서 추가·삭제·순서 변경 */
-export const DEFAULT_BOARD_CATS: BoardBadge[] = ['잡담', '설정', '합작', '기타'].map(c => ({
-  id: `cat-${c}`, label: c, bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d',
-}));
-
 /** 갤러리(그림백업) 유형 뱃지 2종 — 로그/단일 (라벨·색 수정 가능, 삭제 불가) */
 export const DEFAULT_GALLERY_BADGES: BoardBadge[] = [
   { id: 'log', label: '로그', bg: '#1d2025', border: '#1d2025', fg: '#ffffff' },
@@ -26,19 +21,19 @@ export const DEFAULT_GALLERY_BADGES: BoardBadge[] = [
   { id: 'vlist', label: '단일(세로)', bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' },
 ];
 
-/** 갤러리 말머리 (v2.0) — 예전에는 코드에 박혀 있어 바꿀 수 없었다. 게시판 말머리처럼 자유롭게 관리 */
+/** 갤러리 말머리 (v2.0) — 자유롭게 관리 */
 export const DEFAULT_GALLERY_CATS: BoardBadge[] = ['합작', '낙서', '커미션', '설정화'].map(c => ({
   id: `gcat-${c}`, label: c, bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d',
 }));
 
 export interface BoardSettings {
-  system: BoardBadge[]; cats: BoardBadge[]; gallery: BoardBadge[]; galleryCats: BoardBadge[];
+  system: BoardBadge[]; gallery: BoardBadge[]; galleryCats: BoardBadge[];
   /** 갤러리마다 따로 쓰는 말머리 (v2.0 사용자 요청) — 정한 적 없으면 기본 갤러리 것을 그대로.
    *  새로 만들자마자 말머리가 비면 글부터 못 쓴다(감상타래·스케줄러와 같은 규칙). */
   secGalleryCats?: Record<string, BoardBadge[]>;
 }
 const DEFAULTS: BoardSettings = {
-  system: DEFAULT_BOARD_SYSTEM, cats: DEFAULT_BOARD_CATS,
+  system: DEFAULT_BOARD_SYSTEM,
   gallery: DEFAULT_GALLERY_BADGES, galleryCats: DEFAULT_GALLERY_CATS,
 };
 const KEY = 'ohome.boardset.v1';
@@ -60,15 +55,10 @@ export function useBoardSettings() {
       if (raw) {
         const p = JSON.parse(raw) as Partial<BoardSettings>;
         setSt({
-          /* **저장된 값을 먼저 펼친다** — 예전에는 아는 칸 넷만 골라 새 객체를 만들어서,
-             나중에 늘어난 칸(갤러리별 말머리 `secGalleryCats`)이 읽을 때마다 조용히 사라졌다.
-             저장은 되는데 새로고침하면 없어지는 형태라 원인을 찾기 어렵다 (v2.0) */
-          ...DEFAULTS,
-          ...p,
           system: DEFAULT_BOARD_SYSTEM.map(d => p.system?.find(s => s.id === d.id) ?? d),
-          cats: p.cats ?? DEFAULT_BOARD_CATS,
           gallery: DEFAULT_GALLERY_BADGES.map(d => p.gallery?.find(g => g.id === d.id) ?? d),
           galleryCats: p.galleryCats ?? DEFAULT_GALLERY_CATS,
+          secGalleryCats: p.secGalleryCats,
         });
       }
     } catch { /* 기본값 */ }
@@ -83,16 +73,9 @@ export function useBoardSettings() {
   }, []);
   const patchSystem = useCallback((id: string, p: Partial<BoardBadge>) =>
     apply(s => ({ ...s, system: s.system.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
-  const patchCat = useCallback((id: string, p: Partial<BoardBadge>) =>
-    apply(s => ({ ...s, cats: s.cats.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
-  const addCat = useCallback(() =>
-    apply(s => ({ ...s, cats: [...s.cats, { id: newId(), label: '새 말머리', bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' }] })), [apply]);
-  const removeCat = useCallback((id: string) =>
-    apply(s => ({ ...s, cats: s.cats.filter(b => b.id !== id) })), [apply]);
-  const setCats = useCallback((cats: BoardBadge[]) => apply(s => ({ ...s, cats })), [apply]);
   const patchGallery = useCallback((id: string, p: Partial<BoardBadge>) =>
     apply(s => ({ ...s, gallery: s.gallery.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
-  /* 갤러리 말머리 — 게시판 말머리와 같은 방식으로 추가·수정·삭제·정렬 (v2.0).
+  /* 갤러리 말머리 — 추가·수정·삭제·정렬 (v2.0).
      **갤러리마다 따로** 가질 수 있다 (v2.0 사용자 요청) — 첫 인자가 어느 갤러리인지다.
      보고 있는 갤러리 것만 건드리므로 다른 갤러리 말머리가 지워지지 않는다. */
   const mutGalleryCats = useCallback((secId: string, fn: (cats: BoardBadge[]) => BoardBadge[]) =>
@@ -106,21 +89,13 @@ export function useBoardSettings() {
   const setGalleryCats = useCallback((secId: string, cats: BoardBadge[]) =>
     mutGalleryCats(secId, () => cats), [mutGalleryCats]);
   return {
-    st, loaded, patchSystem, patchCat, addCat, removeCat, setCats, patchGallery,
+    st, loaded, patchSystem, patchGallery,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   };
 }
 
-/** 게시글의 뱃지 결정 — 공지/비밀 우선, 그 외 말머리 매칭(라벨 기준·미등록 말머리는 중립색) */
-export function badgeFor(st: BoardSettings, p: { notice?: boolean; secret?: boolean; category: string }, cats?: BoardBadge[]): BoardBadge {
-  if (p.notice) return st.system[0];
-  if (p.secret) return st.system[1];
-  return (cats ?? st.cats).find(c => c.label === p.category)
-    ?? { id: 'etc', label: p.category, bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' };
-}
-
 /* ---------- 게시판 다중 생성 (5.2 v1.9) ---------- */
-// 같은 유형(리스트형) 게시판을 여러 개 — 게시판별 이름·말머리·권한·리스트 스킨(기본형/티켓형).
+// 같은 유형(리스트형) 게시판을 여러 개 — 게시판별 이름·권한·리스트 스킨(기본형/티켓형).
 // 글은 ohome.board.v1 한 곳에 boardId로 구분 저장(게시판 삭제 시에도 글 데이터는 보존 — 3장 원칙).
 export type BoardSkin = 'list' | 'ticket';
 export type BoardPerm = 'guest' | 'member' | 'admin';
@@ -132,7 +107,6 @@ export interface Board {
   skin: BoardSkin;         // 리스트 스킨 — 기본형 / 티켓형
   permWrite: BoardPerm;    // 글쓰기 권한 (mock 단계에선 로그인 전제 — 로드뷰와 동일)
   permComment: BoardPerm;  // 댓글 권한
-  cats: BoardBadge[];      // 게시판별 말머리
   fg?: string;             // 목록 글씨색 (v1.9 — 미지정이면 테마 기본색)
 }
 
@@ -141,8 +115,8 @@ export const MAIN_BOARD_ID = 'main';
 
 export const DEFAULT_BOARDS: Board[] = [{
   id: MAIN_BOARD_ID, name: '리스트',
-  desc: 'MD / HTML 작성 지원 · 스크립트 실행 불허 · 말머리 · 비밀글 · 접기',
-  skin: 'list', permWrite: 'member', permComment: 'member', cats: DEFAULT_BOARD_CATS,
+  desc: 'MD / HTML 작성 지원 · 스크립트 실행 불허 · 비밀글 · 접기',
+  skin: 'list', permWrite: 'member', permComment: 'member',
 }];
 
 export function useBoards(): {
@@ -155,14 +129,6 @@ export function useBoards(): {
     try {
       const raw = getRawSetting(BOARDS_KEY);
       if (raw) setSt(JSON.parse(raw));
-      else {
-        // 마이그레이션 — 구 전역 말머리(boardset.cats)를 기본 게시판으로 승계
-        const old = getRawSetting(KEY);
-        if (old) {
-          const cats = (JSON.parse(old) as Partial<BoardSettings>).cats;
-          if (cats?.length) setSt([{ ...DEFAULT_BOARDS[0], cats }]);
-        }
-      }
     } catch { /* 기본값 */ }
     setLoaded(true);
     const sync = () => {

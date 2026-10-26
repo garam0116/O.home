@@ -1,5 +1,5 @@
 'use client';
-// 일반 게시판 목록 (4.2 / 5.2 다중 게시판) — 말머리 필터 · 검색 · 비밀글 마스킹 · 접기 표시 · 페이지네이션
+// 일반 게시판 목록 (4.2 / 5.2 다중 게시판) — 공지 필터 · 검색 · 비밀글 마스킹 · 접기 표시 · 페이지네이션
 // ?b=<게시판 id> 로 게시판 구분 (없으면 기본 게시판) · 리스트 스킨: 기본형 / 티켓형 (5.2 v1.9)
 import React, { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,7 +9,7 @@ import {
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
 import {
-  useBoardSettings, useBoards, badgeFor, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm,
+  useBoardSettings, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm,
 } from '@/lib/boardStore';
 import { SearchBar, Pager } from '@/components/ui/Kit';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -51,7 +51,6 @@ function BoardInner() {
   const visible = useMemo(() => {
     let list = posts.filter(p => (p.boardId ?? MAIN_BOARD_ID) === board.id);
     if (cat === '공지') list = list.filter(p => p.notice);
-    else if (cat !== '전체') list = list.filter(p => p.category === cat);
     if (q) {
       const k = q.toLowerCase();
       list = list.filter(p =>
@@ -73,9 +72,9 @@ function BoardInner() {
 
   if (!boardsLoaded) return <section className="page" />;
 
-  const postBadge = (p: Post) => (p.notice || p.secret || p.category) ? (
-    <span style={boardBadgeStyle(badgeFor(boardSet, p, board.cats))}>
-      {p.notice ? boardSet.system[0].label : p.secret ? boardSet.system[1].label : p.category}
+  const postBadge = (p: Post) => (p.notice || p.secret) ? (
+    <span style={boardBadgeStyle(boardSet.system[p.notice ? 0 : 1])}>
+      {boardSet.system[p.notice ? 0 : 1].label}
     </span>
   ) : null;
 
@@ -87,7 +86,7 @@ function BoardInner() {
       </div>
       <div className="toolrow">
         <div className="seg">
-          {['전체', '공지', ...board.cats.map(x => x.label)].map(c => (
+          {['전체', '공지'].map(c => (
             <button key={c} className={cat === c ? 'on' : ''} onClick={() => { setCat(c); setPage(1); }}>{c}</button>
           ))}
         </div>
