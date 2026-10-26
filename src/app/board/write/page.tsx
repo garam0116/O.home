@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { useLocalList, BOARD_SEED, Post, newId, FoldType } from '@/lib/postStore';
 import { useBoards, boardHref, MAIN_BOARD_ID } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
-import { KInput, KTextarea, KSelect, KCheck } from '@/components/ui/Kit';
+import { KInput, KTextarea, KCheck } from '@/components/ui/Kit';
 import { CropEditor, CropImg, CropValue } from '@/components/ui/CropEditor';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { RichEditor } from '@/components/ui/RichEditor';
@@ -21,6 +21,13 @@ import { putThumbnail } from '@/lib/thumbnail';
 const hasRichHtml = (html: string) =>
   /<(table|thead|tbody|tr|td|th|div|span|section|article|video|audio|details|summary|font|center)\b/i.test(html)
   || /\s(style|class|id)\s*=/i.test(html);
+
+function isImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return /^https?:\/\//i.test(value) && (url.protocol === 'http:' || url.protocol === 'https:');
+  } catch { return false; }
+}
 
 function WriteInner() {
   const router = useRouter();
@@ -39,7 +46,6 @@ function WriteInner() {
   // HTML 모드 안의 보기 (v2.0 사용자 요청) — 코드 그대로 / 미리보기에서 바로 편집
   const [htmlView, setHtmlView] = useState<'code' | 'preview'>('code');
   const [askRich, setAskRich] = useState<null | (() => void)>(null);   // 정리 경고 후 실행할 전환
-  const [category, setCategory] = useState('');
   const [secret, setSecret] = useState(false);
   const [notice, setNotice] = useState(false);
   // 태그 (v2.0 사용자 요청) — 쉼표로 구분해 입력, 저장할 때 배열로
@@ -50,6 +56,8 @@ function WriteInner() {
   const [foldLabel, setFoldLabel] = useState('');
   // 대표 이미지 — 별도 업로드 또는 본문 이미지 선택 + 16:9 썸네일 크롭
   const [thumbSrc, setThumbSrc] = useState<string | undefined>(undefined);
+  const [thumbInput, setThumbInput] = useState('');
+  const thumbInvalid = !!thumbInput.trim() && !isImageUrl(thumbInput.trim());
   const [thumbCrop, setThumbCrop] = useState<CropValue | undefined>(undefined);
   const [cropOpen, setCropOpen] = useState(false);
   const [thumbBusy, setThumbBusy] = useState(false);
@@ -73,11 +81,11 @@ function WriteInner() {
     // 에디터로 쓴 글은 에디터로 다시 연다 — 예전에는 무조건 HTML 소스가 떠서
     // 에디터로 쓴 글을 수정하면 갑자기 태그가 보였다 (authored 없는 옛 글은 지금까지대로 HTML)
     setWriteMode(p.mode === 'md' ? 'md' : (p.authored === 'editor' ? 'editor' : 'html'));
-    setCategory(p.category ?? '');
     setSecret(p.secret); setNotice(p.notice);
     setFoldType(p.fold?.type ?? 'none'); setFoldLabel(p.fold?.label ?? '');
     setTagsText((p.tags ?? []).join(', '));
     setThumbSrc(p.thumbSrc); setThumbCrop(p.thumbCrop);
+    setThumbInput(p.thumbSrc && isImageUrl(p.thumbSrc) ? p.thumbSrc : '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editPid, postsLoaded, posts]);
 
@@ -93,6 +101,7 @@ function WriteInner() {
 
   const post = () => {
     if (thumbBusy) return;
+    if (thumbInvalid) { toast('썸네일은 올바른 http(s) 이미지 URL을 입력해 주세요'); return; }
     if (!title.trim() || !body.trim()) { toast('제목과 내용을 입력해 주세요'); return; }
     if (editing) {
       // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/날짜/댓글/소속 게시판은 유지
@@ -102,7 +111,6 @@ function WriteInner() {
         title: title.trim(), body,
         mode: writeMode === 'md' ? 'md' : 'html',
         authored: writeMode === 'editor' ? 'editor' : undefined,
-        category,
         secret, notice: isAdmin ? notice : p.notice,
         tags: parseTags(tagsText),
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
@@ -114,7 +122,7 @@ function WriteInner() {
     }
     const p: Post = {
       id: newId(), title: title.trim(), body,
-      mode: writeMode === 'md' ? 'md' : 'html', category,
+      mode: writeMode === 'md' ? 'md' : 'html',
       author: user.nickname, authorId: user.id, date: new Date().toISOString(),
       secret, notice: isAdmin && notice,
       tags: parseTags(tagsText),
@@ -186,11 +194,22 @@ function WriteInner() {
                 setThumbBusy(true);
                 try {
                   const ref = await putThumbnail(files[0]);
-                  setThumbSrc(ref); setThumbCrop(undefined);
+                  setThumbSrc(ref); setThumbCrop(undefined); setThumbInput('');
                 } catch (e) {
                   toast(`썸네일을 저장하지 못했습니다 — ${e instanceof Error ? e.message : String(e)}`);
                 } finally { setThumbBusy(false); }
               }} />
+            <label className="k-label" htmlFor="thumbnail-url" style={{ marginTop: 10 }}>이미지 URL</label>
+            <KInput id="thumbnail-url" type="url" placeholder="https://example.com/image.jpg"
+              value={thumbInput} disabled={thumbBusy}
+              aria-invalid={thumbInvalid} aria-describedby={thumbInvalid ? 'thumbnail-url-error' : undefined}
+              onChange={e => {
+                const value = e.target.value;
+                setThumbInput(value);
+                setThumbSrc(isImageUrl(value.trim()) ? value.trim() : undefined);
+                setThumbCrop(undefined);
+              }} style={{ width: '100%' }} />
+            {thumbInvalid && <p id="thumbnail-url-error" role="alert" className="hint">올바른 http(s) 이미지 URL을 입력해 주세요</p>}
             {thumbUrl && (
               <div style={{ marginTop: 10 }}>
                 <button type="button" aria-label="썸네일 위치 조정" disabled={thumbBusy}
@@ -199,7 +218,7 @@ function WriteInner() {
                   <CropImg src={thumbUrl} crop={thumbCrop} />
                 </button>
                 <button type="button" className="btn btn-ghost" disabled={thumbBusy}
-                  onClick={() => { setThumbSrc(undefined); setThumbCrop(undefined); }}>썸네일 삭제</button>
+                  onClick={() => { setThumbSrc(undefined); setThumbCrop(undefined); setThumbInput(''); }}>썸네일 삭제</button>
               </div>
             )}
           </div>
@@ -210,7 +229,7 @@ function WriteInner() {
                 {bodyImages.map(src => (
                   <div key={src}
                     data-tip={thumbSrc === src ? '썸네일 위치 조정' : '대표로 선택'}
-                    onClick={() => { if (thumbBusy) return; if (thumbSrc !== src) { setThumbSrc(src); setThumbCrop(undefined); } setCropOpen(true); }}
+                    onClick={() => { if (thumbBusy) return; setThumbInput(''); if (thumbSrc !== src) { setThumbSrc(src); setThumbCrop(undefined); } setCropOpen(true); }}
                     style={{
                       width: 104, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
                       position: 'relative', flexShrink: 0,
@@ -233,11 +252,6 @@ function WriteInner() {
         <div>
           <div className="panel widget" style={{ marginBottom: 14 }}>
             <h4>설정</h4>
-            <div className="form-row">
-              <label className="k-label" style={{ width: 60 }}>말머리</label>
-              <KSelect minWidth={130} value={category} onChange={setCategory}
-                options={[{ value: '', label: '없음' }, ...board.cats.map(x => ({ value: x.label, label: x.label }))]} />
-            </div>
             {/* 태그 (v2.0 사용자 요청) — 목록의 작성자 왼쪽에 나열되고 검색에 걸린다 */}
             <div className="form-row">
               <label className="k-label" style={{ width: 60 }}>태그</label>

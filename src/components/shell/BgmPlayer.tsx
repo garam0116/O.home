@@ -67,7 +67,8 @@ export function BgmPlayer() {
   const [listOpen, setListOpen] = useState(false);
   const [volume, setVolume] = useState(settings.volume);
   // 접기 상태 — 방문자별 기억 (4.1)
-  const [folded, setFolded] = useState(false);
+  const [foldState, setFolded] = useState<boolean | null>(null);
+  const folded = foldState ?? false;
   const playerRef = useRef<YTPlayer | null>(null);
   const readyRef = useRef(false);       // onReady 이후에만 playVideo가 실제 동작 (그 전엔 무시됨)
   const startedRef = useRef(false);     // 한 번이라도 실제 재생 시작됨 — 첫 재생은 loadVideoById 경로 필수
@@ -81,7 +82,9 @@ export function BgmPlayer() {
   useEffect(() => { setVolume(settings.volume); playerRef.current?.setVolume(settings.volume); }, [settings.volume]);
 
   useEffect(() => {
-    try { setFolded(localStorage.getItem('ohome.bgm.fold') === '1'); } catch { /* 무시 */ }
+    let preference: string | null = null;
+    try { preference = localStorage.getItem('ohome.bgm.fold'); } catch { /* 무시 */ }
+    setFolded(preference === '1' ? true : preference === '0' ? false : window.matchMedia('(max-width: 620px)').matches);
   }, []);
   const setFold = (v: boolean) => {
     setFolded(v);
@@ -251,7 +254,10 @@ export function BgmPlayer() {
     <div
       ref={rootRef}
       className={`bgm ${folded ? 'folded' : ''} ${settings.position === 'bl' ? 'bgm-left' : ''}`}
-      style={settings.position === 'bl' ? { right: 'auto', left: 20 } : undefined}
+      style={{
+        ...(settings.position === 'bl' ? { right: 'auto', left: 20 } : {}),
+        visibility: foldState === null ? 'hidden' : undefined,
+      }}
       onClick={() => { if (folded) setFold(false); }}
       data-tip={folded ? '펼치기' : undefined}
     >
@@ -259,7 +265,10 @@ export function BgmPlayer() {
       <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
         <div ref={holderRef} />
       </div>
-      <div className="disc" style={{ animationPlayState: playing ? 'running' : 'paused' }} />
+      {folded
+        ? <button type="button" className="disc" aria-label="BGM 펼치기" onClick={e => { e.stopPropagation(); setFold(false); }}
+            style={{ animationPlayState: playing ? 'running' : 'paused' }} />
+        : <div className="disc" style={{ animationPlayState: playing ? 'running' : 'paused' }} />}
       <div className="title">
         {/* 흐르는 글씨는 제목만 — 설명은 항상 말줄임 (정신없지 않게) */}
         <Marquee className="tt" text={track?.title ?? ''} active={playing} />
@@ -277,7 +286,7 @@ export function BgmPlayer() {
         <i style={{ width: `${volume}%` }} />
       </div>
       {/* 접기 — 디스크만 남김 (4.1) · 화살표는 접히는 방향(화면 가장자리 쪽) */}
-      <button className="fold-btn" data-tip="접기" onClick={e => { e.stopPropagation(); setFold(true); }}>
+      <button className="fold-btn" aria-label="BGM 접기" data-tip="접기" onClick={e => { e.stopPropagation(); setFold(true); }}>
         {settings.position === 'bl' ? '«' : '»'}
       </button>
       {/* 곡 목록 팝업 (v1.9) — 바깥 클릭 시 닫힘 */}
