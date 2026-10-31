@@ -29,6 +29,20 @@ function isImageUrl(value: string): boolean {
   } catch { return false; }
 }
 
+/** ISO → 로컬 날짜 'YYYY-MM-DD' (date 입력값) */
+const toDay = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/** 고른 날짜 + 기준 시각(시·분·초)으로 ISO — 같은 날 글끼리 순서가 유지되게 시각은 살린다 */
+const withDay = (day: string, base: string) => {
+  const [y, m, d] = day.split('-').map(Number);
+  const t = new Date(base);
+  t.setFullYear(y, m - 1, d);
+  return t.toISOString();
+};
+
 function WriteInner() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
@@ -48,6 +62,8 @@ function WriteInner() {
   const [askRich, setAskRich] = useState<null | (() => void)>(null);   // 정리 경고 후 실행할 전환
   const [secret, setSecret] = useState(false);
   const [notice, setNotice] = useState(false);
+  // 게시 일자 (사용자 요청) — 기본은 오늘, 과거·미래 날짜로 지정 가능
+  const [day, setDay] = useState(() => toDay(new Date().toISOString()));
   // 태그 (v2.0 사용자 요청) — 쉼표로 구분해 입력, 저장할 때 배열로
   const [tagsText, setTagsText] = useState('');
   const parseTags = (s: string) =>
@@ -82,6 +98,7 @@ function WriteInner() {
     // 에디터로 쓴 글을 수정하면 갑자기 태그가 보였다 (authored 없는 옛 글은 지금까지대로 HTML)
     setWriteMode(p.mode === 'md' ? 'md' : (p.authored === 'editor' ? 'editor' : 'html'));
     setSecret(p.secret); setNotice(p.notice);
+    setDay(toDay(p.date));
     setFoldType(p.fold?.type ?? 'none'); setFoldLabel(p.fold?.label ?? '');
     setTagsText((p.tags ?? []).join(', '));
     setThumbSrc(p.thumbSrc); setThumbCrop(p.thumbCrop);
@@ -103,8 +120,9 @@ function WriteInner() {
     if (thumbBusy) return;
     if (thumbInvalid) { toast('썸네일은 올바른 http(s) 이미지 URL을 입력해 주세요'); return; }
     if (!title.trim() || !body.trim()) { toast('제목과 내용을 입력해 주세요'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { toast('일자를 입력해 주세요'); return; }
     if (editing) {
-      // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/날짜/댓글/소속 게시판은 유지
+      // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/댓글/소속 게시판은 유지 · 일자는 바꿀 수 있다
       if (editing.authorId !== user.id) { toast('수정은 작성자 본인만 할 수 있습니다'); return; }
       setPosts(posts.map(p => (p.id === editing.id ? {
         ...p,
@@ -112,6 +130,7 @@ function WriteInner() {
         mode: writeMode === 'md' ? 'md' : 'html',
         authored: writeMode === 'editor' ? 'editor' : undefined,
         secret, notice: isAdmin ? notice : p.notice,
+        date: day === toDay(p.date) ? p.date : withDay(day, p.date),
         tags: parseTags(tagsText),
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
         thumbSrc, thumbCrop,
@@ -123,7 +142,7 @@ function WriteInner() {
     const p: Post = {
       id: newId(), title: title.trim(), body,
       mode: writeMode === 'md' ? 'md' : 'html',
-      author: user.nickname, authorId: user.id, date: new Date().toISOString(),
+      author: user.nickname, authorId: user.id, date: withDay(day, new Date().toISOString()),
       secret, notice: isAdmin && notice,
       tags: parseTags(tagsText),
       fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
@@ -252,6 +271,10 @@ function WriteInner() {
         <div>
           <div className="panel widget" style={{ marginBottom: 14 }}>
             <h4>설정</h4>
+            <div className="form-row">
+              <label className="k-label" style={{ width: 60 }}>일자</label>
+              <KInput type="date" value={day} onChange={e => setDay(e.target.value)} style={{ flex: 1 }} />
+            </div>
             {/* 태그 (v2.0 사용자 요청) — 목록의 작성자 왼쪽에 나열되고 검색에 걸린다 */}
             <div className="form-row">
               <label className="k-label" style={{ width: 60 }}>태그</label>
