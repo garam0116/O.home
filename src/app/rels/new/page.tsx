@@ -1,26 +1,29 @@
 'use client';
 // 자관 등록 페이지 (4.5) — 상대 캐릭터는 등록 후 상세에서 추가
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, newId } from '@/lib/postStore';
 import { Character, CHAR_SEED, Relation, REL_SEED, RelMember } from '@/lib/charStore';
+import { useSectionParam, secStamp, secQuery, useSectionTitle } from '@/lib/sectionStore';
 import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 
-export default function RelNewPage() {
+function RelNewInner() {
   const router = useRouter();
   const { isAdmin } = useAuth();
   const toast = useToast();
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
   const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
+  const sec = useSectionParam('rels');   // 어느 자관 목록에서 눌러 왔는지
+  const tt = useSectionTitle('rels', sec.id, 'ADD RELATION');
 
   if (!loaded) return <section className="page" />;
   if (!isAdmin) {
     return (
       <section className="page">
-        <div className="page-head"><PageTitle>ADD RELATION</PageTitle><p>관리자 전용</p></div>
+        <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>관리자 전용</p></div>
       </section>
     );
   }
@@ -28,14 +31,14 @@ export default function RelNewPage() {
   return (
     <section className="page">
       <div className="page-head">
-        <PageTitle>ADD RELATION</PageTitle>
+        <PageTitle href={tt.href}>{tt.title}</PageTitle>
         <EditableDesc k="rels-new-desc" def="자관 등록 — 상대 캐릭터는 페이지를 만든 뒤 상세에서 추가할 수 있습니다" />
       </div>
       <RelForm
         initial={null}
         myChars={chars.filter(c => c.own)}
         existingIds={rels.flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])])}
-        onCancel={() => router.push('/rels')}
+        onCancel={() => router.push('/rels' + secQuery('rels', sec.id))}
         onSave={v => {
           // 팔레트는 캐릭터 쪽을 상세에서 그대로 읽는다 — 여기서 복사해 두면 나중에 캐릭터 색을
           // 바꿔도 자관이 따라오지 않는다 (v2.0 — 상세 페이지와 같은 규칙으로 통일)
@@ -55,7 +58,7 @@ export default function RelNewPage() {
             nameShadowColor: v.nameShadowColor, nameShadow: v.nameShadow,
             headerBgG1: v.headerBgG1, headerBgG2: v.headerBgG2, headerBgAngle: v.headerBgAngle,
             pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle,
-            members, thumbClass: '',
+            members, thumbClass: '', ...secStamp(sec.id),
             illustMode: v.kind === 'pair' ? 'duo' : 'one',
             aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase,
               hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog }],
@@ -68,4 +71,9 @@ export default function RelNewPage() {
       />
     </section>
   );
+}
+
+export default function RelNewPage() {
+  // useSearchParams는 Suspense 경계 필요 (Next App Router)
+  return <Suspense fallback={<section className="page" />}><RelNewInner /></Suspense>;
 }

@@ -416,6 +416,8 @@ export interface Relation {
   lorebookUrl?: string;
   members: RelMember[];          // 2인 = 좌/우, 3인+ = 다인 리스트
   visibility: Visibility;
+  /** 어느 자관 목록 것인지 — 없으면 기본 목록. 캐릭터·로그·역극이 자관을 찾을 때는 소속을 보지 않는다 */
+  secId?: string;
   thumbClass: string;
   illustMode: 'duo' | 'one';     // 2인: 전신 2장 / 일러 1장 (v1.8)
   aus: RelAu[];                  // AU 리스트 (첫 항목 = 원본 base)

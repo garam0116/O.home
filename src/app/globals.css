@@ -1595,6 +1595,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .board-post{padding:26px 28px}
 .board-comments-body{padding:16px 18px}
 @media(max-width:620px){
+  /* 박스 없는 전체화면은 그대로, 뒤에 흰 배경을 깐다 (사용자 요청) */
+  #appMain:has(.board-detail){background:#fff}
+  .board-detail{--page-title:var(--ink);--page-desc:var(--faint)} /* 흰 바탕에서도 큰 제목이 보이게 — 카드 글씨색 사용 */
   .board-detail>.panel{background:none;border:0;border-radius:0;box-shadow:none}
   .board-post,.board-comments-body{padding:0}
   .board-detail .cmt-input{padding-left:0;padding-right:0;background:none}

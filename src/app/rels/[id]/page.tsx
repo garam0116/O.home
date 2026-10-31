@@ -31,6 +31,7 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
@@ -257,6 +258,8 @@ export default function RelDetailPage() {
   const [chars, setChars, charsLoaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [logs] = useLocalList<TrpgLog>('ohome.trpg.v1', TRPG_SEED);
   const [rooms] = useLocalList<RpRoom>('ohome.rp.v1', RP_SEED);
+  // 소속 자관 목록 — 큰 글씨·삭제 후 돌아갈 곳
+  const tt = useSectionTitle('rels', findByKey(rels, id)?.secId, 'RELATIONS');
   const [tab, setTab] = useState<'tl' | 'qa'>('tl');
   const [auId, setAuId] = useState('base');
   const [oneMode, setOneMode] = useState<boolean | null>(null);
@@ -517,7 +520,7 @@ export default function RelDetailPage() {
   if (!rel || (rel.visibility === 'private' && !isAdmin) || (rel.visibility === 'member' && !user)) {
     return (
       <section className="page">
-        <div className="page-head"><PageTitle>RELATIONS</PageTitle><p>자관을 찾을 수 없거나 열람 권한이 없습니다</p></div>
+        <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>자관을 찾을 수 없거나 열람 권한이 없습니다</p></div>
       </section>
     );
   }
@@ -903,7 +906,7 @@ export default function RelDetailPage() {
             setRels(rels.filter(r => r.id !== rel.id));
             // 자관에 달렸던 문답 답변도 함께 (v2.0 — 따로 저장이라 남기면 주인 없는 줄이 된다)
             setQaRows(qaRows.filter(r => r.relId !== rel.id));
-            router.push('/rels');
+            router.push(sectionHref('rels', rel.secId ?? MAIN_SEC));
           } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setDelAsk(false) },
         ]} />

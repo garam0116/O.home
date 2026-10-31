@@ -1,11 +1,12 @@
 'use client';
 // EditableDesc 주입
 // 자관 리스트 (4.5) — 4:3 가로 썸네일 · 공개범위 3단계 · 멤버 색 점
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { Relation, REL_SEED, relDday, relPath } from '@/lib/charStore';
+import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
 import { SearchBar } from '@/components/ui/Kit';
 import { useToast } from '@/components/ui/Toast';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -13,12 +14,16 @@ import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
 
-export default function RelsPage() {
+function RelsInner() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const { editOn } = useMainStore();
-  const [rels, setRels] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  const [relsAll, setRelsAll] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  // 여러 개로 만든 자관 목록 — 주소의 ?s= 가 가리키는 것만, 저장은 이 목록 자리만 교체
+  const sec = useSectionParam('rels');
+  const rels = filterSection(relsAll, sec.id);
+  const setRels = sectionSetter(relsAll, sec.id, setRelsAll);
   const [q, setQ] = useState('');
 
   const visible = rels
@@ -31,11 +36,11 @@ export default function RelsPage() {
   return (
     <section className="page">
       <div className="page-head">
-        <PageTitle>RELATIONS</PageTitle>
+        <PageTitle>{sec.id === 'main' ? 'RELATIONS' : sec.name}</PageTitle>
         <EditableDesc k="rels-desc" def="자관 목록 · 4:3 가로 썸네일 · 공개범위: 전체공개/멤버공개/나만보기" />
         <div className="head-actions">
           <SearchBar onSearch={setQ} />
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/rels/new')}>＋ ADD RELATION</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/rels/new' + secQuery('rels', sec.id))}>＋ ADD RELATION</button>}
         </div>
       </div>
       <div className="g3 rels-grid">
@@ -90,4 +95,9 @@ export default function RelsPage() {
       </div>
     </section>
   );
+}
+
+export default function RelsPage() {
+  // useSearchParams는 Suspense 경계 필요 (Next App Router)
+  return <Suspense fallback={<section className="page" />}><RelsInner /></Suspense>;
 }
