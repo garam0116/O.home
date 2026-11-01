@@ -99,7 +99,7 @@ function BoardInner() {
       </div>
 
       {board.skin === 'gallery' || board.skin === 'gallery2' ? (
-        /* 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 4:5 카드, 그림 위에 제목·날짜.
+        /* 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 5:6 카드, 그림 위에 제목·날짜.
            1 = 하단 옅은 그림자 + 흰 글씨 · 2 = 반투명 흰 띠 + 글씨.
            뱃지는 공지·비밀·접힘일 때만 왼쪽 위에 작게 — 모든 카드에 붙으면 시선이 흩어진다 */
         <div className={`bgal ${board.skin === 'gallery2' ? 'bgal-2' : 'bgal-1'}`}>
