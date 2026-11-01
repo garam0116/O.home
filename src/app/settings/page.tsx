@@ -16,7 +16,7 @@ import { newId } from '@/lib/postStore';
 import { useCommSettings, badgeStyle, CommBadge, CommSettings } from '@/lib/commStore';
 import {
   useBoardSettings, boardBadgeStyle, BoardBadge, galleryCatsOf,
-  useBoards, Board, BoardSkin, BoardPerm, MAIN_BOARD_ID,
+  useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf,
 } from '@/lib/boardStore';
 import { useThreadSettings, ThreadWork, THREAD_SEED, ThreadCat, threadBadgeStyle, threadCats, threadCatsPatch } from '@/lib/threadStore';
 import { useTrpgSettings, DOTORI_STATUS_KEYS, DotoriStatus, dotoriBadgeStyle } from '@/lib/galleryStore';
@@ -30,7 +30,7 @@ import { FEATURES } from '@/lib/menu';
 import { SectionsBlock } from '@/components/settings/SectionList';
 import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
-import { useSiteDraft } from '@/lib/siteStore';
+import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf } from '@/lib/siteStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
@@ -54,6 +54,9 @@ import { validateConfig, configFileText, saveLocalConfig, parseFirebaseSnippet, 
 import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
+
+/** 보관할 수 없는 탭 — 설정 첫 화면이라 늘 메뉴에 있어야 한다 (v2.3) */
+const UNARCHIVABLE = '디자인';
 
 const CATEGORIES = [
   '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', '커미션', 'TRPG', '감상타래', '메모장',
@@ -535,6 +538,25 @@ function DesignPane() {
       </div>
 
       <SpellCheckRow />
+      <BoardWidthRow />
+    </div>
+  );
+}
+
+/** 게시판 본문 폭 (v2.3 사용자 요청) — 목록·글 상세 공통(동기화). 다른 디자인 항목처럼 미리보기 즉시, SAVE로 저장 */
+function BoardWidthRow() {
+  const { site, set } = useSiteDraft();
+  return (
+    <div className="set-row">
+      <div className="l"><b>게시판 본문 폭</b><small>게시판 목록과 글 상세에 같은 폭으로 적용 — 기본 {BOARD_W.def}px · 모바일은 화면 폭 그대로</small></div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        {site.boardW != null && site.boardW !== BOARD_W.def && (
+          <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+            onClick={() => set({ boardW: undefined })}>기본값</button>
+        )}
+        <KStep value={boardWOf(site)} min={BOARD_W.min} max={BOARD_W.max} step={10} suffix="px"
+          onChange={v => set({ boardW: v })} />
+      </div>
     </div>
   );
 }
@@ -658,7 +680,7 @@ function WidgetsPane() {
 /** 게시판 관리 탭 (5.2) — 게시판 생성·삭제·스킨·권한 + 뱃지 색 */
 function BoardPane() {
   const {
-    st, patchSystem, patchGallery,
+    st, patchSystem, patchGallery, setPerPage,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   } = useBoardSettings();
   const { boards, setBoards, patchBoard } = useBoards();
@@ -689,7 +711,7 @@ function BoardPane() {
       <a className="btn btn-ghost" href="/admin/posts">전체 게시글 관리</a>
 
       <h3 style={{ marginTop: 20 }}>게시판 목록</h3>
-      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/티켓형) 게시판마다 지정 — 글쓰기·댓글 권한은 메뉴 관리에서</div>
+      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 — 글쓰기·댓글 권한은 메뉴 관리에서</div>
       <DragList items={boards} keyOf={b => b.id} onReorder={setBoards}
         render={b => (
           <div className="set-row" style={{ width: '100%' }}>
@@ -701,9 +723,9 @@ function BoardPane() {
             </div>
             <div className="cp-group" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <div className="mini-seg">
-                {(['list', 'ticket'] as BoardSkin[]).map(s => (
-                  <button key={s} className={b.skin === s ? 'on' : ''}
-                    onClick={() => patchBoard(b.id, { skin: s })}>{s === 'list' ? '기본형' : '티켓형'}</button>
+                {BOARD_SKINS.map(k => (
+                  <button key={k.id} className={b.skin === k.id ? 'on' : ''}
+                    onClick={() => patchBoard(b.id, { skin: k.id })}>{k.label}</button>
                 ))}
               </div>
               {/* 목록 글씨색 (v1.9) — 미지정이면 테마 기본색 */}
@@ -728,6 +750,12 @@ function BoardPane() {
             id: newId(), name: '새 게시판', desc: '게시판 설명을 입력하세요',
             skin: 'list', permWrite: 'member', permComment: 'member',
           }])}>＋ ADD BOARD</button>
+      </div>
+
+      {/* 페이지당 글 수 (v2.3 사용자 요청) — 게시판마다가 아니라 모든 게시판 공통 */}
+      <div className="set-row" style={{ marginTop: 14 }}>
+        <div className="l"><b>페이지당 글 수</b><small>모든 게시판 목록에 공통 적용 — 갤러리형은 한 줄에 3개라 3의 배수가 깔끔합니다</small></div>
+        <KStep value={perPageOf(st)} min={BOARD_PER_PAGE.min} max={BOARD_PER_PAGE.max} suffix="개" onChange={setPerPage} />
       </div>
 
       <hr style={{ margin: '24px 0', border: 'none', borderTop: '1.5px solid var(--line)' }} />
@@ -2979,6 +3007,29 @@ function SettingsInner() {
     router.push(`/settings?tab=${encodeURIComponent(t)}`);
   };
 
+  /* 메뉴 보관함 (v2.3 사용자 요청) — 지금 쓰지 않는 탭을 메뉴 맨 아래로 접어 둔다.
+     숨기기만 하므로 설정값은 그대로고, 보관함 안에서도 눌러서 열 수 있다.
+     보관된 탭을 보고 있으면(주소로 들어온 경우 포함) 보관함을 펼친 채로 둔다 */
+  const [site, patchSite] = useSiteSettings();
+  const archived = CATEGORIES.filter(c => c !== UNARCHIVABLE && (site.setArchived ?? []).includes(c));
+  const activeTabs = CATEGORIES.filter(c => !archived.includes(c));
+  const [archOpen, setArchOpen] = useState(false);
+  const showArch = archOpen || archived.includes(tab);
+  const toggleArchive = (c: string) => {
+    const cur = site.setArchived ?? [];
+    patchSite({ setArchived: cur.includes(c) ? cur.filter(x => x !== c) : [...cur, c] });
+  };
+  const navItem = (c: (typeof CATEGORIES)[number], inArchive: boolean) => (
+    <div className="set-nav-item" key={c}>
+      <button className={tab === c ? 'on' : ''} onClick={() => setTab(c)}>{c}</button>
+      {c !== UNARCHIVABLE && (
+        <button className="set-nav-arch-btn" data-tip={inArchive ? '메뉴로 꺼내기' : '보관함으로'}
+          aria-label={inArchive ? `${c} 메뉴로 꺼내기` : `${c} 보관하기`}
+          onClick={() => toggleArchive(c)}>{inArchive ? '↑' : '↓'}</button>
+      )}
+    </div>
+  );
+
   // 모바일에서는 환경설정 미제공 (v1.9 사용자 확정 — 수정할 정보량이 모바일에 맞지 않음)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -3070,9 +3121,16 @@ function SettingsInner() {
         ]} />
       <div className="settings-layout">
         <div className="panel set-nav">
-          {CATEGORIES.map(c => (
-            <button key={c} className={tab === c ? 'on' : ''} onClick={() => setTab(c)}>{c}</button>
-          ))}
+          {activeTabs.map(c => navItem(c, false))}
+          {archived.length > 0 && (
+            <div className="set-nav-arch">
+              <button className="set-nav-arch-head" aria-expanded={showArch}
+                onClick={() => setArchOpen(!showArch)}>
+                <span className={`caret${showArch ? ' open' : ''}`}>▸</span> 보관함 <i>{archived.length}</i>
+              </button>
+              {showArch && archived.map(c => navItem(c, true))}
+            </div>
+          )}
         </div>
         <div className="panel" style={{ padding: 26 }}>
           {tab === '디자인' ? (

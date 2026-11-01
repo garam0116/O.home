@@ -55,6 +55,9 @@ function WriteInner() {
   const bid = editing?.boardId ?? params.get('b') ?? MAIN_BOARD_ID;
   const { boards } = useBoards();
   const board = boards.find(b => b.id === bid) ?? boards[0];
+  // 대표 썸네일 비율 — 갤러리형 게시판은 카드와 같은 4:5, 기본형은 목록 썸네일과 같은 16:9 (v2.3)
+  const galleryThumb = board.skin === 'gallery' || board.skin === 'gallery2';
+  const thumbRatio = galleryThumb ? '4/5' : '16/9';
   const [title, setTitle] = useState('');
   const [writeMode, setWriteMode] = useState<'editor' | 'md' | 'html'>('editor'); // 에디터가 기본
   const [body, setBody] = useState('');
@@ -226,7 +229,7 @@ function WriteInner() {
               <div style={{ marginTop: 10 }}>
                 <button type="button" aria-label="썸네일 위치 조정" disabled={thumbBusy}
                   onClick={() => setCropOpen(true)}
-                  style={{ display: 'block', position: 'relative', width: 200, maxWidth: '100%', aspectRatio: '16/9', overflow: 'hidden', borderRadius: 8 }}>
+                  style={{ display: 'block', position: 'relative', width: galleryThumb ? 140 : 200, maxWidth: '100%', aspectRatio: thumbRatio, overflow: 'hidden', borderRadius: 8 }}>
                   <CropImg src={thumbUrl} crop={thumbCrop} />
                 </button>
                 <button type="button" className="btn btn-ghost" disabled={thumbBusy}
@@ -243,7 +246,7 @@ function WriteInner() {
                     data-tip={thumbSrc === src ? '썸네일 위치 조정' : '대표로 선택'}
                     onClick={() => { if (thumbBusy) return; setThumbInput(''); if (thumbSrc !== src) { setThumbSrc(src); setThumbCrop(undefined); } setCropOpen(true); }}
                     style={{
-                      width: 104, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
+                      width: galleryThumb ? 80 : 104, aspectRatio: thumbRatio, borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
                       position: 'relative', flexShrink: 0,
                       outline: thumbSrc === src ? '2px solid var(--accent)' : '1px solid var(--line)', outlineOffset: 2,
                     }}>
@@ -322,9 +325,9 @@ function WriteInner() {
           : <p className="pv-empty">아직 작성한 내용이 없습니다.</p>}
       </Modal>
 
-      {/* 대표 썸네일 위치 지정 — 16:9 (티켓 스킨) */}
+      {/* 대표 썸네일 위치 지정 — 갤러리형 4:5 / 기본형 16:9 (v2.3) */}
       {cropOpen && thumbUrl && (
-        <CropEditor open src={thumbUrl} aspect="16:9" initial={thumbCrop}
+        <CropEditor open src={thumbUrl} aspect={galleryThumb ? 4 / 5 : '16:9'} aspectLabel={galleryThumb ? '4:5' : undefined} initial={thumbCrop}
           onClose={() => setCropOpen(false)}
           onApply={c => { setThumbCrop(c); setCropOpen(false); }} />
       )}
