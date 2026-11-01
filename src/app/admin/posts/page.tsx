@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useBoards, MAIN_BOARD_ID } from '@/lib/boardStore';
 import { BOARD_SEED, Post, useLocalList } from '@/lib/postStore';
+
+/** 작성일 — 저장값은 UTC(ISO)라 앞 10글자를 자르면 한국 시간 오전 9시 전 글이 하루 전 날짜로 나온다.
+ *  보는 사람의 현지 날짜로 바꿔 표시한다 */
+const ymdLocal = (iso: string) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 import { KInput, KSelect, Pager } from '@/components/ui/Kit';
 
 const PER_PAGE = 20;
@@ -68,7 +76,7 @@ function PostList() {
                       </td>
                       <td style={{ padding: 12 }}>{boardName(currentBoard)}</td>
                       <td style={{ padding: 12 }}>{post.author}</td>
-                      <td style={{ padding: 12, whiteSpace: 'nowrap' }}><time dateTime={post.date}>{post.date.slice(0, 10)}</time></td>
+                      <td style={{ padding: 12, whiteSpace: 'nowrap' }}><time dateTime={post.date}>{ymdLocal(post.date)}</time></td>
                       <td style={{ padding: 12 }}>
                         <KSelect value={currentBoard} onChange={value => move(post, value)}
                           options={[
