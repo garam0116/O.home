@@ -300,7 +300,7 @@ a{color:inherit;text-decoration:none}
 }
 /* 포커스 — 디자인 탭 「입력 포커스」에서 색·링 방식·두께 지정 (v1.9 사용자 요청) */
 .k-input:focus,.k-textarea:focus{border-color:var(--focus-bd,var(--steel-3));box-shadow:var(--focus-ring,0 0 0 3px rgba(60,67,77,.12))}
-.k-textarea{resize:none;min-height:86px;line-height:1.7;overflow:hidden}
+.k-textarea{resize:none;min-height:86px;line-height:1.7;overflow:hidden;max-height:min(50vh,420px)} /* 일정 높이까지만 늘고 그 뒤는 안에서 스크롤 (사용자 요청) */
 /* 밝은 영역 스크롤바: 얇고 연하게 (v1.8) */
 .k-textarea,.panel,.mng-box{scrollbar-color:var(--sb-thumb,#c9ccd2) transparent;scrollbar-width:thin}
 .k-textarea::-webkit-scrollbar,.panel ::-webkit-scrollbar,.mng-box ::-webkit-scrollbar{width:8px}
@@ -624,7 +624,7 @@ a{color:inherit;text-decoration:none}
 /* 이어쓰기 컴포저 — 테두리 없는 입력 + 아래 툴바 (v1.8) */
 .thr-write{border-top:1px solid var(--line);padding:0;display:block}
 .thr-write textarea{width:100%;border:none;outline:none;background:transparent;resize:none;
-  padding:16px 18px 8px;font-size:calc(13px*var(--fs,1));line-height:1.75;min-height:76px;font-family:inherit;color:var(--ink)}
+  padding:16px 18px 8px;font-size:calc(13px*var(--fs,1));line-height:1.75;min-height:76px;max-height:min(50vh,420px);overflow-y:auto;field-sizing:content;font-family:inherit;color:var(--ink)}
 .thr-write textarea::placeholder{color:var(--faint)}
 .thr-write .wfoot{display:flex;justify-content:space-between;align-items:center;margin:0 18px;padding:9px 0 12px;border-top:1px solid var(--line)}
 .thr-att{display:flex;gap:7px;padding:0 18px 10px;flex-wrap:wrap}
@@ -1645,35 +1645,56 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .write-editor .re-body{max-height:min(62vh,640px);overflow-y:auto;scrollbar-width:thin}
 .write-editor .re-content{min-height:320px}
 .write-md{height:min(62vh,640px);min-height:320px !important;overflow-y:auto !important}
-/* HTML 코드 편집기 — VS Code Dark+ 느낌 (사용자 요청) */
-.ce-wrap{--ce-lh:20px;--ce-pad:10px;--ce-h:min(62vh,640px);border:1.5px solid #2b2b2b;border-radius:var(--radius-s);overflow:hidden;background:#1e1e1e;color:#d4d4d4;
-  font-family:Consolas,'Cascadia Code','D2Coding','Courier New',ui-monospace,monospace;font-size:13.5px}
-.ce-wrap.focus{border-color:#007acc;box-shadow:0 0 0 3px rgba(0,122,204,.18)}
-.ce-tabs{display:flex;background:#252526;height:34px;border-bottom:1px solid #1e1e1e}
-.ce-tab{display:flex;align-items:center;gap:7px;padding:0 14px;background:#1e1e1e;color:#fff;font-size:12.5px;border-top:1.5px solid #007acc;font-family:var(--sans)}
-.ce-ico{color:#e37933;font-size:11px;font-weight:700;font-family:Consolas,ui-monospace,monospace}
+/* HTML 코드 편집기 — 차분한 최신 편집기 스타일 (사용자 요청: 눈 아프지 않게)
+   긴 줄은 자동 줄바꿈 — 가로 스크롤 없음. pre와 textarea는 줄바꿈 폭이 같아야 하므로
+   둘 다 스크롤바 자리를 항상 같은 너비로 비워 둔다(scrollbar-gutter) */
+.ce-wrap{--ce-lh:22px;--ce-pad:14px;--ce-h:min(62vh,640px);
+  border:1px solid var(--ce-bd);border-radius:12px;overflow:hidden;background:var(--ce-bg);color:var(--ce-fg);
+  box-shadow:0 1px 2px rgba(15,17,20,.04);transition:border-color .15s,box-shadow .15s;
+  font-family:'JetBrains Mono','D2Coding','SF Mono',Menlo,Consolas,ui-monospace,monospace;font-size:13px;
+  font-variant-ligatures:none;-webkit-font-smoothing:antialiased}
+.ce-wrap.focus{border-color:var(--ce-accent);box-shadow:0 0 0 3px var(--ce-ring)}
+/* 색 — Vitesse 테마(antfu/vitesse-theme, MIT) 팔레트 참고: 밝은 / 어두운 */
+.ce-wrap.light{--ce-bg:#ffffff;--ce-bar:#fafaf9;--ce-bd:#e7e5e4;--ce-fg:#393a34;--ce-ln:#c4c4c0;--ce-ln-on:#6b6b66;
+  --ce-caret:#393a34;--ce-sel:rgba(34,34,34,.08);--ce-cur:rgba(34,34,34,.03);--ce-sb:#dddcd8;--ce-ph:#b0b0aa;--ce-mute:#8e8f8b;
+  --ce-accent:#59873a;--ce-ring:rgba(89,135,58,.14);
+  --c-tag:#1e754f;--c-attr:#b07d48;--c-str:#b56959;--c-punc:#999999;--c-cmt:#a0ada0;--c-ent:#a65e2b}
+.ce-wrap.dark{--ce-bg:#121212;--ce-bar:#181818;--ce-bd:#2a2a2a;--ce-fg:#dbd7ca;--ce-ln:#444444;--ce-ln-on:#bfbaaa;
+  --ce-caret:#dbd7ca;--ce-sel:rgba(238,238,238,.1);--ce-cur:rgba(255,255,255,.03);--ce-sb:#333333;--ce-ph:#555555;--ce-mute:#7b7b74;
+  --ce-accent:#4d9375;--ce-ring:rgba(77,147,117,.2);
+  --c-tag:#4d9375;--c-attr:#bd976a;--c-str:#c98a7d;--c-punc:#666666;--c-cmt:#758575;--c-ent:#d4976c}
+/* 상단 바 — 파일 이름 + 테마 전환 */
+.ce-tabs{display:flex;align-items:center;gap:10px;height:38px;padding:0 8px 0 14px;background:var(--ce-bar);border-bottom:1px solid var(--ce-bd)}
+.ce-tab{display:flex;align-items:center;gap:8px;color:var(--ce-mute);font-size:12px;font-family:var(--sans);letter-spacing:.01em}
+.ce-dots{display:flex;gap:6px;margin-right:4px}
+.ce-dots i{width:9px;height:9px;border-radius:50%;background:var(--ce-bd)}
+.ce-ico{color:var(--ce-accent);font-size:10.5px;font-weight:700;font-family:inherit}
+.ce-theme{margin-left:auto;width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--ce-mute);transition:.15s}
+.ce-theme:hover{background:var(--ce-cur);color:var(--ce-fg)}
+.ce-theme svg{width:15px;height:15px}
 .ce-main{display:flex;height:var(--ce-h);min-height:320px}
-.ce-gutter{flex-shrink:0;min-width:48px;padding:var(--ce-pad) 14px var(--ce-pad) 10px;text-align:right;color:#6e7681;overflow:hidden;line-height:var(--ce-lh);user-select:none;background:#1e1e1e}
-.ce-gutter .on{color:#c6c6c6}
+.ce-gutter{flex-shrink:0;box-sizing:border-box;padding:var(--ce-pad) 12px var(--ce-pad) 12px;text-align:right;color:var(--ce-ln);overflow:hidden;line-height:var(--ce-lh);user-select:none;background:var(--ce-bg);font-size:12px}
+.ce-gutter>div{min-height:var(--ce-lh);transition:color .1s}
+.ce-gutter .on{color:var(--ce-ln-on)}
 .ce-code{position:relative;flex:1;min-width:0;overflow:hidden}
-.ce-pre,.ce-ta{position:absolute;inset:0;margin:0;padding:var(--ce-pad) 16px var(--ce-pad) 4px;border:0;font:inherit;line-height:var(--ce-lh);
-  white-space:pre;overflow-wrap:normal;word-break:normal;tab-size:2;letter-spacing:0}
-.ce-pre{overflow:hidden;pointer-events:none;color:#d4d4d4}
-.ce-ta{width:100%;height:100%;resize:none;background:transparent;color:transparent;caret-color:#aeafad;outline:none;overflow:auto;
-  -webkit-text-fill-color:transparent;scrollbar-color:#4f4f4f transparent;scrollbar-width:thin}
-.ce-ta::selection{background:rgba(38,79,120,.85);-webkit-text-fill-color:transparent}
-.ce-ta::-webkit-scrollbar{width:12px;height:12px}
-.ce-ta::-webkit-scrollbar-thumb{background:rgba(121,121,121,.4)}
-.ce-ta::-webkit-scrollbar-corner{background:#1e1e1e}
-.ce-curline{position:absolute;left:0;right:0;height:var(--ce-lh);border-top:1px solid #282828;border-bottom:1px solid #282828;background:rgba(255,255,255,.03);pointer-events:none}
-.ce-ph{position:absolute;top:var(--ce-pad);left:4px;color:#6a6a6a;pointer-events:none;line-height:var(--ce-lh)}
-.ce-status{display:flex;justify-content:flex-end;gap:18px;padding:0 12px;height:22px;align-items:center;background:#007acc;color:#fff;font-size:11.5px;font-family:var(--sans)}
-.ce-tag{color:#569cd6}
-.ce-attr{color:#9cdcfe}
-.ce-str{color:#ce9178}
-.ce-punc{color:#808080}
-.ce-cmt{color:#6a9955}
-.ce-ent{color:#569cd6}
+.ce-pre,.ce-ta{position:absolute;inset:0;margin:0;padding:var(--ce-pad) 14px var(--ce-pad) 6px;border:0;font:inherit;line-height:var(--ce-lh);
+  white-space:pre-wrap;word-break:break-all;overflow-wrap:anywhere;tab-size:2;letter-spacing:0;
+  scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ce-sb) transparent}
+.ce-pre{overflow:hidden;pointer-events:none;color:var(--ce-fg)}
+.ce-pre>div{min-height:var(--ce-lh)}
+.ce-ta{width:100%;height:100%;resize:none;background:transparent;color:transparent;caret-color:var(--ce-caret);outline:none;overflow-x:hidden;overflow-y:auto;
+  -webkit-text-fill-color:transparent}
+.ce-ta::selection{background:var(--ce-sel);-webkit-text-fill-color:transparent}
+.ce-curline{position:absolute;left:0;right:0;height:var(--ce-lh);background:var(--ce-cur);pointer-events:none}
+.ce-ph{position:absolute;top:var(--ce-pad);left:6px;color:var(--ce-ph);pointer-events:none;line-height:var(--ce-lh)}
+/* 하단 상태 표시 — 색 띠 대신 얇고 조용하게 */
+.ce-status{display:flex;justify-content:flex-end;gap:16px;padding:0 14px;height:28px;align-items:center;background:var(--ce-bar);border-top:1px solid var(--ce-bd);color:var(--ce-mute);font-size:11px;font-family:var(--sans)}
+.ce-tag{color:var(--c-tag)}
+.ce-attr{color:var(--c-attr)}
+.ce-str{color:var(--c-str)}
+.ce-punc{color:var(--c-punc)}
+.ce-cmt{color:var(--c-cmt);font-style:italic}
+.ce-ent{color:var(--c-ent)}
 /* 게시 전 미리보기 팝업 (사용자 요청 — 아래로 줄줄 나오던 미리보기 대신) */
 .mng-box.pv-modal{width:860px}
 .pv-modal .pv-title{font-size:calc(20px*var(--fs,1));font-weight:700;color:var(--ink);padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--line)}
