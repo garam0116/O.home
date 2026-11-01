@@ -12,7 +12,7 @@
  *
  * 10단위라 사이에 끼워 넣을 자리가 늘 남는다 — 10과 20 사이에 넣고 싶으면 15라고 적으면 된다.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** 이 자리(0부터)의 순서 번호 — 10, 20, 30 … */
 export const orderNoOf = (index: number) => (index + 1) * 10;
@@ -38,12 +38,14 @@ export function moveToOrder<T>(list: T[], from: number, wanted: number): T[] {
 }
 
 /** 우클릭 자리에 뜨는 번호 입력 — Enter로 적용, Esc·바깥 클릭으로 닫기 */
-export function OrderMenu({ at, current, total, onApply, onClose }: {
+export function OrderMenu({ at, current, total, onApply, onClose, children }: {
   at: { x: number; y: number };
   current: number;                 // 지금 번호 (10단위)
   total: number;                   // 전체 개수 — 안내 문구용
   onApply: (wanted: number) => void;
   onClose: () => void;
+  /** 번호 입력 아래에 덧붙일 메뉴 (예: 자관 「다른 목록으로 이동」, v2.1) */
+  children?: React.ReactNode;
 }) {
   const [v, setV] = useState(String(current));
   const ref = useRef<HTMLInputElement>(null);
@@ -76,7 +78,10 @@ export function OrderMenu({ at, current, total, onApply, onClose }: {
 
   // 화면 밖으로 나가지 않게 (메뉴 크기만큼 물려 둔다)
   const left = Math.min(at.x, (typeof window !== 'undefined' ? window.innerWidth : 9999) - 190);
-  const top = Math.min(at.y, (typeof window !== 'undefined' ? window.innerHeight : 9999) - 130);
+  // 덧붙인 메뉴가 있으면 키가 커지므로 실제 높이를 재서 물린다
+  const [boxH, setBoxH] = useState(130);
+  useLayoutEffect(() => { if (boxRef.current) setBoxH(boxRef.current.offsetHeight + 8); }, [children]);
+  const top = Math.max(8, Math.min(at.y, (typeof window !== 'undefined' ? window.innerHeight : 9999) - boxH));
 
   return (
     <div ref={boxRef} className="ctx-menu on" style={{ left, top, minWidth: 176, padding: 10 }}
@@ -95,6 +100,7 @@ export function OrderMenu({ at, current, total, onApply, onClose }: {
         1~{orderNoOf(total - 1)} · 사이에 넣으려면 15처럼
       </p>
       <button style={{ textAlign: 'center', marginTop: 2 }} onClick={apply}>이 번호로 옮기기</button>
+      {children}
     </div>
   );
 }
