@@ -151,7 +151,7 @@ a{color:inherit;text-decoration:none}
    색은 전부 기존 테마 변수(--bgm-bg/fg/ic/vol, --accent-soft, --line-dark)만 사용 */
 .bgm{position:fixed;right:20px;bottom:20px;z-index:70;color:var(--bgm-fg)}
 .bgm.bgm-left{right:auto;left:20px}
-.bgm .disc{display:block;width:56px;height:56px;padding:4px;border-radius:50%;background:var(--bgm-bg);
+.bgm .disc{display:block;width:48px;height:48px;padding:4px;border-radius:50%;background:var(--bgm-bg);
   border:1px solid var(--line-dark);backdrop-filter:blur(10px);transition:transform .18s}
 .bgm .disc:hover{transform:scale(1.06)}
 .bgm .disc:focus-visible{outline:2px solid var(--bgm-ic);outline-offset:2px}
@@ -160,7 +160,7 @@ a{color:inherit;text-decoration:none}
   background:repeating-radial-gradient(circle at center,rgba(0,0,0,.28) 0 .6px,transparent .6px 2.4px),
     conic-gradient(#565d68,#2b3038,#565d68,#2b3038,#565d68);
   animation:spin 7s linear infinite}
-.bgm .rec .lbl{width:48%;height:48%;border-radius:50%;object-fit:cover;display:block;background:#2b3038;box-shadow:0 0 0 1.5px rgba(0,0,0,.45)}
+.bgm .rec .lbl{width:50%;height:50%;border-radius:50%;object-fit:cover;display:block;background:#2b3038;box-shadow:0 0 0 1.5px rgba(0,0,0,.45)}
 .bgm .rec::after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:#14161a;border:1.5px solid #757c87}
 @keyframes spin{to{transform:rotate(360deg)}}
 .bgm .mq{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -1794,7 +1794,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
      손가락으로 누르기 쉽게 버튼·바·목록 줄을 키우고, 노치/홈 바 영역(safe-area)만큼 띄움 */
   .bgm{right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}
   .bgm.bgm-left{right:auto;left:14px}
-  .bgm .disc{width:46px;height:46px;padding:3px}
+  .bgm .disc{width:30px;height:30px;padding:2px} /* 예전 접힌 디스크(약 28px)와 비슷한 크기 */
+  .bgm .rec::after{width:3px;height:3px;border-width:1px}
   .bgm .disc:hover{transform:none}
   .bgm-dim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);animation:bgmFade .2s}
   @keyframes bgmFade{from{opacity:0}}
