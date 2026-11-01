@@ -338,6 +338,12 @@ function DesignPane() {
         </div>
       </div>
 
+      {/* 로고 이미지 (v2.2 사용자 요청) — 지정하면 로고 텍스트 대신 표시 */}
+      <div className="set-row" style={{ flexWrap: 'wrap' }}>
+        <div className="l"><b>로고 이미지</b><small>지정하면 상단바에 로고 텍스트 대신 이미지를 표시 — 가로로 긴 투명 PNG 권장, 높이는 상단바에 맞춰 자동 축소 · 모바일을 비우면 PC 이미지를 그대로 사용</small></div>
+        <LogoImageControls />
+      </div>
+
       <div className="set-row">
         <div className="l"><b>상단메뉴</b></div>
         <div className="cp-group">
@@ -1165,45 +1171,73 @@ function CrawlDescControl() {
   );
 }
 
-/** 브라우저 탭 아이콘 (v2.0 사용자 요청) — 지정 전에는 기본 아이콘(배포 기본값)이 뜬다.
- *  탭 제목 바로 아래에 같은 드래프트/SAVE 흐름으로 둔다. */
-function FaviconControl() {
+/** 사이트 이미지 한 칸 — 업로드·주소 붙여넣기·제거 (드래프트/SAVE 흐름).
+ *  브라우저 탭 아이콘(v2.0)과 로고 이미지 PC/모바일(v2.2 사용자 요청)이 같은 모양을 쓴다 */
+function SiteImageControl({ field, accept, emptyText, failText, wide }: {
+  field: 'favicon' | 'logoImage' | 'logoImageM';
+  accept: string; emptyText: string; failText: string; wide?: boolean;
+}) {
   const { site, set } = useSiteDraft();
   const toast = useToast();
-  const url = useBlobUrl(site.favicon);
-  const imageSource = useImageSource(url => set({ favicon: url }));
+  const ref = site[field];
+  const url = useBlobUrl(ref);
+  const imageSource = useImageSource(url => set({ [field]: url }));
+  const inputId = `siteImg-${field}`;
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }} tabIndex={0}
       onDragOver={e => e.preventDefault()} {...imageSource.handlers}>
       <span style={{
-        width: 35, height: 35, borderRadius: 'var(--radius-s)', border: '1px solid var(--line)',
-        background: 'var(--panel)', display: 'grid', placeItems: 'center', overflow: 'hidden', flexShrink: 0,
+        width: wide ? 110 : 35, height: 35, borderRadius: 'var(--radius-s)', border: '1px solid var(--line)',
+        background: wide ? 'var(--top-bg)' : 'var(--panel)', display: 'grid', placeItems: 'center', overflow: 'hidden', flexShrink: 0,
       }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {url ? <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          : <span style={{ fontSize: 10, color: 'var(--faint)' }}>기본</span>}
+          : <span style={{ fontSize: 10, color: 'var(--faint)' }}>{emptyText}</span>}
       </span>
-      <input id="siteFavicon" type="file" accept="image/png,image/x-icon,image/svg+xml,image/webp,.ico"
+      <input id={inputId} type="file" accept={accept}
         style={{ display: 'none' }}
         onChange={async e => {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (!f) return;
           // 올리기가 막히면 아무 말 없이 끝나지 않게 (v2.0 — 프로필 사진에서 겪은 것과 같은 이유)
-          try { set({ favicon: await putBlob(f) }); } catch (err) {
-            toast(`아이콘을 저장소에 올리지 못했습니다 — ${err instanceof Error ? err.message : String(err)}`);
+          try { set({ [field]: await putBlob(f) }); } catch (err) {
+            toast(`${failText}을(를) 저장소에 올리지 못했습니다 — ${err instanceof Error ? err.message : String(err)}`);
           }
         }} />
       <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
-        onClick={() => document.getElementById('siteFavicon')?.click()}>
-        {site.favicon ? 'CHANGE' : 'UPLOAD'}
+        onClick={() => document.getElementById(inputId)?.click()}>
+        {ref ? 'CHANGE' : 'UPLOAD'}
       </button>
       <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 이미지 주소 붙여넣기</button>
-      {site.favicon && (
+      {ref && (
         <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
-          onClick={() => set({ favicon: undefined })}>REMOVE</button>
+          onClick={() => set({ [field]: undefined })}>REMOVE</button>
       )}
       {imageSource.element}
+    </div>
+  );
+}
+
+/** 브라우저 탭 아이콘 (v2.0 사용자 요청) — 지정 전에는 기본 아이콘(배포 기본값)이 뜬다. */
+function FaviconControl() {
+  return <SiteImageControl field="favicon" emptyText="기본" failText="아이콘"
+    accept="image/png,image/x-icon,image/svg+xml,image/webp,.ico" />;
+}
+
+/** 로고 이미지 (v2.2 사용자 요청) — 텍스트 로고가 좁은 화면에서 잘릴 때 대신 쓰는 이미지. PC/모바일 따로 */
+function LogoImageControls() {
+  const accept = 'image/png,image/svg+xml,image/webp,image/jpeg,image/gif';
+  return (
+    <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <small style={{ width: 44, color: 'var(--faint)' }}>PC</small>
+        <SiteImageControl field="logoImage" wide emptyText="텍스트 로고" failText="로고 이미지" accept={accept} />
+      </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <small style={{ width: 44, color: 'var(--faint)' }}>모바일</small>
+        <SiteImageControl field="logoImageM" wide emptyText="PC와 같음" failText="로고 이미지" accept={accept} />
+      </div>
     </div>
   );
 }

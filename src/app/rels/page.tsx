@@ -132,7 +132,7 @@ function RelsInner() {
                     {/* 두 게시판 중 가장 최근 업데이트 (v2.1 사용자 요청) — 링크 줄 오른쪽 빈 자리 */}
                     {upd != null && (
                       <em className="rel-card-upd" title="LOG · LOREBOOK 중 가장 최근 업데이트">
-                        LATEST UPDATE <time>{fmtUpdate(upd)}</time>
+                        LATEST <time>{fmtUpdate(upd)}</time>
                       </em>
                     )}
                   </div>
