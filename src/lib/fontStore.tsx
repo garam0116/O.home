@@ -171,6 +171,10 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 첫 페인트를 외부 폰트 CSS 응답으로 막지 않는다.
     ensureLink('ohome-base-fonts', 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+KR:wght@500;700&display=swap');
+    // 기본 산세리프(--sans-base 첫 순위) Pretendard — 이전에는 이름만 스택에 있고 로드가 없어서
+    // 설치 안 된 PC(대부분의 윈도우)에서는 맑은 고딕으로 떨어졌다 (게시판 목록 제목 등 본문 전체).
+    // 다이내믹 서브셋이라 화면에 쓰인 글자 조각만 받는다
+    ensureLink('ohome-pretendard', 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css');
     const plain = BUILTIN_FONTS.filter(f => f.gfont && !st.overrides[f.id]?.cssUrl);
     const gf = plain.map(f => `family=${f.gfont}`).join('&');
     if (gf) ensureLink('ohome-gfonts', `https://fonts.googleapis.com/css2?${gf}&display=swap`);
