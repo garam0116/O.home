@@ -1,15 +1,15 @@
 'use client';
 // 게시글 상세 (4.2) — 본문 렌더(격리 새니타이즈) · 접기 · 댓글+대댓글
-import React, { useMemo, useState } from 'react';
+// 주소는 글 번호 /board/{번호} (v2.4) — 예전 id 주소(/board/mvwvev4lnr1m)로 들어오면 번호 주소로 바꿔 준다
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useHrefBlock } from '@/components/shell/MenuGuard';
-import { extraBoardHref } from '@/lib/menuStore';
 import { useAuth } from '@/lib/auth';
 import {
   useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput } from '@/components/ui/Kit';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
@@ -35,12 +35,20 @@ export default function BoardDetailPage() {
   const [delAsk, setDelAsk] = useState(false);
   const [gName, setGName] = useState('');                       // 게스트 닉네임 (방문자 댓글 허용 시)
 
-  const post = posts.find(p => p.id === id);
+  // 주소 값은 글 번호 또는 예전 id (v2.4)
+  const key = decodeURIComponent(id);
+  const nums = useMemo(() => postNumbers(posts), [posts]);
+  const post = findPostByKey(posts, key, nums);
+  const no = post ? nums.get(post.id) : undefined;
+  // id 주소로 들어왔으면 번호 주소로 — 주소창에 /board/{번호}가 남게
+  useEffect(() => {
+    if (no !== undefined && key !== String(no)) router.replace(`/board/${no}`);
+  }, [no, key, router]);
   /* 이 글이 속한 곳이 비공개면 주소로 들어와도 열리지 않게 (v2.0 사용자 요청).
      글 주소에는 섹션이 없어 MenuGuard가 못 막는다 — 글을 읽어 소속을 알아낸 여기서 판정한다.
      **다른 early return보다 먼저 불러야 한다**(훅이므로 렌더마다 개수가 같아야 한다) */
   const bid = post?.boardId ?? MAIN_BOARD_ID;
-  const blocked = useHrefBlock(post && (bid === MAIN_BOARD_ID ? '/board' : extraBoardHref(bid)));
+  const blocked = useHrefBlock(post && boardHref(bid, boards));
   // loaded 이후에만 본문 렌더 (SSR/하이드레이션 불일치 방지)
   const html = useMemo(() => (post && loaded ? renderBody(post.mode, post.body) : ''), [post, loaded]);
 
@@ -123,7 +131,7 @@ export default function BoardDetailPage() {
   return (
     <section className="page board-detail">
       <div className="page-head">
-        <PageTitle href={boardHref(board.id)}>{boardTitle}</PageTitle>
+        <PageTitle href={boardHref(board.id, boards)}>{boardTitle}</PageTitle>
         <p>{post.notice ? '공지 · ' : ''}{post.author} · {fmtDate(post.date)}</p>
         <div className="head-actions">
           {/* 수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
@@ -206,7 +214,7 @@ export default function BoardDetailPage() {
             setPosts(posts.filter(p => p.id !== post.id));
             // 글에 딸린 댓글도 함께 지운다 — 따로 저장되므로 남겨 두면 주인 없는 줄이 된다 (v2.0)
             setCmtRows(cmtRows.filter(c => !(c.target === 'post' && c.targetId === post.id)));
-            router.push(boardHref(board.id));
+            router.push(boardHref(board.id, boards));
           } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setDelAsk(false) },
         ]} />

@@ -17,6 +17,7 @@ import { useCommSettings, badgeStyle, CommBadge, CommSettings } from '@/lib/comm
 import {
   useBoardSettings, boardBadgeStyle, BoardBadge, galleryCatsOf,
   useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf,
+  boardHref, boardKeys, findBoardByKey,
 } from '@/lib/boardStore';
 import { useThreadSettings, ThreadWork, THREAD_SEED, ThreadCat, threadBadgeStyle, threadCats, threadCatsPatch } from '@/lib/threadStore';
 import { useTrpgSettings, DOTORI_STATUS_KEYS, DotoriStatus, dotoriBadgeStyle } from '@/lib/galleryStore';
@@ -28,7 +29,7 @@ import {
 } from '@/lib/menuStore';
 import { FEATURES } from '@/lib/menu';
 import { SectionsBlock } from '@/components/settings/SectionList';
-import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection } from '@/lib/sectionStore';
+import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection, cleanSlug } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
 import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf } from '@/lib/siteStore';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -683,7 +684,34 @@ function BoardPane() {
     st, patchSystem, patchGallery, setPerPage,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   } = useBoardSettings();
-  const { boards, setBoards, patchBoard } = useBoards();
+  const { boards, setBoards: setBoardsRaw } = useBoards();
+  const [ms, patchMenu] = useMenuSettings();
+  /* 게시판 주소 (v2.4 사용자 요청) — `/board/b/별명`. 별명을 비우면 이름(영소문자)이 주소가 되므로
+     **이름이나 별명을 고치면 주소가 바뀐다.** 메뉴 트리에는 주소가 문자열로 적혀 있어서,
+     그 자리도 함께 고쳐야 배치·공개범위·페이지 타이틀이 풀리지 않는다 (섹션 별명과 같은 방식). */
+  const setBoards = (next: Board[]) => {
+    const before = new Map(boards.map(b => [b.id, boardHref(b.id, boards)]));
+    setBoardsRaw(next);
+    const swapMap = new Map<string, string>();
+    next.forEach(b => {
+      const was = before.get(b.id);
+      const now = boardHref(b.id, next);
+      if (was && was !== now) swapMap.set(was, now);
+    });
+    if (!swapMap.size) return;
+    const swap = (h: string) => swapMap.get(h) ?? h;
+    patchMenu({
+      tree: (ms.tree ?? []).map(g => ({
+        ...g,
+        ...(g.href ? { href: swap(g.href) } : {}),
+        items: g.items.map(it => ({ ...it, href: swap(it.href) })),
+      })),
+      removedBoards: (ms.removedBoards ?? []).map(swap),
+    });
+  };
+  const patchBoard = (id: string, p: Partial<Board>) =>
+    setBoards(boards.map(b => (b.id === id ? { ...b, ...p } : b)));
+  const bKeys = boardKeys(boards);
   /* 갤러리 말머리도 갤러리마다 따로 (v2.0 사용자 요청) — 어느 갤러리 것을 고칠지 고른다.
      하나뿐이면 고를 것이 없으니 선택 줄을 아예 두지 않는다 (감상타래와 같은 방식) */
   const { list: secList } = useSections();
@@ -711,7 +739,11 @@ function BoardPane() {
       <a className="btn btn-ghost" href="/admin/posts">전체 게시글 관리</a>
 
       <h3 style={{ marginTop: 20 }}>게시판 목록</h3>
-      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 — 글쓰기·댓글 권한은 메뉴 관리에서</div>
+      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 — 글쓰기·댓글 권한은 메뉴 관리에서
+        <br />
+        <b>주소</b>는 <code>/board/b/주소</code> — 영소문자·숫자·하이픈만 쓸 수 있고, 비우면 게시판 이름을 영소문자로 바꿔 씁니다
+        (이름에 영문·숫자가 없으면 내부 id). 이름이나 주소를 바꾸면 메뉴의 주소도 함께 바뀌고, 글은 그대로 있습니다
+      </div>
       <DragList items={boards} keyOf={b => b.id} onReorder={setBoards}
         render={b => (
           <div className="set-row" style={{ width: '100%' }}>
@@ -719,7 +751,24 @@ function BoardPane() {
               <span className="drag-h">⠿</span>
               <KInput value={b.name} onChange={e => patchBoard(b.id, { name: e.target.value })}
                 style={{ width: 110 }} />
-              {b.id === MAIN_BOARD_ID && <span className="pill">기본</span>}
+              {b.id === MAIN_BOARD_ID
+                ? <span className="pill">기본</span>
+                : (
+                  /* 주소 별명 (v2.4) — 비우면 이름을 영소문자로 (Palimpsest → palimpsest) */
+                  <>
+                    <span className="cp-lb">주소</span>
+                    <KInput value={b.slug ?? ''} placeholder={bKeys.get(b.id) ?? b.id}
+                      onChange={e => {
+                        // 입력 중에는 하이픈을 지우지 않는다(`my-` 다음 글자를 칠 수 있게) — 주소로 쓸 때 다듬는다
+                        const raw = e.target.value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, 32);
+                        const slug = cleanSlug(raw);
+                        const taken = boards.some(x => x.id !== b.id && (x.id === slug || bKeys.get(x.id) === slug));
+                        if (slug && taken) return;      // 다른 게시판 주소와 겹치면 그대로 둔다
+                        patchBoard(b.id, { slug: raw || undefined });
+                      }} style={{ width: 110 }} />
+                    <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{boardHref(b.id, boards)}</small>
+                  </>
+                )}
             </div>
             <div className="cp-group" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <div className="mini-seg">
@@ -1909,7 +1958,7 @@ function MenuPane() {
   const placeUnplaced = (href: string, to: string) => {
     if (to === 'solo') setTree([...tree, { id: newGroupId(), label: defLabel(href), href, items: [] }]);
     else setTree(tree.map(g => (g.id === to ? { ...g, items: [...g.items, { href }] } : g)));
-    if (href.startsWith('/board?b=')) setDraftRemoved(removed.filter(h => h !== href));
+    if (href.startsWith('/board/b/')) setDraftRemoved(removed.filter(h => h !== href));
   };
   const groupOptions = (excludeId?: string) => [
     ...tree.filter(g => !g.href && g.id !== excludeId).map(g => ({ value: g.id, label: `→ ${g.label}` })),
@@ -1961,9 +2010,11 @@ function MenuPane() {
       );
     }
     // 게시판 글쓰기·댓글 권한 (게시판별)
-    if (href === '/board' || href.startsWith('/board?b=')) {
-      const bid = href === '/board' ? MAIN_BOARD_ID : href.slice('/board?b='.length);
-      const bd = boards.find(b => b.id === bid);
+    if (href === '/board' || href.startsWith('/board/b/')) {
+      // 메뉴 주소에는 별명(또는 이름에서 만든 값)이 적혀 있다 — id·별명 어느 쪽으로도 찾는다 (v2.4)
+      const bd = href === '/board'
+        ? boards.find(b => b.id === MAIN_BOARD_ID)
+        : findBoardByKey(href.slice('/board/b/'.length), boards);
       if (!bd) return null;
       return (
         <>

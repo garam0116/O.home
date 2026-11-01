@@ -1,8 +1,9 @@
 'use client';
 // 일반 게시판 목록 (4.2 / 5.2 다중 게시판) — 공지 필터 · 검색 · 비밀글 마스킹 · 접기 표시 · 페이지네이션
-// ?b=<게시판 id> 로 게시판 구분 (없으면 기본 게시판) · 리스트 스킨: 기본형 / 갤러리형 1·2 (v2.3)
-import React, { Suspense, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+// /board/b/<게시판 주소> 로 게시판 구분 (없으면 기본 게시판, v2.4) · 리스트 스킨: 기본형 / 갤러리형 1·2 (v2.3)
+// 옛 주소 /board?b=<id> 로 들어오면 새 주소로 바꿔 준다
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
   useLocalList, BOARD_SEED, Post, fmtDate,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/postStore';
 import {
   useBoardSettings, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm, perPageOf,
+  findBoardByKey, postNumbers, postHref, withPostNumbers,
 } from '@/lib/boardStore';
 import { SearchBar, Pager } from '@/components/ui/Kit';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -27,10 +29,31 @@ function BoardInner() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const params = useSearchParams();
-  const bid = params.get('b') ?? MAIN_BOARD_ID;
+  // 주소의 게시판 — `/board/b/{key}`(별명·이름에서 만든 값·id) 또는 옛 `?b={id}` (v2.4)
+  const { key } = useParams<{ key?: string }>();
+  const want = key ? decodeURIComponent(key) : params.get('b');
   const { boards, loaded: boardsLoaded } = useBoards();
-  const board = boards.find(b => b.id === bid) ?? boards[0];
-  const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  const board = (want ? findBoardByKey(want, boards) : undefined) ?? boards[0];
+  const bid = board.id;
+  const [posts, setPosts, postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  // 글 번호 (v2.4) — 글 주소 /board/{번호}
+  const nums = useMemo(() => postNumbers(posts), [posts]);
+
+  /* 옛 주소·id 주소로 들어오면 지금 주소로 바꿔 둔다 (v2.4) — 공유해 둔 `/board?b=id` 링크도 열리고,
+     주소창에는 `/board/b/별명`이 남는다. 없는 게시판이면 기본 게시판으로 */
+  const canon = boardsLoaded ? boardHref(bid, boards) : null;
+  const cur = key ? `/board/b/${want}` : want ? `/board?b=${want}` : '/board';
+  useEffect(() => {
+    if (canon && cur !== canon) router.replace(canon);
+  }, [canon, cur, router]);
+
+  /* 번호가 없는 예전 글에 번호를 저장해 둔다 (v2.4) — 관리자만(모든 글을 볼 수 있고 고칠 수 있다).
+     한 번 저장되면 그 뒤로는 글을 지워도 다른 글 번호가 밀리지 않는다 */
+  useEffect(() => {
+    if (!isAdmin || !postsLoaded) return;
+    const next = withPostNumbers(posts);
+    if (next) setPosts(next);
+  }, [isAdmin, postsLoaded, posts, setPosts]);
   // 댓글 수 — 댓글은 글과 따로 저장된다 (v2.0). 옛 글 안에 남아 있던 것도 함께 센다
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
   const cmtCount = (p: Post) => commentsFor(cmtRows, 'post', p.id, p.comments).length;
@@ -81,7 +104,7 @@ function BoardInner() {
   return (
     <section className="page board-page">
       <div className="page-head">
-        <PageTitle href={boardHref(board.id)}>{board.id === MAIN_BOARD_ID ? 'BOARD' : board.name}</PageTitle>
+        <PageTitle href={boardHref(board.id, boards)}>{board.id === MAIN_BOARD_ID ? 'BOARD' : board.name}</PageTitle>
         <EditableDesc k={board.id === MAIN_BOARD_ID ? 'board-desc' : `board-desc-${board.id}`} def={board.desc} />
       </div>
       <div className="toolrow">
@@ -110,7 +133,7 @@ function BoardInner() {
             const badge = postBadge(p) ?? (p.fold ? <span style={boardBadgeStyle(boardSet.system[2])}>{boardSet.system[2].label}</span> : null);
             return (
               <div className={`bgal-card${thumb ? '' : ' no-thumb'}`} key={p.id}
-                onClick={() => { if (readable) router.push(`/board/${p.id}`); }}>
+                onClick={() => { if (readable) router.push(postHref(p, nums)); }}>
                 {thumb
                   ? <CroppedBlobImg fileRef={thumb} crop={p.thumbSrc ? p.thumbCrop : undefined} />
                   : <span className="bgal-ph">{readable ? (p.title.trim()[0] ?? '·') : '🔒'}</span>}
@@ -133,7 +156,7 @@ function BoardInner() {
         /* 기본형 스킨 — 리스트 행 (글씨색은 게시판 관리에서 지정 가능, v1.9) */
         <div className="panel board-list flush" style={board.fg ? { color: board.fg } : undefined}>
           {pageList.map(p => (
-            <div className="brow" key={p.id} onClick={() => { if (canRead(p)) router.push(`/board/${p.id}`); }}>
+            <div className="brow" key={p.id} onClick={() => { if (canRead(p)) router.push(postHref(p, nums)); }}>
               <span className="cat">{postBadge(p)}</span>
               {/* 제목 칸 안에서 태그를 오른쪽 끝(=작성자 바로 왼쪽)에 정렬 (v2.0 사용자 요청) —
                   칸을 따로 만들면 행마다 그리드가 독립이라 작성자 열이 태그 길이만큼 어긋난다 */}

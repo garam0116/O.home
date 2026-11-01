@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_MENU, FEATURES, MenuItem } from './menu';
 import { newId } from './postStore';
 import { getRawSetting, setSetting } from './settingStore';
+import { boardHref, type Board } from './boardStore';
+import { canonHref } from './urlCanon';
 
 export type MenuPerm = 'guest' | 'member' | 'admin';
 
@@ -132,7 +134,9 @@ function moveHrefs(p: Partial<MenuSettings>): Partial<MenuSettings> {
       if (h === from) return to;
       if (h.startsWith(`${from}?`)) return to + h.slice(from.length);
     }
-    return h;
+    // 게시판·자관 목록 주소를 쿼리에서 경로로 (v2.4) — `/board?b=id` → `/board/b/별명`,
+    // `/rels?s=2nd` → `/rels/r/2nd`. 같은 곳의 다른 표기(id 주소)도 지금 주소로 맞춘다
+    return canonHref(h);
   };
   return {
     ...p,
@@ -200,17 +204,17 @@ export function useMenuSettings(): [MenuSettings, (patch: Partial<MenuSettings>)
   return [st, patch, loaded];
 }
 
-/** 게시판 href — 추가 게시판은 /board?b=<id> */
-export const extraBoardHref = (id: string) => `/board?b=${id}`;
+/** 게시판 href — 추가 게시판은 /board/b/<별명> (v2.4) */
+export const extraBoardHref = (id: string) => boardHref(id);
 
 /** 메뉴에 얹는 추가 항목 (v2.0) — 게시판뿐 아니라 갤러리·다이어리 등 「여러 개로 만든 섹션」 공통.
  *  anchor = 이 항목을 어느 기본 메뉴 뒤에 끼울지 (예: /diary 뒤) */
 export interface ExtraEntry { id: string; name: string; href: string; anchor: string }
 
 /** 게시판 목록을 추가 항목 형태로 (기본 게시판은 이미 메뉴에 있으므로 뺀다) */
-export const boardEntries = (boards?: { id: string; name: string }[]): ExtraEntry[] =>
+export const boardEntries = (boards?: Board[]): ExtraEntry[] =>
   (boards ?? []).filter(b => b.id !== 'main')
-    .map(b => ({ id: b.id, name: b.name, href: extraBoardHref(b.id), anchor: '/board' }));
+    .map(b => ({ id: b.id, name: b.name, href: boardHref(b.id, boards), anchor: '/board' }));
 
 /** 메뉴 관리에서 지정한 페이지 상단 큰 제목 (5.2 v1.9) — 정확히 일치하는 href만, 없으면 null */
 export function pageTitleFor(s: MenuSettings, href: string): string | null {

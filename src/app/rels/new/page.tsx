@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, newId } from '@/lib/postStore';
 import { Character, CHAR_SEED, Relation, REL_SEED, RelMember } from '@/lib/charStore';
-import { useSectionParam, secStamp, secQuery, useSectionTitle } from '@/lib/sectionStore';
+import { useSectionParam, secStamp, sectionHref, useSectionTitle, REL_RESERVED } from '@/lib/sectionStore';
 import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
@@ -37,8 +37,8 @@ function RelNewInner() {
       <RelForm
         initial={null}
         myChars={chars.filter(c => c.own)}
-        existingIds={rels.flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])])}
-        onCancel={() => router.push('/rels' + secQuery('rels', sec.id))}
+        existingIds={rels.flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])]).concat(REL_RESERVED)}
+        onCancel={() => router.push(sectionHref('rels', sec.id))}
         onSave={v => {
           // 팔레트는 캐릭터 쪽을 상세에서 그대로 읽는다 — 여기서 복사해 두면 나중에 캐릭터 색을
           // 바꿔도 자관이 따라오지 않는다 (v2.0 — 상세 페이지와 같은 규칙으로 통일)

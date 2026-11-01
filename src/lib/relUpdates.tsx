@@ -5,7 +5,8 @@
  * 자관 카드의 LOG·LOREBOOK 링크가 가리키는 **이 홈 안의 게시판**에서 가장 최근 글의 날짜를 찾아,
  * 두 링크 중 더 늦은 날짜 하나를 카드에 적는다 (로그 10/1 · 로어북 10/2 → Oct 2, 2026).
  *
- * 링크는 주소 그대로 해석한다 — `/board?b=lore`, `/trpg?s=log`, `/gallery/abc`처럼
+ * 링크는 주소 그대로 해석한다 — `/board/b/lore`, `/board/12`, `/trpg?s=log`, `/gallery/abc`처럼
+ * (옛 `/board?b=id` 주소도 그대로 알아본다, v2.4)
  * 목록 주소면 그 목록(섹션)의 글 전체에서, 글 하나의 주소면 그 글의 날짜를 쓴다.
  * 바깥 사이트(포스타입 등) 주소는 그쪽 글 목록을 읽을 수 없으므로 날짜를 계산하지 않는다.
  *
@@ -14,7 +15,8 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocalList } from './postStore';
-import { MAIN_BOARD_ID } from './boardStore';
+import { MAIN_BOARD_ID, findBoardByKey, findPostByKey } from './boardStore';
+import type { Post } from './postStore';
 import { useSections, inSection, MAIN_SEC, type SectionKind } from './sectionStore';
 import { lastDate, type ThreadWork } from './threadStore';
 
@@ -46,9 +48,13 @@ export function parseTarget(url?: string): Target | null {
   let u: URL;
   try { u = new URL(raw, window.location.origin); } catch { return null; }
   if (u.origin !== window.location.origin) return null;
-  const [first, second] = u.pathname.split('/').filter(Boolean);
+  const [first, second, third] = u.pathname.split('/').filter(Boolean);
   if (!first || !(first in SOURCES)) return null;
   const kind = first as SrcKind;
+  // 게시판 목록 주소 `/board/b/{주소}` (v2.4) — 글 하나가 아니라 그 게시판 전체
+  if (kind === 'board' && second === 'b') {
+    return third ? { kind, board: decodeURIComponent(third) } : { kind };
+  }
   const itemId = second && !['write', 'new'].includes(second) ? decodeURIComponent(second) : undefined;
   return {
     kind, itemId,
@@ -110,10 +116,15 @@ export function useLatestUpdates(linkSets: (string | undefined)[][], isAdmin: bo
     const rows = rowsBy[t.kind];
     if (!rows) return undefined;
     let hit: Row[];
-    if (t.itemId) {
+    if (t.itemId && t.kind === 'board') {
+      // 게시판 글 주소는 번호(`/board/12`) 또는 예전 id (v2.4)
+      const p = findPostByKey(rows as unknown as Post[], t.itemId);
+      hit = p ? [p as unknown as Row] : [];
+    } else if (t.itemId) {
       hit = rows.filter(r => r.id === t.itemId);
     } else if (t.kind === 'board') {
-      const b = t.board ?? MAIN_BOARD_ID;
+      // 주소 값은 별명·이름에서 만든 값·id 어느 것이든 (v2.4)
+      const b = t.board ? (findBoardByKey(t.board)?.id ?? t.board) : MAIN_BOARD_ID;
       hit = rows.filter(r => (r.boardId ?? MAIN_BOARD_ID) === b);
     } else {
       // ?s= 는 섹션 id 또는 별명 — 못 찾으면 목록 페이지처럼 기본 섹션으로 본다
