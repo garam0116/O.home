@@ -719,7 +719,7 @@ export function ApplyWidget({ conf }: { conf: WidgetConf }) {
 
 /* ---------- 게시판 검색 (사용자 요청) ----------
    모든 게시판의 글을 찾는 검색창 — 엔터·돋보기를 누르면 `/search?q=` 결과로 간다.
-   결과 화면은 게시판 목록(기본형 리스트)과 같은 모양이다. 제목·안내 문구는 편집모드 우클릭 「설정」에서 */
+   결과 화면은 게시판 목록(갤러리형 1)과 같은 모양이다. 제목·안내 문구는 편집모드 우클릭 「설정」에서 */
 export function SearchWidget({ conf }: { conf: WidgetConf }) {
   const router = useRouter();
   const { editOn, updateWidget } = useMainStore();
@@ -737,8 +737,8 @@ export function SearchWidget({ conf }: { conf: WidgetConf }) {
     <div className="panel widget search-wg">
       <h4>{s.title?.trim() || 'SEARCH'}</h4>
       <form className="search-wg-box" role="search" onSubmit={e => { e.preventDefault(); go(); }}>
-        <input value={q} onChange={e => setQ(e.target.value)} aria-label="게시판 전체 글 검색"
-          placeholder={s.placeholder?.trim() || '게시판 전체 글 검색'} />
+        <input value={q} onChange={e => setQ(e.target.value)} aria-label="전체 글 검색"
+          placeholder={s.placeholder?.trim() || '전체 글 검색'} />
         <button type="submit" aria-label="검색">
           <svg viewBox="0 0 24 24" aria-hidden>
             <circle cx="10.5" cy="10.5" r="6.3" />
@@ -759,7 +759,7 @@ export function SearchWidget({ conf }: { conf: WidgetConf }) {
           <label className="cp-lb">위젯 제목</label>
           <KInput value={draft.title ?? ''} placeholder="SEARCH" onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
           <label className="cp-lb">입력칸 안내 문구</label>
-          <KInput value={draft.placeholder ?? ''} placeholder="게시판 전체 글 검색" onChange={e => setDraft(d => ({ ...d, placeholder: e.target.value }))} />
+          <KInput value={draft.placeholder ?? ''} placeholder="전체 글 검색" onChange={e => setDraft(d => ({ ...d, placeholder: e.target.value }))} />
         </div>
       </Modal>
     </div>

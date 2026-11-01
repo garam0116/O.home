@@ -2,7 +2,7 @@
 // 일반 게시판 목록 (4.2 / 5.2 다중 게시판) — 공지 필터 · 검색 · 비밀글 마스킹 · 접기 표시 · 페이지네이션
 // /board/b/<게시판 주소> 로 게시판 구분 (없으면 기본 게시판, v2.4) · 리스트 스킨: 기본형 / 갤러리형 1·2 (v2.3)
 // 옛 주소 /board?b=<id> 로 들어오면 새 주소로 바꿔 준다
-// 게시판 통합 검색(`/search?q=`, 메인 검색 위젯)도 이 화면을 기본형 스킨으로 그대로 쓴다 — 목록과 같은 모양
+// 게시판 통합 검색(`/search?q=`, 메인 검색 위젯)도 이 화면을 갤러리형 1 스킨으로 그대로 쓴다 — 목록과 같은 모양
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -37,7 +37,7 @@ function Chevron() {
 }
 
 /** `searchAll` — 게시판 통합 검색 모드 (메인 검색 위젯 → `/search?q=`).
- *  게시판 하나 대신 이 방문자가 볼 수 있는 모든 게시판의 글에서 찾고, 스킨은 늘 기본형(리스트)으로 그린다 */
+ *  게시판 하나 대신 이 방문자가 볼 수 있는 모든 게시판의 글에서 찾고, 스킨은 늘 갤러리형 1로 그린다 */
 export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
@@ -129,9 +129,8 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
   const canRead = (p: Post) => !p.secret || isAdmin || (!!p.authorId && p.authorId === user?.id);
 
   if (!boardsLoaded || (searchAll && !menuLoaded)) return <section className="page board-page" />;
-  // 통합 검색 결과는 늘 기본형 리스트로 — 게시판마다 스킨이 달라도 한 목록에 섞이므로
-  const skin = searchAll ? 'list' : board.skin;
-  const boardName = (p: Post) => boards.find(b => b.id === (p.boardId ?? MAIN_BOARD_ID))?.name ?? '';
+  // 통합 검색 결과는 늘 갤러리형 1로 (사용자 요청) — 게시판마다 스킨이 달라도 한 목록에 섞이므로 하나로 맞춘다
+  const skin = searchAll ? 'gallery' : board.skin;
 
   const postBadge = (p: Post) => (p.notice || p.secret) ? (
     <span style={boardBadgeStyle(boardSet.system[p.notice ? 0 : 1])}>
@@ -144,7 +143,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
       {searchAll ? (
         <div className="page-head">
           <PageTitle href="/search">SEARCH</PageTitle>
-          <p>{q ? `‘${q}’ 검색 결과 ${visible.length}개 · 모든 게시판의 제목·작성자·태그·본문` : '검색어를 입력하세요 · 모든 게시판의 제목·작성자·태그·본문에서 찾습니다'}</p>
+          <p>{q ? `‘${q}’ 검색 결과 ${visible.length}개` : '검색어를 입력하세요'}</p>
         </div>
       ) : (
         <div className="page-head">
@@ -170,7 +169,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
         /* 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 5:6 카드, 그림 위에 제목·날짜.
            1 = 하단 옅은 그림자 + 흰 글씨 · 2 = 반투명 흰 띠 + 글씨.
            뱃지는 공지·비밀·접힘일 때만 왼쪽 위에 작게 — 모든 카드에 붙으면 시선이 흩어진다 */
-        <div className={`bgal ${board.skin === 'gallery2' ? 'bgal-2' : 'bgal-1'}`}>
+        <div className={`bgal ${skin === 'gallery2' ? 'bgal-2' : 'bgal-1'}`}>
           {pageList.map(p => {
             const readable = canRead(p);
             // 대표 이미지(직접 선택 + 크롭) 우선, 없으면 본문 첫 이미지
@@ -183,7 +182,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
                   ? <CroppedBlobImg fileRef={thumb} crop={p.thumbSrc ? p.thumbCrop : undefined} />
                   : <span className="bgal-ph">{readable ? (p.title.trim()[0] ?? '·') : '🔒'}</span>}
                 {badge && <div className="bgal-badge">{badge}</div>}
-                <div className="bgal-tx" style={board.fg && board.skin === 'gallery2' ? { color: board.fg } : undefined}>
+                <div className="bgal-tx" style={board.fg && skin === 'gallery2' ? { color: board.fg } : undefined}>
                   <b>
                     {readable ? <>{p.secret && '🔒 '}{p.title}</> : '비밀글입니다'}
                     {readable && cmtCount(p) > 0 && <span className="cmt">{cmtCount(p)}</span>}
@@ -195,7 +194,9 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
             );
           })}
           {pageList.length === 0 && (
-            <div className="panel" style={{ gridColumn: '1 / -1', padding: 36, textAlign: 'center', fontSize: 12.5, color: 'var(--faint)' }}>게시글이 없습니다</div>
+            <div className="panel" style={{ gridColumn: '1 / -1', padding: 36, textAlign: 'center', fontSize: 12.5, color: 'var(--faint)' }}>
+              {searchAll ? (q ? '검색 결과가 없습니다' : '검색어를 입력하세요') : '게시글이 없습니다'}
+            </div>
           )}
         </div>
       ) : (
@@ -224,8 +225,6 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
                 {canRead(p) && (p.tags ?? []).length > 0 && (
                   <span className="tags">{(p.tags ?? []).map(t => <i key={t}>#{t}</i>)}</span>
                 )}
-                {/* 통합 검색 — 어느 게시판 글인지 태그 자리 끝에 작게 */}
-                {searchAll && boardName(p) && <span className="tags bsrc">{boardName(p)}</span>}
               </div>
               <span className="who">{p.author}</span>
               <span className="dt">{fmtListDate(p.date)}</span>

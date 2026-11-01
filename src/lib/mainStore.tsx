@@ -56,7 +56,7 @@ export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = 
   deco: { title: '이미지', desc: '패널 없이 이미지만' },
   memoboard: { title: 'STICKY', desc: '스티커 메모 미니보드 — 클릭 시 메모장 (4.6)' },
   apply: { title: 'COMMISSION', desc: '커미션 신청자 — 마감 빠른 순 (몇 명까지 볼지 설정)' },
-  search: { title: 'SEARCH', desc: '게시판 전체 글 검색창 — 결과는 게시판 목록 모양으로' },
+  search: { title: 'SEARCH', desc: '전체 글 검색창 — 결과는 게시판 목록(갤러리형 1) 모양으로' },
 };
 
 /** 같은 종류를 여러 개 추가할 수 있는 위젯 (v1.9 사용자 확정 — 나머지는 하나만) */
