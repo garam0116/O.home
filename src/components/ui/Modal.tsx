@@ -5,8 +5,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-export function Modal({ open, title, desc, onClose, children, small, actions, dirty }: {
+export function Modal({ open, title, desc, onClose, children, small, actions, dirty, className }: {
   open: boolean; title?: string; desc?: string; onClose: () => void;
+  className?: string;   // 상자에 덧붙일 클래스 (폭 조절 등)
   children?: React.ReactNode; small?: boolean; actions?: React.ReactNode;
   dirty?: boolean;    // true면 바깥 클릭으로 닫기 전에 경고 확인
 }) {
@@ -34,7 +35,7 @@ export function Modal({ open, title, desc, onClose, children, small, actions, di
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div className="modal-ov" onMouseDown={e => { if (e.target === e.currentTarget) tryClose(); }}>
-      <div className={`mng-box ${small ? 'sm' : ''}`}>
+      <div className={`mng-box ${small ? 'sm' : ''} ${className ?? ''}`}>
         {title && <h3>{title}</h3>}
         {desc && <p className="d">{desc}</p>}
         {children}

@@ -1,5 +1,5 @@
 'use client';
-// 게시판 글쓰기/수정 (4.2 / 5.2 다중 게시판) — MD/HTML 모드 선택 + 실시간 미리보기 + 접기/비밀글/공지 설정
+// 게시판 글쓰기/수정 (4.2 / 5.2 다중 게시판) — MD/HTML 모드 선택 + 미리보기 팝업 + 접기/비밀글/공지 설정
 // ?edit=<글 id> 로 진입하면 수정 모드 (작성자·관리자만)
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,7 +9,8 @@ import { useBoards, boardHref, MAIN_BOARD_ID } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput, KTextarea, KCheck } from '@/components/ui/Kit';
 import { CropEditor, CropImg, CropValue } from '@/components/ui/CropEditor';
-import { ConfirmModal } from '@/components/ui/Modal';
+import { ConfirmModal, Modal } from '@/components/ui/Modal';
+import { CodeEditor } from '@/components/ui/CodeEditor';
 import { RichEditor } from '@/components/ui/RichEditor';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
@@ -59,6 +60,7 @@ function WriteInner() {
   const [body, setBody] = useState('');
   // HTML 모드 안의 보기 (v2.0 사용자 요청) — 코드 그대로 / 미리보기에서 바로 편집
   const [htmlView, setHtmlView] = useState<'code' | 'preview'>('code');
+  const [pvOpen, setPvOpen] = useState(false);   // 게시 전 미리보기 팝업 (사용자 요청)
   const [askRich, setAskRich] = useState<null | (() => void)>(null);   // 정리 경고 후 실행할 전환
   const [secret, setSecret] = useState(false);
   const [notice, setNotice] = useState(false);
@@ -190,20 +192,19 @@ function WriteInner() {
               </div>
             )}
           </div>
+          {/* 본문 상자는 일정 높이까지만 늘고 그 뒤는 안에서 스크롤 (사용자 요청) */}
           {writeMode === 'editor' || (writeMode === 'html' && htmlView === 'preview') ? (
-            <RichEditor value={body} onChange={setBody} placeholder='내용을 작성하세요 — 이미지 삽입 가능 (스크립트 불허 6.3)' />
+            <div className="write-editor">
+              <RichEditor value={body} onChange={setBody} placeholder='내용을 작성하세요 — 이미지 삽입 가능 (스크립트 불허 6.3)' />
+            </div>
+          ) : writeMode === 'html' ? (
+            // HTML 코드 — VS Code 느낌의 편집기 (사용자 요청)
+            <CodeEditor value={body} onChange={setBody} placeholder='<div>HTML 코드를 작성/붙여넣기...</div>' />
           ) : (
-            <>
-              <KTextarea
-                style={{ minHeight: 220, fontFamily: writeMode === 'html' ? 'ui-monospace, Consolas, monospace' : undefined }}
-                placeholder={writeMode === 'md' ? '마크다운으로 작성...' : '<div>HTML 코드를 작성/붙여넣기...</div>'}
-                value={body} onChange={e => setBody(e.target.value)}
-              />
-              <div className="preview-box" style={{ marginTop: 14 }}>
-                <div className="pv-label">PREVIEW — 실시간 미리보기</div>
-                <div className="post-body" dangerouslySetInnerHTML={{ __html: preview }} />
-              </div>
-            </>
+            <KTextarea autoGrow={false} className="write-md"
+              placeholder='마크다운으로 작성...'
+              value={body} onChange={e => setBody(e.target.value)}
+            />
           )}
           <div style={{ marginTop: 14 }}>
             <label className="k-label" style={{ marginBottom: 7 }}>썸네일 (선택)</label>
@@ -303,6 +304,7 @@ function WriteInner() {
           <div className="form-actions">
             <button className="btn btn-onbk"
               onClick={() => router.push(editing ? `/board/${editing.id}` : boardHref(board.id))}>CANCEL</button>
+            <button className="btn btn-ghost" onClick={() => setPvOpen(true)}>PREVIEW</button>
             <button className="btn btn-accent" disabled={thumbBusy} onClick={post}>{editing ? 'SAVE' : 'POST'}</button>
           </div>
         </div>
@@ -316,6 +318,18 @@ function WriteInner() {
           { label: 'CANCEL', kind: 'ghost', onClick: () => setAskRich(null) },
           { label: '계속', kind: 'accent', onClick: () => { askRich?.(); setAskRich(null); } },
         ]} />
+
+      {/* 게시 전 미리보기 — 아래에 줄줄 나오던 실시간 미리보기 대신 팝업으로 (사용자 요청) */}
+      <Modal open={pvOpen} onClose={() => setPvOpen(false)} className="pv-modal"
+        actions={<>
+          <button className="btn btn-ghost" onClick={() => setPvOpen(false)}>계속 편집</button>
+          <button className="btn btn-accent" disabled={thumbBusy} onClick={() => { setPvOpen(false); post(); }}>{editing ? 'SAVE' : 'POST'}</button>
+        </>}>
+        <div className="pv-title">{title.trim() || '(제목 없음)'}</div>
+        {body.trim()
+          ? <div className="post-body" dangerouslySetInnerHTML={{ __html: preview }} />
+          : <p className="pv-empty">아직 작성한 내용이 없습니다.</p>}
+      </Modal>
 
       {/* 대표 썸네일 위치 지정 — 16:9 (티켓 스킨) */}
       {cropOpen && thumbUrl && (

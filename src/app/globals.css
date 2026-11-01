@@ -1678,6 +1678,44 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .form-actions{justify-content:flex-end}
   .form-actions .btn{flex:0 0 auto;padding:9px 26px}
 }
+/* 글쓰기 본문 — 일정 높이까지만 늘어나고 그 뒤로는 안에서 스크롤 (사용자 요청) */
+.write-editor .re-body{max-height:min(62vh,640px);overflow-y:auto;scrollbar-width:thin}
+.write-editor .re-content{min-height:320px}
+.write-md{height:min(62vh,640px);min-height:320px !important;overflow-y:auto !important}
+/* HTML 코드 편집기 — VS Code Dark+ 느낌 (사용자 요청) */
+.ce-wrap{--ce-lh:20px;--ce-pad:10px;--ce-h:min(62vh,640px);border:1.5px solid #2b2b2b;border-radius:var(--radius-s);overflow:hidden;background:#1e1e1e;color:#d4d4d4;
+  font-family:Consolas,'Cascadia Code','D2Coding','Courier New',ui-monospace,monospace;font-size:13.5px}
+.ce-wrap.focus{border-color:#007acc;box-shadow:0 0 0 3px rgba(0,122,204,.18)}
+.ce-tabs{display:flex;background:#252526;height:34px;border-bottom:1px solid #1e1e1e}
+.ce-tab{display:flex;align-items:center;gap:7px;padding:0 14px;background:#1e1e1e;color:#fff;font-size:12.5px;border-top:1.5px solid #007acc;font-family:var(--sans)}
+.ce-ico{color:#e37933;font-size:11px;font-weight:700;font-family:Consolas,ui-monospace,monospace}
+.ce-main{display:flex;height:var(--ce-h);min-height:320px}
+.ce-gutter{flex-shrink:0;min-width:48px;padding:var(--ce-pad) 14px var(--ce-pad) 10px;text-align:right;color:#6e7681;overflow:hidden;line-height:var(--ce-lh);user-select:none;background:#1e1e1e}
+.ce-gutter .on{color:#c6c6c6}
+.ce-code{position:relative;flex:1;min-width:0;overflow:hidden}
+.ce-pre,.ce-ta{position:absolute;inset:0;margin:0;padding:var(--ce-pad) 16px var(--ce-pad) 4px;border:0;font:inherit;line-height:var(--ce-lh);
+  white-space:pre;overflow-wrap:normal;word-break:normal;tab-size:2;letter-spacing:0}
+.ce-pre{overflow:hidden;pointer-events:none;color:#d4d4d4}
+.ce-ta{width:100%;height:100%;resize:none;background:transparent;color:transparent;caret-color:#aeafad;outline:none;overflow:auto;
+  -webkit-text-fill-color:transparent;scrollbar-color:#4f4f4f transparent;scrollbar-width:thin}
+.ce-ta::selection{background:rgba(38,79,120,.85);-webkit-text-fill-color:transparent}
+.ce-ta::-webkit-scrollbar{width:12px;height:12px}
+.ce-ta::-webkit-scrollbar-thumb{background:rgba(121,121,121,.4)}
+.ce-ta::-webkit-scrollbar-corner{background:#1e1e1e}
+.ce-curline{position:absolute;left:0;right:0;height:var(--ce-lh);border-top:1px solid #282828;border-bottom:1px solid #282828;background:rgba(255,255,255,.03);pointer-events:none}
+.ce-ph{position:absolute;top:var(--ce-pad);left:4px;color:#6a6a6a;pointer-events:none;line-height:var(--ce-lh)}
+.ce-status{display:flex;justify-content:flex-end;gap:18px;padding:0 12px;height:22px;align-items:center;background:#007acc;color:#fff;font-size:11.5px;font-family:var(--sans)}
+.ce-tag{color:#569cd6}
+.ce-attr{color:#9cdcfe}
+.ce-str{color:#ce9178}
+.ce-punc{color:#808080}
+.ce-cmt{color:#6a9955}
+.ce-ent{color:#569cd6}
+/* 게시 전 미리보기 팝업 (사용자 요청 — 아래로 줄줄 나오던 미리보기 대신) */
+.mng-box.pv-modal{width:860px}
+.pv-modal .pv-title{font-size:calc(20px*var(--fs,1));font-weight:700;color:var(--ink);padding-bottom:12px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.pv-modal .pv-empty{color:var(--faint);font-size:13px}
+.pv-modal .modal-actions{position:sticky;bottom:-24px;margin:20px -24px -24px;padding:12px 24px 18px;background:var(--panel-solid);border-top:1px solid var(--line)}
 .preview-box{border:1.5px dashed var(--line);border-radius:var(--radius-s);padding:16px;min-height:120px;background:#fff}
 .preview-box .pv-label{font-size:calc(10px*var(--fs,1));letter-spacing:.16em;color:var(--faint);margin-bottom:8px}
 /* 방명록 (4.7) */
