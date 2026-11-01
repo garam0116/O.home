@@ -52,9 +52,12 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   };
 
   const {
-    collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
+    collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
   } = fsMod;
   type Cons = ReturnType<typeof where>;
+
+  // 가입코드는 공개 설정(settings)이 아니라 관리자만 읽는 meta/invite에 둔다 (보안 검토)
+  const INVITE_KEY = 'ohome.invite.v1';
 
   // Firestore SDK는 서버에 못 닿으면 무한 재시도한다 — 쓰기가 영영 안 끝나는 것을 막는다
   const TIMEOUT = Symbol('timeout');
@@ -91,9 +94,59 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   authMod.onAuthStateChanged(auth, () => {
     if (initialAuthState) { initialAuthState = false; return; }
     ownerCache = undefined;
+    memberCache = undefined;
   });
   void authReady;
   void ownerNow();
+
+  /** 회원 여부 — members/{uid} 문서(가입코드를 맞힌 계정) 또는 관리자.
+   *  규칙이 회원 공개 글을 회원에게만 내주므로, 회원이 아니면 공개 글만 질의해야 목록이 통째로 거부되지 않는다.
+   *  예전 규칙(members 없음)에서는 읽기가 거부되는데, 그때는 예전처럼 로그인 = 회원으로 본다. */
+  let memberCache: Promise<boolean> | undefined;
+  const isMemberNow = async () => {
+    const u = auth.currentUser;
+    if (!u) return false;
+    if (await isAdminNow()) return true;
+    return (memberCache ??= getDoc(doc(db, 'members', u.uid)).then(s => s.exists(), () => true));
+  };
+
+  /** 관리자 로그인 시 1회 — 보안 규칙 갱신 이전 데이터를 새 구조로 옮긴다.
+   *  · 기존 회원(프로필이 있는 계정)에게 members 문서를 만들어 회원 권한 유지 (meta/owner.membersMigrated로 1회만)
+   *  · 공개 설정(settings)에 있던 가입코드를 관리자 전용 meta/invite로 옮기고 공개 사본 삭제
+   *  최신 규칙이 아직 게시되지 않았다면 조용히 실패한다 — 규칙을 게시하고 다시 로그인하면 된다. */
+  let migrating = false;
+  const migrateAsAdmin = async () => {
+    if (migrating) return;
+    migrating = true;
+    let failed = false;
+    try {
+      const own = await ownerNow() as { membersMigrated?: boolean } | null;
+      if (own && !own.membersMigrated) {
+        const profs = await getDocs(collection(db, 'profiles'));
+        for (let i = 0; i < profs.docs.length; i += 400) {
+          const batch = writeBatch(db);
+          profs.docs.slice(i, i + 400).forEach(p =>
+            batch.set(doc(db, 'members', p.id), { migrated: true, at: Date.now() }, { merge: true }));
+          await batch.commit();
+        }
+        await updateDoc(doc(db, 'meta', 'owner'), { membersMigrated: true });
+        ownerCache = undefined;
+      }
+    } catch { failed = true; /* 예전 규칙 */ }
+    try {
+      const legacy = await getDoc(doc(db, 'settings', INVITE_KEY));
+      if (legacy.exists()) {
+        const inv = await getDoc(doc(db, 'meta', 'invite'));
+        if (!inv.exists()) {
+          const v = (legacy.data() as { value?: unknown }).value;
+          await setDoc(doc(db, 'meta', 'invite'), { code: (typeof v === 'string' && v.trim()) || 'WELCOME' });
+        }
+        await deleteDoc(legacy.ref);
+      }
+    } catch { failed = true; /* 예전 규칙 */ }
+    // 실패했으면 다음 로그인 상태 확인 때 다시 시도 (규칙을 게시한 뒤 새로고침 없이도 옮겨지게)
+    if (failed) migrating = false;
+  };
 
   /**
    * 로그인 상태에 맞는 목록 질의 조건.
@@ -110,6 +163,8 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     const u = auth.currentUser;
     if (!u) return [[where('visibility', '==', 'public')]];
     if (await isAdminNow()) return [[]];                    // 관리자는 전부
+    // 가입코드 없이 만든 계정(회원 아님) — 전체공개 + 내가 쓴 것만
+    if (!(await isMemberNow())) return [[where('visibility', '==', 'public')], [where('authorId', '==', u.uid)]];
     // 회원: 전체공개+회원공개, 그리고 내가 쓴 것(비공개 포함)은 따로 받아 합친다
     return [[where('visibility', 'in', ['public', 'member'])], [where('authorId', '==', u.uid)]];
   };
@@ -134,6 +189,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       avatarColor = profile.avatarColor;
     }
     const isAdmin = !!own && (own.uid === u.uid || (own.admins ?? []).includes(u.uid));
+    if (isAdmin) void migrateAsAdmin();
     return {
       id: u.uid, nickname, role: isAdmin ? 'admin' : 'member',
       email: u.email ?? undefined, avatarUrl, avatarColor,
@@ -212,9 +268,42 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       } catch (e) { return { ok: false, error: humanError(e) }; }
     },
 
-    async signUp(id, password, nickname) {
+    async signUp(id, password, nickname, invite = '') {
+      let cred: Awaited<ReturnType<typeof authMod.createUserWithEmailAndPassword>>;
       try {
-        const cred = await authMod.createUserWithEmailAndPassword(auth, id, password);
+        cred = await authMod.createUserWithEmailAndPassword(auth, id, password);
+      } catch (e) { return { ok: false, error: humanError(e) }; }
+      // 가입코드 확인은 규칙이 한다 — members 문서를 만들 수 있어야 회원이다.
+      // 코드가 틀리면 방금 만든 로그인 계정을 지워 같은 이메일로 다시 시도할 수 있게 한다.
+      try {
+        const m = await withLimit(setDoc(doc(db, 'members', cred.user.uid), { code: invite, at: Date.now() }));
+        if (m === TIMEOUT) return { ok: false, error: `${NO_REACH} (로그인 계정은 이미 만들어졌습니다)` };
+      } catch (e) {
+        if (((e as { code?: string })?.code ?? '').includes('permission-denied')) {
+          // 자기 members 문서 읽기까지 거부되면 members 규칙이 없는 예전 규칙이다 —
+          // 서버가 코드를 확인하지 못하므로 예전처럼 여기서 비교한다 (최신 규칙 게시 권장)
+          const oldRules = await getDoc(doc(db, 'members', cred.user.uid)).then(() => false, () => true);
+          let valid = false;
+          if (oldRules) {
+            const own = await ownerInfo();
+            let expected = 'WELCOME';
+            try {
+              const s = await getDoc(doc(db, 'settings', INVITE_KEY));
+              const v = s.exists() ? (s.data() as { value?: unknown }).value : null;
+              if (typeof v === 'string' && v.trim()) expected = v.trim();
+            } catch { /* 기본값 */ }
+            valid = !own?.uid || invite === expected;   // 첫 관리자 설치는 코드 없이
+          }
+          if (!valid) {
+            try { await authMod.deleteUser(cred.user); } catch { /* 무시 */ }
+            return { ok: false, error: '가입코드가 올바르지 않습니다.' };
+          }
+        } else {
+          return { ok: false, error: humanError(e) };
+        }
+      }
+      memberCache = undefined;
+      try {
         await authMod.updateProfile(cred.user, { displayName: nickname });
         const r = await withLimit(
           setDoc(doc(db, 'profiles', cred.user.uid), { nickname, createdAt: Date.now() }, { merge: true }));
@@ -379,18 +468,38 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async fetchSetting<T>(key: string) {
+      if (key === INVITE_KEY) {
+        try {
+          const inv = await getDoc(doc(db, 'meta', 'invite'));
+          return inv.exists() ? ((inv.data() as { code?: T }).code ?? null) : null;
+        } catch { return null; }
+      }
       const snap = await getDoc(doc(db, 'settings', key));
       return snap.exists() ? ((snap.data() as { value: T }).value ?? null) : null;
     },
 
     async saveSetting(key, value) {
+      if (key === INVITE_KEY) {
+        if (value == null) await deleteDoc(doc(db, 'meta', 'invite'));
+        else await setDoc(doc(db, 'meta', 'invite'), { code: String(value).trim() || 'WELCOME' });
+        // 예전 버전이 공개 설정에 남긴 사본은 지운다
+        try { await deleteDoc(doc(db, 'settings', INVITE_KEY)); } catch { /* 무시 */ }
+        return;
+      }
       await setDoc(doc(db, 'settings', key), { value, updatedAt: Date.now() });
     },
 
     async fetchAllSettings() {
       const snap = await getDocs(collection(db, 'settings'));
       const out: Record<string, unknown> = {};
-      snap.docs.forEach(d => { out[d.id] = (d.data() as { value: unknown }).value; });
+      snap.docs.forEach(d => { if (d.id !== INVITE_KEY) out[d.id] = (d.data() as { value: unknown }).value; });
+      await authReady;
+      if (await isAdminNow()) {
+        try {
+          const inv = await getDoc(doc(db, 'meta', 'invite'));
+          if (inv.exists()) out[INVITE_KEY] = (inv.data() as { code?: unknown }).code;
+        } catch { /* 예전 규칙 */ }
+      }
       return out;
     },
 
@@ -400,9 +509,11 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       const r = st.ref(storage, path);
       // 경로가 업로드마다 고유하므로 내용이 바뀌지 않는다 — 길게 캐시해 재방문·엣지 캐시 이득을 본다
       // (지정하지 않으면 브라우저가 매번 다시 받아 먼 지역 버킷에서 지연이 그대로 드러남)
+      // owner: 규칙이 덮어쓰기·삭제를 올린 사람(또는 관리자)에게만 허용한다
       await st.uploadBytes(r, blob, {
         contentType: blob.type || 'application/octet-stream',
         cacheControl: 'public, max-age=31536000, immutable',
+        customMetadata: { owner: auth.currentUser?.uid ?? '' },
       });
       return await st.getDownloadURL(r);
     },

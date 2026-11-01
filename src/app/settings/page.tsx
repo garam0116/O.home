@@ -944,7 +944,17 @@ function MemberPane() {
   const [codeLoaded, setCodeLoaded] = useState(false);
   const [regVer, setRegVer] = useState(0);   // 가입 계정 삭제 후 목록 갱신용
   const [removedIds, setRemovedIds] = useState<string[]>([]);   // 서버 모드에서 방금 지운 회원
-  useEffect(() => { setCode(inviteCode()); setCodeLoaded(true); }, []);
+  useEffect(() => {
+    setCode(inviteCode());
+    // 서버 모드: 가입코드는 관리자 전용 저장소라 앱 시작 때 받은 설정에 없을 수 있다 — 직접 읽는다
+    if (!isServerMode()) { setCodeLoaded(true); return; }
+    let alive = true;
+    void (backend()?.fetchSetting<string>('ohome.invite.v1') ?? Promise.resolve(null))
+      .then(v => { if (alive && typeof v === 'string' && v) setCode(v); })
+      .catch(() => { /* 무시 */ })
+      .finally(() => { if (alive) setCodeLoaded(true); });
+    return () => { alive = false; };
+  }, []);
   void regVer;
 
   const members = useMembers();
@@ -3000,7 +3010,7 @@ function BgmPane() {
         <KToggle checked={state.settings.enabled} onChange={v => setSettings({ enabled: v })} />
       </div>
       <div className="set-row">
-        <div className="l"><b>재생 방식</b><small>자동: 접속 후 처음 클릭/키 입력하는 순간 재생 (브라우저 정책상 완전 무동작 자동재생은 불가) · 수동: 재생 버튼을 눌러야 재생</small></div>
+        <div className="l"><b>재생 방식</b><small>자동: 접속 후 처음 클릭/키 입력하는 순간 재생 (브라우저 정책상 완전 무동작 자동재생은 불가) · 수동: 재생 버튼을 눌러야 재생 · 모바일에서는 항상 수동</small></div>
         <div className="mini-seg">
           <button className={state.settings.autoplay ? 'on' : ''}
             onClick={() => setSettings({ autoplay: true })}>접속 시 자동 재생</button>

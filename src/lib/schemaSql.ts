@@ -41,11 +41,20 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- ── 5. 가입 시 프로필 자동 생성 (첫 가입자 = 관리자) ─────────
+-- 가입코드는 서버에서 확인한다 — 화면에서만 확인하면 가입 API를 직접 불러 건너뛸 수 있다.
+-- 코드는 site_settings의 'ohome.invite.v1'(관리자만 읽기), 없으면 기본 WELCOME.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare existing int;
+declare expected text;
 begin
   select count(*) into existing from public.profiles;
+  if existing > 0 then
+    select nullif(value #>> '{}', '') into expected from public.site_settings where key = 'ohome.invite.v1';
+    if coalesce(new.raw_user_meta_data->>'invite', '') <> coalesce(expected, 'WELCOME') then
+      raise exception 'invalid invite code';
+    end if;
+  end if;
   insert into public.profiles (id, nickname, role)
   values (
     new.id,
@@ -163,7 +172,30 @@ drop policy if exists "profiles_select" on public.profiles;
 create policy "profiles_select" on public.profiles for select using (true);
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles for update to authenticated
-  using (auth.uid() = id or public.is_admin());
+  using (auth.uid() = id or public.is_admin())
+  with check (auth.uid() = id or public.is_admin());
+
+-- 역할(role)은 관리자만 바꿀 수 있다 — 정책은 "자기 행"만 보므로, 이게 없으면
+-- 회원이 API로 자기 role을 'admin'으로 고쳐 관리자가 될 수 있다.
+-- (security invoker: 가입 트리거·SQL Editor처럼 서버 내부에서 쓰는 경로는 그대로 통과)
+create or replace function public.guard_profile_role()
+returns trigger language plpgsql set search_path = public as $$
+begin
+  if current_user not in ('authenticated', 'anon') or public.is_admin() then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    new.role := 'member';
+  elsif new.role is distinct from old.role then
+    new.role := old.role;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists profiles_guard_role on public.profiles;
+create trigger profiles_guard_role
+  before insert or update on public.profiles
+  for each row execute function public.guard_profile_role();
 -- 프로필 저장은 upsert(INSERT 경로)라 INSERT 정책이 없으면 행이 이미 있어도 거부된다
 -- ("new row violates row-level security policy" — v2.0 포크 제보). 자기 행만 만들 수 있게 허용.
 drop policy if exists "profiles_insert_own" on public.profiles;
@@ -173,16 +205,18 @@ drop policy if exists "profiles_delete_admin" on public.profiles;
 create policy "profiles_delete_admin" on public.profiles for delete to authenticated
   using (public.is_admin());
 
+-- 가입코드는 관리자만 본다 (누구나 읽을 수 있으면 코드가 의미 없다)
 drop policy if exists "invite_select" on public.invite_codes;
-create policy "invite_select" on public.invite_codes for select using (true);
+create policy "invite_select" on public.invite_codes for select to authenticated using (public.is_admin());
 drop policy if exists "invite_write" on public.invite_codes;
 create policy "invite_write" on public.invite_codes for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "invite_use" on public.invite_codes;
-create policy "invite_use" on public.invite_codes for update using (used_by is null);
 
+-- 설정은 공개 읽기 — 단 가입코드('ohome.invite.v1')는 관리자만
 drop policy if exists "settings_select" on public.site_settings;
-create policy "settings_select" on public.site_settings for select using (true);
+create policy "settings_select" on public.site_settings for select
+  using (key <> 'ohome.invite.v1' or public.is_admin());
 drop policy if exists "settings_write" on public.site_settings;
 create policy "settings_write" on public.site_settings for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
@@ -196,8 +230,11 @@ drop policy if exists "ohome_read" on storage.objects;
 create policy "ohome_read" on storage.objects for select using (bucket_id = 'ohome');
 drop policy if exists "ohome_write" on storage.objects;
 create policy "ohome_write" on storage.objects for insert to authenticated with check (bucket_id = 'ohome');
+-- 덮어쓰기는 올린 사람 또는 관리자만 (남의 이미지를 바꿔치기하지 못하게)
 drop policy if exists "ohome_update" on storage.objects;
-create policy "ohome_update" on storage.objects for update to authenticated using (bucket_id = 'ohome');
+create policy "ohome_update" on storage.objects for update to authenticated
+  using (bucket_id = 'ohome' and (owner = auth.uid() or public.is_admin()))
+  with check (bucket_id = 'ohome' and (owner = auth.uid() or public.is_admin()));
 drop policy if exists "ohome_delete" on storage.objects;
 create policy "ohome_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'ohome' and (owner = auth.uid() or public.is_admin()));
