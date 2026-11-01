@@ -3,7 +3,7 @@
 // /board/b/<게시판 주소> 로 게시판 구분 (없으면 기본 게시판, v2.4) · 리스트 스킨: 기본형 / 갤러리형 1·2 (v2.3)
 // 옛 주소 /board?b=<id> 로 들어오면 새 주소로 바꿔 준다
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
   useLocalList, BOARD_SEED, Post, fmtListDate,
@@ -38,6 +38,7 @@ function BoardInner() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const params = useSearchParams();
+  const pathname = usePathname();
   // 주소의 게시판 — `/board/b/{key}`(별명·이름에서 만든 값·id) 또는 옛 `?b={id}` (v2.4)
   const { key } = useParams<{ key?: string }>();
   const want = key ? decodeURIComponent(key) : params.get('b');
@@ -62,11 +63,20 @@ function BoardInner() {
   const { st: boardSet } = useBoardSettings();   // 시스템 뱃지 색 (환경설정 > 게시판 관리)
   const [cat, setCat] = useState('전체');
   const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+  /* 페이지 번호는 주소(`?page=3`)에 둔다 (v2.5 사용자 요청) — 컴포넌트 상태로만 두면 글을 읽고
+     뒤로가기(iOS 스와이프 포함)했을 때 목록이 새로 그려지며 1페이지로 돌아갔다.
+     push가 아니라 replace로 바꿔서, 페이지를 넘길 때마다 방문 기록이 쌓이지는 않게 한다 */
+  const page = Math.max(1, parseInt(params.get('page') ?? '', 10) || 1);
+  const setPage = (n: number) => {
+    const sp = new URLSearchParams(params.toString());
+    if (n <= 1) sp.delete('page'); else sp.set('page', String(n));
+    const qs = sp.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
-  // 게시판 전환 시 필터·페이지 초기화
+  // 게시판 전환 시 필터 초기화 — 페이지는 새 게시판 주소에 `?page`가 없으니 저절로 1이 된다
   const [prevBid, setPrevBid] = useState(bid);
-  if (prevBid !== bid) { setPrevBid(bid); setCat('전체'); setQ(''); setPage(1); }
+  if (prevBid !== bid) { setPrevBid(bid); setCat('전체'); setQ(''); }
 
   // 권한 3단계 — mock 단계에선 로그인 전제 (로드뷰 4.10과 동일 규칙)
   const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
@@ -90,7 +100,9 @@ function BoardInner() {
   // 페이지당 글 수 — 환경설정 > 게시판 관리에서 모든 게시판 공통으로 지정 (v2.3)
   const perPage = perPageOf(boardSet);
   const totalPages = Math.max(1, Math.ceil(visible.length / perPage));
-  const pageList = visible.slice((page - 1) * perPage, page * perPage);
+  // 글이 지워져 페이지 수가 줄었거나 아직 불러오는 중이면 마지막 페이지로 맞춰 보여 준다 (주소는 그대로)
+  const curPage = Math.min(page, totalPages);
+  const pageList = visible.slice((curPage - 1) * perPage, curPage * perPage);
   /* 비밀글 열람 (v2.0 발견) — authorId 없는 비밀글은 비로그인 방문자에게도 열렸다.
      둘 다 undefined라 `undefined === undefined`가 참이었기 때문 */
   const canRead = (p: Post) => !p.secret || isAdmin || (!!p.authorId && p.authorId === user?.id);
@@ -192,7 +204,7 @@ function BoardInner() {
           )}
         </div>
       )}
-      <Pager page={page} total={totalPages} onChange={setPage} />
+      <Pager page={curPage} total={totalPages} onChange={setPage} />
     </section>
   );
 }
