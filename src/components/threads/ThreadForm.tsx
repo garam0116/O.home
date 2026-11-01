@@ -146,7 +146,7 @@ export function ThreadForm({ editId }: { editId?: string }) {
               <div
                 tabIndex={0} {...source.handlers}
                 style={{
-                  width: 110, aspectRatio: '3/4', borderRadius: 9, overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
+                  width: 110, aspectRatio: '3/4', borderRadius: 9, overflow: 'hidden', cursor: 'pointer',
                   border: '1.5px dashed var(--line)', position: 'relative', flexShrink: 0,
                 }}
                 onClick={() => posterRef.current?.click()}>

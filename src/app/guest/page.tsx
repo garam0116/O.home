@@ -11,7 +11,6 @@ import { GuestIdBar } from '@/components/ui/GuestId';
 import { Modal, useConfirmDelete } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useToast } from '@/components/ui/Toast';
-import { pushNotif, notifyAdmins } from '@/lib/notifStore';
 
 export default function GuestbookPage() {
   const { user, isAdmin } = useAuth();
@@ -49,13 +48,6 @@ export default function GuestbookPage() {
     setEntries([...entries, e]);
     setBody(''); setSecret(false); setGName('');
     toast('방명록이 등록되었습니다');
-    // 알림 (4.13) — 관리자에게 (본인 제외는 notifyAdmins가 건다).
-    // 예전에는 받는 사람을 'admin'(목업 id)으로 적어 **서버 모드의 실제 관리자에게는 안 갔다** (v2.0)
-    notifyAdmins({
-      type: 'guest', href: '/guest',
-      title: '방명록에 새 글이 달렸습니다',
-      body: `${e.author} — ${e.secret ? '비밀글' : e.body.slice(0, 50)}`,
-    });
   };
 
   const canRead = (e: GuestEntry) => !e.secret || isAdmin || (e.authorId && e.authorId === user?.id);
@@ -85,27 +77,6 @@ export default function GuestbookPage() {
     };
     setCmtRows([...cmtRows, c]);
     setReplyFor(null); setReplyText('');
-    // 알림 (4.13) — 회원이 쓴 방명록이면 그 회원에게 (본인 답글 제외)
-    const me = user?.id ?? '';
-    if (target.authorId && target.authorId !== me) {
-      pushNotif({
-        type: 'comment', toUserId: target.authorId, href: '/guest',
-        title: '방명록 글에 답글이 달렸습니다',
-        body: `${c.author} — ${c.text.slice(0, 50)}`,
-      });
-    }
-    // 이 글에 먼저 답글을 단 회원들에게도 (v2.0 포크 제보 — 대화 참여자가 못 받던 것)
-    const seen = new Set<string>();
-    for (const t of repliesOf(target.id)) {
-      const to = t.authorId;
-      if (!to || to === me || to === target.authorId || seen.has(to)) continue;
-      seen.add(to);
-      pushNotif({
-        type: 'comment', toUserId: to, href: '/guest',
-        title: '참여한 방명록 대화에 새 답글이 달렸습니다',
-        body: `${c.author} — ${c.text.slice(0, 50)}`,
-      });
-    }
   };
   const repliesOf = (id: string) => commentsFor(cmtRows, 'guest', id);
   // 답글 삭제 — 관리자 또는 본인(회원). 손님 답글은 관리자만 (서버가 그렇게밖에 못 받는다)
@@ -162,13 +133,13 @@ export default function GuestbookPage() {
                 {fmtDate(e.date)}
                 {/* 답글은 모두 가능 (v2.0 포크 제보) — 비밀글은 읽을 수 있는 사람만 */}
                 {canRead(e) && (
-                  <span style={{ cursor: 'var(--cur-pointer,pointer)', marginLeft: 10, color: 'var(--accent)' }}
+                  <span style={{ cursor: 'pointer', marginLeft: 10, color: 'var(--accent)' }}
                     onClick={() => { setReplyFor(e.id); setReplyText(''); }}>
                     답글
                   </span>
                 )}
                 {(isAdmin || (!!e.authorId && e.authorId === user?.id)) && (
-                  <span style={{ cursor: 'var(--cur-pointer,pointer)', marginLeft: 8 }} onClick={() => setDelFor(e.id)}>삭제</span>
+                  <span style={{ cursor: 'pointer', marginLeft: 8 }} onClick={() => setDelFor(e.id)}>삭제</span>
                 )}
               </small>
             </div>
@@ -183,7 +154,7 @@ export default function GuestbookPage() {
               <div className="reply" key={c.id}>
                 <b>↳ {c.author}</b>{c.text}
                 {(isAdmin || (!!c.authorId && c.authorId === user?.id)) && (
-                  <span style={{ cursor: 'var(--cur-pointer,pointer)', marginLeft: 8, fontSize: 10.5, color: 'var(--faint)' }}
+                  <span style={{ cursor: 'pointer', marginLeft: 8, fontSize: 10.5, color: 'var(--faint)' }}
                     onClick={() => removeReply(c)}>삭제</span>
                 )}
               </div>

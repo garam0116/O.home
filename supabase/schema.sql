@@ -88,11 +88,8 @@ declare content_tables text[] := array[
   'memos',        -- 스티커 메모
   'commissions',  -- 커미션
   'applicants',   -- 신청자
-  'moods',        -- 무드 목록
   'comments',     -- 댓글 (v2.0 — 글 안이 아니라 자기 행으로. 글을 수정하지 않고 댓글을 달 수 있게)
-  'qa_answers',   -- 자관 문답 답변 (v2.0 — 같은 이유로 자관 안이 아니라 자기 행으로)
-  'rp_messages',  -- 역극 발화 (v2.0 — 같은 이유로 방 안이 아니라 자기 행으로)
-  'notifications' -- 알림 (v2.0 — 기기 보관이던 것을 서버로: 받은 사람 계정으로 어느 기기에서나)
+  'rp_messages'   -- 역극 발화 (v2.0 — 같은 이유로 방 안이 아니라 자기 행으로)
 ];
 begin
   foreach t in array content_tables loop
@@ -153,11 +150,6 @@ create policy "insert" on public.guestbook for insert with check (true);
 -- 수정·삭제는 위 공통 정책 그대로: 작성자 본인 또는 관리자.
 drop policy if exists "insert" on public.comments;
 create policy "insert" on public.comments for insert with check (true);
-
--- 알림도 비로그인 방문자가 만들 수 있다 (v2.0) — 손님 댓글·방명록이 관리자에게 알림을 남겨야 하므로.
--- 행의 주인(author_id)은 받는 사람이라, 읽기·수정·삭제는 받는 사람과 관리자만 (공통 정책 그대로).
-drop policy if exists "insert" on public.notifications;
-create policy "insert" on public.notifications for insert with check (true);
 
 -- ── 7. 사이트 설정 권한 (읽기 공개 · 쓰기 관리자) ────────────
 alter table public.profiles enable row level security;
@@ -235,12 +227,12 @@ drop policy if exists "ohome_delete" on storage.objects;
 create policy "ohome_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'ohome' and (owner = auth.uid() or public.is_admin()));
 
--- ── 9. 실시간 (역극·문답 티키타카) ───────────────────────────
+-- ── 9. 실시간 (역극 티키타카) ───────────────────────────
 do $$
 declare t text;
 begin
-  -- 발화·답변·댓글이 각자 행으로 분리됐으므로(v2.0) 실시간도 그 테이블을 봐야 한다
-  foreach t in array array['rp_rooms', 'rp_messages', 'relations', 'qa_answers', 'posts', 'comments', 'guestbook', 'notifications'] loop
+  -- 발화·댓글이 각자 행으로 분리됐으므로(v2.0) 실시간도 그 테이블을 봐야 한다
+  foreach t in array array['rp_rooms', 'rp_messages', 'relations', 'posts', 'comments', 'guestbook'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when others then null;  -- 이미 추가돼 있으면 무시

@@ -22,12 +22,6 @@ export const ERR_EVT = 'ohome-setting-error';
 const LOCAL_ONLY = new Set<string>([
   'ohome.bgm.fold', 'ohome.mockuser.v1', 'ohome.server.v1', 'ohome.setup.v1',
   'ohome.themeCss.v1',   // 첫 페인트용 파생 캐시 (원본은 ohome.theme.v2)
-  'ohome.notif.v1',      // 알림 목록은 사람별
-  /* 알림 on/off도 사람별 — 서버 사이트 설정이 아니다 (v2.0 포크 제보 — 「새로고침마다 꺼짐」).
-     예전에 서버 설정 키로 잘못 분류돼 백업 복원 때 서버에 한 번 올라가면, 매 접속마다
-     그 옛 값이 로컬 토글을 덮어써 아무리 바꿔도 되돌아갔다. 설정 쓰기는 관리자 전용이라
-     일반 회원은 서버에 고칠 수도 없다 — 알림 목록과 같은 기기 보관으로 되돌린다. */
-  'ohome.notifset.v1',
 ]);
 
 /** 이 키는 기기 보관 전용인가 — 백업 복원·이전이 서버로 올리지 않게 (v2.0) */
@@ -41,9 +35,9 @@ export const isLocalOnlySetting = (key: string) => LOCAL_ONLY.has(key);
  */
 export const SETTING_KEYS = [
   'ohome.theme.v2', 'ohome.themePresets.v1', 'ohome.fonts.v2', 'ohome.menuset.v1', 'ohome.site.v1',
-  'ohome.pagetext.v1', 'ohome.cursor.v1', 'ohome.bgm.v1', 'ohome.boardset.v1', 'ohome.boards.v1',
+  'ohome.pagetext.v1', 'ohome.bgm.v1', 'ohome.boardset.v1', 'ohome.boards.v1',
   'ohome.commset.v1', 'ohome.memoset.v1', 'ohome.threadset.v1', 'ohome.trpgset.v1',
-  'ohome.relqsets.v1', 'ohome.main.v1', 'ohome.sched.v1',
+  'ohome.main.v1', 'ohome.sched.v1',
   'ohome.membertags.v1', 'ohome.invite.v1', 'ohome.roadnext.v1', 'ohome.repo.v1',
   'ohome.sections.v1', 'ohome.intro.v1', 'ohome.links.v1',
 ];

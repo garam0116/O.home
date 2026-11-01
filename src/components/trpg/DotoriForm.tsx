@@ -58,7 +58,7 @@ export function DotoriForm({ initial, onSave, onCancel }: {
         <label className="k-label" style={{ margin: 0 }}>
           이미지 <span style={{ fontWeight: 400, color: 'var(--faint)' }}>— 카드 썸네일 16:9 · 원본은 잘리지 않음 (선택)</span>
         </label>
-        <div tabIndex={0} {...source.handlers} style={{ aspectRatio: '16/9', borderRadius: 9, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }} onClick={() => document.getElementById('dtImgF')?.click()}>
+        <div tabIndex={0} {...source.handlers} style={{ aspectRatio: '16/9', borderRadius: 9, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)', cursor: 'pointer' }} onClick={() => document.getElementById('dtImgF')?.click()}>
           {fileUrl
             ? <CropImg src={fileUrl} crop={crop} />
             : (!removed && initial?.imgId)

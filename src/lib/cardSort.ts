@@ -36,7 +36,7 @@ export function useCardSort<T>(shown: T[], save: (nextShown: T[]) => void, enabl
       onDrop: (e: DragEvent) => { e.preventDefault(); end(); },
       onDragEnd: end,
       style: {
-        cursor: 'var(--cur-grab,grab)',
+        cursor: 'grab',
         outline: draggingIdx === i ? '2px solid var(--accent)' : '1.5px dashed rgba(201,106,115,.55)',
         outlineOffset: 3,
         opacity: draggingIdx === i ? 0.35 : undefined,

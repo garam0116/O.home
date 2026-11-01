@@ -110,19 +110,12 @@ export const COLLECTION_OF: Record<string, string> = {
   'ohome.memo.v1': 'memos',
   'ohome.comm.v1': 'commissions',
   'ohome.commapply.v1': 'applicants',
-  'ohome.moods.v1': 'moods',
   // 댓글 — 글 안이 아니라 자기 문서로 (v2.0). 글 안에 두면 댓글을 달 때마다 글을 UPDATE 해야 해서
   // 「글 수정은 작성자·관리자만」 규칙에 걸려 일반 회원이 관리자 글에 댓글을 달 수 없었다
   'ohome.comments.v1': 'comments',
-  // 자관 문답 답변 — 자관 안이 아니라 자기 문서로 (v2.0). 댓글과 같은 이유:
-  // 자관 안에 두면 답을 달 때마다 자관을 UPDATE 해야 해서 일반 회원이 답할 수 없었다
-  'ohome.qaanswers.v1': 'qa_answers',
   // 역극 발화 — 방 안이 아니라 자기 문서로 (v2.0). 같은 이유로, 방 안에 두면 말할 때마다
   // 방을 UPDATE 해야 해서 남이 만든 방에서 참여자가 발화할 수 없었다
   'ohome.rpmsgs.v1': 'rp_messages',
-  // 알림 — 기기 보관이던 것을 서버로 (v2.0 포크 제보 「알림이 안 와요」).
-  // 행 주인(authorId)을 받는 사람으로 적어, 받는 사람 계정이 어느 기기에서나 받아 간다
-  'ohome.notif.v1': 'notifications',
 };
 
 export const CONTENT_COLLECTIONS = Object.values(COLLECTION_OF);

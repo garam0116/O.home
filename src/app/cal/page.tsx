@@ -207,7 +207,7 @@ function CalInner() {
                     <span style={{
                       flex: 1, minWidth: 0, textAlign: 'left',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      cursor: canWrite ? 'var(--cur-pointer,pointer)' : undefined,
+                      cursor: canWrite ? 'pointer' : undefined,
                     }} onClick={() => openEdit(e)}>{e.title}</span>
                     <i style={{
                       width: 9, height: 9, borderRadius: '50%', flexShrink: 0,

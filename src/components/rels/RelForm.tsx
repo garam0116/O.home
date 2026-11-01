@@ -3,10 +3,9 @@
 // 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭) · 등록 시 내 캐릭터 연동
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, Relation, Visibility, RelCpTag, RelMember, RelSideSlot, auMember, auStyle, fullShadow } from '@/lib/charStore';
+import { Character, Relation, Visibility, RelCpTag, RelMember, RelSideSlot, auMember, auStyle, fullShadow, CP_LABEL } from '@/lib/charStore';
 import { ColorField } from '@/components/ui/ColorField';
 import { isValidSlug, slugify } from '@/lib/link';
-import { CP_LABEL } from '@/lib/relqStore';
 import { newId } from '@/lib/postStore';
 import { useFonts, deVarFamily } from '@/lib/fontStore';
 import { useBlobUrl } from '@/lib/blobStore';
@@ -68,9 +67,7 @@ export interface RelFormValue {
   quoteColors?: Record<string, { fg?: string; mark?: string }>; // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   fullFront?: string;                          // 앞에 보일 캐릭터 id
   auName?: string;           // AU별 자관명 (v2.0 사용자 요청 — AU 편집일 때만)
-  qaHide?: boolean;          // 문답 답변 숨기기 (v2.0 사용자 요청)
   hideTimeline?: boolean;    // 섹션 숨김 — 원본/base 포함 AU별 (v2.0 사용자 요청)
-  hideQa?: boolean;
   hideRp?: boolean;
   hideLog?: boolean;
   pickedCharIds: string[];   // 등록 시 연동할 내 캐릭터 (수정 모드에선 빈 배열)
@@ -133,7 +130,7 @@ function FullPrevImg({ draft, scale, offX, offY, name, shadow, onScale, onOffset
       <img ref={imgRef} src={src} alt={name}
         style={{
           position: 'absolute', bottom: `${offY}%`, left: `calc(50% + ${offX}%)`, transform: 'translateX(-50%)',
-          height: `${scale}%`, maxWidth: 'none', cursor: 'var(--cur-grab,grab)',
+          height: `${scale}%`, maxWidth: 'none', cursor: 'grab',
           userSelect: 'none', touchAction: 'none',
           filter: shadow,
         }}
@@ -203,7 +200,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const auObj = auId ? initial?.aus.find(a => a.id === auId) : undefined;
   const sectionAu = auObj ?? initial?.aus.find(a => a.id === 'base');
   const [hideTimeline, setHideTimeline] = useState(!!sectionAu?.hideTimeline);
-  const [hideQa, setHideQa] = useState(!!sectionAu?.hideQa);
   const [hideRp, setHideRp] = useState(!!sectionAu?.hideRp);
   const [hideLog, setHideLog] = useState(!!sectionAu?.hideLog);
 
@@ -330,8 +326,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
     () => Object.fromEntries(pairMembers.map(m => [m.charId, { fg: mOf(m).quoteColor, mark: mOf(m).quoteMarkColor }])));
   // AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름 그대로
   const [auName, setAuName] = useState(auObj?.name ?? '');
-  // 문답 답변 가리기 (v2.0 사용자 요청) — 질문은 그대로 두고 답변 내용만
-  const [qaHide, setQaHide] = useState(!!initial?.qaHide);
   // 전신 앞뒤도 AU별 (v2.0) — AU에서 바꾼 앞뒤가 원본·다른 AU를 건드리지 않게
   const [fullFront, setFullFront] = useState<string | undefined>(auObj?.fullFront ?? initial?.fullFront);
 
@@ -465,9 +459,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       themeTone: themeMode === 'custom' ? themeTone : undefined,
       cp,
       auName: auObj ? auName.trim() : undefined,
-      qaHide: qaHide || undefined,
       hideTimeline: hideTimeline || undefined,
-      hideQa: hideQa || undefined,
       hideRp: hideRp || undefined,
       hideLog: hideLog || undefined,
       fulls: pairMembers.length
@@ -594,7 +586,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   : arts[0] ? <ArtThumb item={arts[0]} crop={thumbCrop} />
                   : <div className="ph" style={{ width: '100%', height: '100%' }} />}
               </div>
-              <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
+              <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'pointer' }}
                 {...fileDrop(fl => { const f = fl[0]; if (f) {
                   setThumbDraft({ file: f, url: URL.createObjectURL(f) }); setThumbCropOpen(true);
                 } })}>
@@ -631,7 +623,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>
                     <b style={{ fontSize: 11.5 }}>{side === 'l' ? '왼쪽' : '오른쪽'} · 멤버가 없을 때 표시</b>
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      <label className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
+                      <label className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5, cursor: 'pointer' }}
                         {...fileDrop(fl => { const f = fl[0]; if (f) setSideImage(side, f); })}>
                         {draft ? '교체' : '↑ 업로드'}
                         <input type="file" accept="image/*" style={{ display: 'none' }}
@@ -689,7 +681,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 return (
                   <FullImageSource key={m.charId} onSelect={url => setFulls(o => ({ ...o, [m.charId]: { ref: url, url } }))}>
                     <b style={{ fontSize: 12 }}>{nm}</b>
-                    <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'var(--cur-pointer,pointer)' }}
+                    <label className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, cursor: 'pointer' }}
                       {...fileDrop(fl => { const f = fl[0]; if (f) setFulls(o => ({ ...o, [m.charId]: { file: f, url: URL.createObjectURL(f) } })); })}>
                       {d ? '교체' : '↑ 업로드'}
                       <input type="file" accept="image/*" style={{ display: 'none' }}
@@ -784,7 +776,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
         )}
         {fontMembers.length > 0 && (
           <>
-            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인·문답</label>
+            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인</label>
             {fontMembers.map(m => (
               <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{memberNames?.[m.charId] ?? m.charId}</b>
@@ -803,7 +795,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           헤더 이미지 <span style={{ fontWeight: 400, color: 'var(--faint)' }}>— 상세 상단에 풀폭 블러로 깔리고 아래로 갈수록 투명해짐 (선택)</span>
         </label>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ width: 200, aspectRatio: '3/1', borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+          <div style={{ width: 200, aspectRatio: '3/1', borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1.5px dashed var(--line)', cursor: 'pointer' }}
             tabIndex={0} {...headerSource.handlers}
             onClick={() => document.getElementById('relHeaderF')?.click()}
             {...fileDrop(fl => {
@@ -1018,7 +1010,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
             <p className="hint" style={{ margin: '2px 0 0' }}>이름 폰트 — 상세 대형 타이틀에 적용</p>
             <KSelect value={fontId} onChange={setFontId}
               options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span> }))} />
-            <p className="hint" style={{ margin: '2px 0 0' }}>본문 폰트 — 카드 소개·타임라인·문답 텍스트에 적용</p>
+            <p className="hint" style={{ margin: '2px 0 0' }}>본문 폰트 — 카드 소개·타임라인 텍스트에 적용</p>
             <KSelect value={bodyFontId} onChange={setBodyFontId}
               options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span> }))} />
             <div>
@@ -1058,30 +1050,9 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
             <div style={{ display: 'grid', gap: 7 }}>
               <label className="k-label" style={{ margin: 0 }}>섹션 표시</label>
               <KCheck label="타임라인 숨김" checked={hideTimeline} onChange={setHideTimeline} />
-              <KCheck label="문답 숨김" checked={hideQa} onChange={setHideQa} />
               <KCheck label="역극 리스트 숨김" checked={hideRp} onChange={setHideRp} />
               <KCheck label="로그 리스트 숨김" checked={hideLog} onChange={setHideLog} />
             </div>
-            {/* 문답 답변 가리기 (v2.0 사용자 요청) — 방문자에게 답변 내용을 안 보이게.
-                자관 전체 설정이라 AU 편집에서는 두지 않는다 */}
-            {!auObj && (
-              <div>
-                <KCheck label="문답 답변 숨기기" checked={qaHide} onChange={setQaHide} />
-                <p className="hint" style={{ margin: '5px 0 0', lineHeight: 1.6 }}>
-                  질문은 그대로 두고 <b>답변 내용만</b> 가립니다 — 관리자와 이 자관 캐릭터에
-                  권한을 받은 회원만 볼 수 있습니다.
-                  {qaHide && (
-                    <>
-                      <br />
-                      <b style={{ color: 'var(--accent)' }}>다만 화면에서 가리는 것이라 완전한 차단은 아닙니다.</b>{' '}
-                      답변은 공개로 저장돼 있어 마음먹고 찾아보는 사람에게는 보일 수 있으니,
-                      정말 알려지면 안 되는 내용은 적지 말아 주세요.
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
-
             {/* 페이지 배경 (v2.0 사용자 요청) — 이 페이지에 있는 동안의 바탕 그라데이션. AU마다 따로 */}
             {(
               <div>

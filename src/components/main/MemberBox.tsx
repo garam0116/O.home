@@ -28,7 +28,7 @@ export function MemberBox() {
             <div style={{ flex: 1 }}>
               <b style={{ fontSize: 13.5 }}>{user.nickname}</b>
               <small style={{ display: 'block', fontSize: 10.5, color: 'var(--faint)' }}>
-                {user.role === 'admin' ? '관리자' : '회원'} · 알림 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>0</span>
+                {user.role === 'admin' ? '관리자' : '회원'}
               </small>
             </div>
           </div>

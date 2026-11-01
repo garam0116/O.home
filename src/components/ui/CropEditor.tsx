@@ -168,7 +168,7 @@ export function CropEditor({ open, src, aspect, aspectLabel, initial, onClose, o
         <span style={{ fontSize: 11, color: 'var(--faint)' }}>확대 {crop.scale.toFixed(2)}×</span>
         {/* 자체 줌 슬라이더 (기본 range 미사용 — 7장) */}
         <div ref={zoomRef} onPointerDown={onZoomDrag}
-          style={{ flex: 1, maxWidth: 220, height: 4, borderRadius: 4, background: '#d7dae0', position: 'relative', cursor: 'var(--cur-pointer,pointer)' }}>
+          style={{ flex: 1, maxWidth: 220, height: 4, borderRadius: 4, background: '#d7dae0', position: 'relative', cursor: 'pointer' }}>
           <i style={{
             position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 4,
             width: `${((crop.scale - 1) / 2) * 100}%`, background: 'var(--accent)',

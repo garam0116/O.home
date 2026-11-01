@@ -179,7 +179,7 @@ function TrpgPageInner() {
           return null;
         });
       },
-      style: { cursor: 'var(--cur-grab,grab)' },
+      style: { cursor: 'grab' },
     };
   };
 
@@ -420,7 +420,7 @@ function TrpgPageInner() {
             <div
               tabIndex={0}
               style={{
-                width: 128, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
+                width: 128, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
                 border: '1.5px dashed var(--line)', flexShrink: 0, position: 'relative',
                 background: nThumbUrl ? undefined
                   : nColorMode === 'grad' ? `linear-gradient(135deg, ${nC1} 0%, ${nC2} 100%)` : nC1,

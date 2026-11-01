@@ -402,7 +402,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
                   ⤓ 원본 파일 ({origName})
                 </a>
               ) : (
-                <span style={{ color: 'var(--accent)', cursor: 'var(--cur-pointer,pointer)', fontWeight: 600 }}
+                <span style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
                   onClick={async () => {
                     // 이 브라우저에 보관된 원본 파일 (4.3 — 백업 목적)
                     const b = await getBlob(origFileId);
@@ -484,7 +484,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
               <div
                 tabIndex={0}
                 style={{
-                  width: 128, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
+                  width: 128, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
                   border: '1.5px dashed var(--line)', flexShrink: 0, position: 'relative',
                 }}
                 onClick={() => eThumbRef.current?.click()}

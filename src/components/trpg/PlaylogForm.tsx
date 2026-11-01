@@ -83,7 +83,7 @@ export function PlaylogForm({ initial, records, onSave, onCancel }: {
               boxShadow: 'var(--sh-dd)', overflow: 'hidden',
             }}>
               {scPool.slice(0, 6).map(r => (
-                <div key={r.id} style={{ padding: '8px 12px', cursor: 'var(--cur-pointer,pointer)', fontSize: 12.5, borderBottom: '1px dashed var(--line)' }}
+                <div key={r.id} style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12.5, borderBottom: '1px dashed var(--line)' }}
                   onMouseDown={() => {
                     setScenario(r.scenario);
                     if (r.scenarioLink) setScenarioLink(r.scenarioLink);
@@ -121,7 +121,7 @@ export function PlaylogForm({ initial, records, onSave, onCancel }: {
                   .map(l => (
                     <div key={l.id} onClick={() => setLogId(logId === l.id ? '' : l.id)}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 11px', cursor: 'var(--cur-pointer,pointer)',
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 11px', cursor: 'pointer',
                         fontSize: 12.5, borderBottom: '1px dashed var(--line)',
                         background: logId === l.id ? 'rgba(127,127,127,.12)' : undefined,
                       }}>

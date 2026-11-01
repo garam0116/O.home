@@ -8,7 +8,8 @@ import { useAuth } from './auth';
 import { getRawSetting, setSetting } from './settingStore';
 
 export type WidgetType =
-  | 'banner' | 'member'                 // 고정 요소 (삭제 불가)
+  | 'banner'                            // 고정 요소 (삭제 불가)
+  | 'member'                            // 회원정보창 — 추가·삭제 가능 (v2.1 사용자 요청)
   | 'menu' | 'memo' | 'diary' | 'latest'
   | 'dday' | 'todo' | 'upcoming' | 'freetext' | 'deco' | 'memoboard'
   | 'apply';   // 'image'는 deco(장식 이미지+링크)로 일원화 (v1.9) · apply = 커미션 신청자 (v2.0)
@@ -42,10 +43,10 @@ interface MainState {
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
   banner: { title: '슬라이드 배너', desc: '고정 요소 — 최상단' },
-  member: { title: '회원정보창', desc: '고정 요소 — 로그인/프로필' },
+  member: { title: '회원정보창', desc: '로그인/프로필' },
   menu: { title: '메뉴리스트', desc: '모바일 전용 — PC에서는 상단 메뉴가 대신함' },
   memo: { title: 'MEMO', desc: '관리자 메모 (클릭 시 관리 모달)' },
-  diary: { title: 'DIARY', desc: '최근 일기 (무드 아이콘 · 비공개 미노출)' },
+  diary: { title: 'DIARY', desc: '최근 일기 (비공개 미노출)' },
   latest: { title: 'LATEST', desc: '최신 그림 3장' },
   dday: { title: 'D-DAY', desc: '디데이 목록' },
   todo: { title: 'TO-DO', desc: '관리자 투두 (방문자는 열람만)' },
@@ -80,7 +81,7 @@ const DEFAULT_STATE: MainState = {
     { id: 'diary', type: 'diary', col: 2, enabled: true, tx: 0, ty: 0, ax: 240, ay: 220, w: 300, h: 150, settings: {} },
     { id: 'latest', type: 'latest', col: 2, enabled: true, tx: 0, ty: 0, ax: 550, ay: 220, w: 300, h: 150, settings: {} },
     // 회원정보창은 로그인 상태 내용(프로필+버튼)에 딱 맞는 높이 — 더 키우면 아래가 비어 보임 (v1.9 사용자 확정)
-    { id: 'member', type: 'member', col: 3, enabled: true, fixed: true, tx: 0, ty: 0, ax: 860, ay: 0, w: 260, h: 150, settings: {} },
+    { id: 'member', type: 'member', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 0, w: 260, h: 150, settings: {} },
     { id: 'dday', type: 'dday', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 160, w: 260, h: 90, settings: { items: [] } },
     { id: 'todo', type: 'todo', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 260, w: 260, h: 90, settings: { items: [] } },
     // UPCOMING은 기본 구성에서 제외 — 필요하면 [＋ 위젯]으로 추가 (v1.9: 켬/끔 대신 추가/삭제 모델)
@@ -138,8 +139,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
         // 구 enabled:false(전체 숨김)는 삭제로 이관 — 토글은 이제 모바일 표시만 제어 (v1.9 사용자 확정)
         const removed = new Set(parsed.removedIds ?? []);
         const kept: WidgetConf[] = [];
-        for (const w of parsed.widgets) {
+        for (let w of parsed.widgets) {
           if ((w.type as string) === 'image') continue;
+          // 회원정보창은 고정 요소에서 빠짐 (v2.1) — 예전 저장분의 fixed 표시를 걷어내야 삭제할 수 있다
+          if (w.type === 'member' && w.fixed) w = { ...w, fixed: undefined };
           if (!w.enabled && !w.fixed) { removed.add(w.id); continue; }
           kept.push(w.enabled ? w : { ...w, enabled: true });
         }
@@ -232,7 +235,8 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
         ax: colX[col], ay: maxY,
         settings: type === 'freetext' ? { text: '자유 텍스트' } : {},
       };
-      return { ...s, widgets: [...s.widgets, w], mobileOrder: [...s.mobileOrder, id] };
+      // 회원정보창은 모바일에서 항상 맨 위(순서 목록 밖)라 모바일 순서에 넣지 않는다 (v2.1)
+      return { ...s, widgets: [...s.widgets, w], mobileOrder: type === 'member' ? s.mobileOrder : [...s.mobileOrder, id] };
     });
     return id;   // 추가 위젯으로 스크롤 안내용 (v1.9)
   }, []);

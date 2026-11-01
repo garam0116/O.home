@@ -1,12 +1,12 @@
 'use client';
-// 다이어리 (4.14) — 아코디언 목록: 제목+무드+날짜 한 줄, 클릭 시 그 자리에서 펼침 ·
-// 무드 필터 · 페이지네이션 · 공개범위(비공개는 관리자만)
+// 다이어리 (4.14) — 아코디언 목록: 제목+날짜 한 줄, 클릭 시 그 자리에서 펼침 ·
+// 페이지네이션 · 공개범위(비공개는 관리자만)
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useSectionParam, filterSection, sectionSetter } from '@/lib/sectionStore';
 import { useLocalList } from '@/lib/postStore';
-import { DiaryPost, DIARY_SEED, Mood, MOOD_SEED, moodTint } from '@/lib/diaryStore';
+import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
 import { renderBody } from '@/lib/sanitize';
 import { SearchBar, Pager } from '@/components/ui/Kit';
 import { ConfirmModal } from '@/components/ui/Modal';
@@ -15,18 +15,6 @@ import { BlobImg } from '@/lib/blobStore';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 
 const PAGE_SIZE = 10;
-
-function MoodIcon({ mood, size = 30 }: { mood?: Mood; size?: number }) {
-  return (
-    <span style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      // 줄높이를 1로 눌러야 글자 상자가 아니라 글자 자체가 가운데로 온다 (v2.0 사용자 발견)
-      display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-      fontSize: size * 0.45,
-      background: moodTint(mood?.color ?? '#888'), color: mood?.color ?? 'var(--sub)',
-    }}>{mood?.icon ?? '·'}</span>
-  );
-}
 
 function DiaryBody({ p, onOpen }: { p: DiaryPost; onOpen: (ids: string[], idx: number) => void }) {
   const html = useMemo(() => renderBody('md', p.body), [p.body]);
@@ -56,9 +44,7 @@ function DiaryPageInner() {
   const posts = filterSection(postsAll, sec.id);
   // 저장은 이 섹션 자리만 교체 — 걸러진 목록을 그대로 넘겨도 다른 섹션이 지워지지 않는다
   const setPosts = sectionSetter(postsAll, sec.id, setPostsAll);
-  const [moods] = useLocalList<Mood>('ohome.moods.v1', MOOD_SEED);
   const [open, setOpen] = useState<string | null>(null);
-  const [fMood, setFMood] = useState('all');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [delFor, setDelFor] = useState<DiaryPost | null>(null);
@@ -81,7 +67,6 @@ function DiaryPageInner() {
   const canSee = (p: DiaryPost) => isAdmin || (p.visibility === 'public' || (p.visibility === 'member' && !!user));
   const visible = posts
     .filter(canSee)
-    .filter(p => fMood === 'all' || p.moodId === fMood)
     .filter(p => !query || p.title.toLowerCase().includes(query))
     .filter(p => !monthFilter || p.date.startsWith(monthKey))
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -100,30 +85,22 @@ function DiaryPageInner() {
   };
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const shown = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const moodOf = (id: string) => moods.find(m => m.id === id);
-  const cnt = (mid: string) => posts
-    .filter(p => isAdmin || (p.visibility === 'public' || (p.visibility === 'member' && !!user)))
-    .filter(p => mid === 'all' || p.moodId === mid).length;
+  const cnt = posts.filter(canSee).length;
 
   return (
     <section className="page">
       <div className="page-head">
         <PageTitle>{sec.id === 'main' ? 'DIARY' : sec.name}</PageTitle>
-        <EditableDesc k="diary-desc" def="무드 일기 — 클릭하면 그 자리에서 펼쳐집니다" />
+        <EditableDesc k="diary-desc" def="일기 — 클릭하면 그 자리에서 펼쳐집니다" />
       </div>
 
-      {/* 무드 필터 + 달 필터 표시 + 검색·WRITE — 필터 줄 오른쪽 정렬 (v1.9 사용자 요청).
+      {/* 전체 + 달 필터 표시 + 검색·WRITE — 필터 줄 오른쪽 정렬 (v1.9 사용자 요청).
           그리드 밖(풀폭): 캘린더가 일기 패널과 같은 높이에서 시작 */}
       <div className="toolrow" style={{ marginBottom: 16 }}>
         <div className="tag-row">
-          <div className={`tag ${fMood === 'all' ? 'on' : ''}`} onClick={() => { setFMood('all'); setPage(1); }}>
-            전체 <small>{cnt('all')}</small>
+          <div className={`tag ${monthFilter ? '' : 'on'}`} onClick={() => { setMonthFilter(false); setPage(1); }}>
+            전체 <small>{cnt}</small>
           </div>
-          {moods.map(m => (
-            <div key={m.id} className={`tag ${fMood === m.id ? 'on' : ''}`} onClick={() => { setFMood(m.id); setPage(1); }}>
-              <span style={{ color: m.color }}>{m.icon}</span> {m.name} <small>{cnt(m.id)}</small>
-            </div>
-          ))}
           {monthFilter && (
             <div className="tag on" onClick={() => { setMonthFilter(false); setPage(1); }}
               data-tip="달 필터 해제">
@@ -142,18 +119,16 @@ function DiaryPageInner() {
       <div>
       <div className="panel" style={{ padding: '6px 20px' }}>
         {shown.map(p => {
-          const m = moodOf(p.moodId);
           const opened = open === p.id;
           return (
             <div key={p.id} id={p.id} className={`dy-row ${opened ? 'open' : ''}`}>
               {/* 접힘: 제목 세로 중앙 / 펼침: 위 정렬 (4.14 v1.8) */}
               <div className="hd" onClick={() => setOpen(o => (o === p.id ? null : p.id))}>
-                <MoodIcon mood={m} />
                 <b className="tt">{p.title}</b>
                 {p.visibility !== 'public' && (
                   <span className="pill" style={{ flexShrink: 0 }}>{p.visibility === 'member' ? '멤버' : '비공개'}</span>
                 )}
-                <small className="dt">{p.date.replace(/-/g, '.')}{m ? ` · ${m.name}` : ''}</small>
+                <small className="dt">{p.date.replace(/-/g, '.')}</small>
                 <span className={`arr ${opened ? 'up' : ''}`} />
               </div>
               {/* 항상 렌더 + grid-rows 트랜지션으로 부드럽게 펼침 (덜컥임 방지) */}
@@ -181,7 +156,7 @@ function DiaryPageInner() {
       </div>
       </div>
 
-      {/* 우: 미니 캘린더 — 일기 쓴 날은 무드색 점, 달을 넘기면 그 달만 목록에 */}
+      {/* 우: 미니 캘린더 — 일기 쓴 날은 점, 달을 넘기면 그 달만 목록에 */}
       <div className="panel dy-cal">
         <div className="hd">
           <button type="button" onClick={() => mv(-1)}>‹</button>
@@ -204,7 +179,7 @@ function DiaryPageInner() {
                 {d}
                 <span className="dots">
                   {(entries ?? []).slice(0, 2).map(p => (
-                    <i key={p.id} style={{ background: moodOf(p.moodId)?.color ?? 'var(--faint)' }} />
+                    <i key={p.id} style={{ background: 'var(--faint)' }} />
                   ))}
                 </span>
               </button>

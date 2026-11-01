@@ -31,7 +31,6 @@ const fmtHM = (iso: string) => {
 };
 
 import { useMembers } from '@/lib/members';
-import { pushNotif } from '@/lib/notifStore';
 
 export default function RpPage() {
   const { user, isAdmin } = useAuth();
@@ -126,13 +125,6 @@ export default function RpPage() {
     setMsgRows([...msgRows, { ...m, roomId: sel.id }]);
     rpMarkRead(sel.id, user.id, m.date);
     setText('');
-    // 알림 (4.13) — 나를 제외한 참여자에게, 방 단위로 묶어서 (디스코드 DM은 봇 연동 시)
-    memberIdsOf(sel).filter(id => id !== user.id).forEach(id =>
-      pushNotif({
-        type: 'rp', toUserId: id, href: '/rp', dedupeKey: `rp:${sel.id}`,
-        title: `역극 「${sel.title}」 새 메시지`,
-        body: t.slice(0, 60),
-      }));
   };
 
   // 메시지 수정(본인) — 모달

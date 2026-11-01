@@ -36,7 +36,7 @@ function RelEditInner() {
     <section className="page">
       <div className="page-head">
         <PageTitle>EDIT — {rel.name}{auObj ? ` · ${auObj.label}` : ''}</PageTitle>
-        <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·타임라인·문답·AU는 상세 페이지에서 관리합니다" />
+        <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·타임라인·AU는 상세 페이지에서 관리합니다" />
       </div>
       <RelForm
         initial={rel}
@@ -58,8 +58,8 @@ function RelEditInner() {
                 nameShadowColor: v.nameShadowColor, nameShadow: v.nameShadow,
                 headerBgG1: v.headerBgG1, headerBgG2: v.headerBgG2, headerBgAngle: v.headerBgAngle,
                 pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle }),
-            // CP/문답 숨김은 자관 전체 설정(AU 폼에는 없음) · 전신 앞뒤는 AU면 그 AU에만 (v2.0)
-            ...(auObj ? {} : { cp: v.cp, qaHide: v.qaHide, fullFront: v.fullFront ?? r.fullFront }),
+            // CP는 자관 전체 설정(AU 폼에는 없음) · 전신 앞뒤는 AU면 그 AU에만 (v2.0)
+            ...(auObj ? {} : { cp: v.cp, fullFront: v.fullFront ?? r.fullFront }),
             illustMode: v.kind === 'pair' ? r.illustMode : 'one',
             // 전신 크기·위치·한마디·대사 색 — **AU를 편집 중이면 자관 공통을 건드리지 않는다**
             // (v2.0 사용자 발견: AU에서 고치면 다른 AU 페이지까지 같이 바뀌던 것.
@@ -85,7 +85,7 @@ function RelEditInner() {
                 aus: r.aus.map(a => (a.id === auObj.id ? {
                   ...a, arts: v.arts, catchphrase: v.catchphrase,
                   ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
-                  hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog,
+                  hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
                   // AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름 그대로 쓰게 아예 지운다
                   name: v.auName?.trim() ? v.auName.trim() : undefined,
                   // AU별 폰트·전신 앞뒤 (v2.0 사용자 제보) — 원본이 아니라 이 AU에 담는다
@@ -129,7 +129,7 @@ function RelEditInner() {
                 logUrl: v.logUrl, lorebookUrl: v.lorebookUrl,
                 // 원본 섹션 숨김도 base AU에 저장 (v2.0 사용자 요청)
                 aus: r.aus.map(a => (a.id === 'base' ? {
-                  ...a, hideTimeline: v.hideTimeline, hideQa: v.hideQa, hideRp: v.hideRp, hideLog: v.hideLog,
+                  ...a, hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
                 } : a)),
                 ...(v.fulls
                   ? {

@@ -278,7 +278,7 @@ export function TCharForm({ editId }: { editId?: string }) {
             <div className="upfile-row" style={{ width: '100%' }}>
               <span className="drag-h">⠿</span>
               <span className="mw-no">{i + 1}</span>
-              <div className="pv" style={{ width: 44, height: 44, borderRadius: 9, overflow: 'hidden', position: 'relative', flexShrink: 0, cursor: 'var(--cur-pointer,pointer)' }}
+              <div className="pv" style={{ width: 44, height: 44, borderRadius: 9, overflow: 'hidden', position: 'relative', flexShrink: 0, cursor: 'pointer' }}
                 onClick={() => setViewFor(f)}>
                 <FaceThumb f={f} crop={imgMode === 'standing' ? sharedCrop : f.crop} />
               </div>

@@ -16,7 +16,7 @@ import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DecoEditor, TodoEdi
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
-import { DiaryPost, DIARY_SEED, Mood, MOOD_SEED, moodTint } from '@/lib/diaryStore';
+import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
 import { useSched, eventColor } from '@/lib/schedStore';
 import { StickyMemo, MEMO_SEED, MEMO_SIZE_W, useMemoSettings } from '@/lib/memoStore';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
@@ -164,7 +164,6 @@ export function DiaryWidget() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [posts] = useLocalList<DiaryPost>('ohome.diary.v1', DIARY_SEED);
-  const [moods] = useLocalList<Mood>('ohome.moods.v1', MOOD_SEED);
   // 메뉴에서 비공개로 둔 다이어리는 위젯에도 안 나온다 (v2.0 사용자 발견 — 위젯으로 새던 것)
   const [menuSet] = useMenuSettings();
   const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
@@ -179,15 +178,11 @@ export function DiaryWidget() {
   return (
     <div className="panel widget" style={{ margin: 0 }}>
       <h4>DIARY <span className="more" onClick={() => router.push('/diary')}>더보기 ›</span></h4>
-      {latest.map(p => {
-        const m = moods.find(x => x.id === p.moodId);
-        return (
-          <div key={p.id} className="diary-mini" onClick={() => router.push(`/diary#${p.id}`)}>
-            <div className="mood" style={{ background: moodTint(m?.color ?? '#888'), color: m?.color }}>{m?.icon ?? '·'}</div>
-            <div className="t"><span className="tt">{p.title}</span> <small>{p.date.slice(5).replace('-', '.')}{m ? ` · ${m.name}` : ''}</small></div>
-          </div>
-        );
-      })}
+      {latest.map(p => (
+        <div key={p.id} className="diary-mini" onClick={() => router.push(`/diary#${p.id}`)}>
+          <div className="t"><span className="tt">{p.title}</span> <small>{p.date.slice(5).replace('-', '.')}</small></div>
+        </div>
+      ))}
       {latest.length === 0 && <p className="hint">공개된 일기가 없습니다</p>}
     </div>
   );
@@ -361,7 +356,7 @@ export function UpcomingWidget() {
     .slice(0, 3);
   if (!canSee) return null;   // 메뉴가 비공개면 위젯 자체를 띄우지 않는다 (v2.0)
   return (
-    <div className="panel widget" style={{ cursor: 'var(--cur-pointer,pointer)' }} onClick={() => router.push('/cal')}>
+    <div className="panel widget" style={{ cursor: 'pointer' }} onClick={() => router.push('/cal')}>
       <h4>UPCOMING <span className="more">더보기 ›</span></h4>
       {upcoming.map(({ e, d }) => (
         <div key={e.id} className="dday-row">
@@ -471,7 +466,7 @@ function ContainImg({ fileRef, rounded, onActivate }: {
         style={{
           maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', display: 'block',
           borderRadius: rounded ? 'var(--radius)' : 0,
-          cursor: onActivate ? 'var(--cur-pointer,pointer)' : undefined,
+          cursor: onActivate ? 'pointer' : undefined,
         }} />
     </div>
   );
@@ -526,7 +521,7 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
         ? (fit === 'contain'
           ? <ContainImg key={cur.id} fileRef={cur.imgId} rounded={rounded} onActivate={canGo ? onBody : undefined} />
           : (
-            <div style={{ position: 'absolute', inset: 0, cursor: canGo ? 'var(--cur-pointer,pointer)' : undefined }}
+            <div style={{ position: 'absolute', inset: 0, cursor: canGo ? 'pointer' : undefined }}
               onClick={canGo ? onBody : undefined}>
               <CroppedBlobImg key={cur.id} fileRef={cur.imgId} crop={cur.crop} ph="" />
             </div>
@@ -619,7 +614,7 @@ export function ApplyWidget({ conf }: { conf: WidgetConf }) {
   return (
     /* 누르면 관리자든 아니든 신청자 페이지로 간다 (v2.0 사용자 요청).
        설정은 편집모드에서 우클릭 > 설정으로만 — 목록을 보러 눌렀는데 관리 창이 뜨면 안 된다 */
-    <div className="panel widget" style={{ cursor: 'var(--cur-pointer,pointer)' }}
+    <div className="panel widget" style={{ cursor: 'pointer' }}
       onClick={e => {
         if ((e.target as HTMLElement).closest('.modal-ov')) return;
         if (editOn) return;   // 편집모드에서는 배치·우클릭 메뉴가 우선

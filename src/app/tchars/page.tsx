@@ -48,9 +48,9 @@ export default function TCharsPage() {
           const face = c.faces[0]; // 대표 인장 = 첫 표정
           return (
             <div key={c.id} className="panel tc-card" {...sort(i)}
-              style={{ cursor: 'var(--cur-pointer,pointer)', ...(sort(i) as { style?: React.CSSProperties }).style }}
+              style={{ cursor: 'pointer', ...(sort(i) as { style?: React.CSSProperties }).style }}
               onClick={() => { if (!editOn) router.push(`/tchars/${c.id}`); }}>
-              <div className="main" style={{ cursor: 'var(--cur-pointer,pointer)' }}>
+              <div className="main" style={{ cursor: 'pointer' }}>
                 <CroppedBlobImg fileRef={face?.imgId} crop={faceCrop(c, face)} ph={face?.ph ?? c.ph} />
                 {isAdmin && (
                   <div className="th-actions hv-actions">

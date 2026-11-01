@@ -111,7 +111,7 @@ export default function MemberDetailPage() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
             {linked.map(({ c, level }) => (
               <div key={c.id} onClick={() => router.push(`/chars/${c.id}`)}
-                style={{ display: 'flex', gap: 8, alignItems: 'center', border: '1px solid var(--line)', borderRadius: 10, padding: '6px 12px 6px 6px', cursor: 'var(--cur-pointer,pointer)' }}>
+                style={{ display: 'flex', gap: 8, alignItems: 'center', border: '1px solid var(--line)', borderRadius: 10, padding: '6px 12px 6px 6px', cursor: 'pointer' }}>
                 <div className={`ph ${c.thumbClass}`} style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                   {(c.thumbId ?? c.arts?.[0]) && <CroppedBlobImg fileRef={c.thumbId ?? c.arts?.[0]} crop={c.thumbCrop} ph={c.thumbClass} />}
                 </div>
@@ -128,7 +128,7 @@ export default function MemberDetailPage() {
         <h3 style={{ marginTop: 20 }}>작성한 글 · 댓글 <small style={{ color: 'var(--faint)', fontWeight: 400 }}>{items.length}건</small></h3>
         {pageItems.length ? pageItems.map((it, i) => (
           <div key={i} onClick={() => router.push(it.href)}
-            style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 2px', borderBottom: '1px solid var(--line)', cursor: 'var(--cur-pointer,pointer)' }}>
+            style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 2px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}>
             <span className="pill" style={{ flexShrink: 0 }}>{it.kind}</span>
             <span style={{ fontSize: 12.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.text}</span>
             <small style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10.5, whiteSpace: 'nowrap' }}>{fmtDate(it.date)}</small>

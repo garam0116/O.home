@@ -121,14 +121,6 @@ export function charWithAu(c: Character, auKey?: string | null): Character {
 
 export interface CharGrant { userId: string; level: 'play' | 'edit' }
 
-/** 이 자관의 멤버 캐릭터 중 하나라도 권한을 받은 회원인가 (v2.0) — 문답 숨김 판정 */
-export function hasRelGrant(
-  members: { charId: string }[], chars: Character[], userId?: string,
-): boolean {
-  if (!userId) return false;
-  return members.some(m => !!charGrant(chars.find(c => c.id === m.charId) ?? { grants: [] } as unknown as Character, userId));
-}
-
 /** 회원의 캐릭터 권한 — edit는 play를 포함 */
 export function charGrant(c: Character, userId?: string): 'play' | 'edit' | null {
   if (!userId) return null;
@@ -163,59 +155,12 @@ export interface RelMember {
 export interface TlSay { charId: string; text: string }
 export interface TlItem { era?: string; desc?: string; says: TlSay[] }
 
-export interface QaAnswer {
-  charId: string; text: string;
-  note?: string;      // 오너 부연설명 — 말풍선 호버 툴팁 (수정 모달에서 관리자가 작성, v1.9)
-  authorId?: string;  // 작성 회원 (v1.9 — 본인 수정, 본인·관리자 삭제 판정)
-}
-export interface QaEntry {
-  no: number; q: string; date: string; answers: QaAnswer[];
-  note?: string;   // 질문에 대한 오너 설명 — 질문 아래에 표시 (관리자만 작성, v2.0)
-}
-
-/**
- * 문답 답변 한 줄 = 자기 문서 하나 (v2.0).
- *
- * 예전에는 답변이 자관(Relation) 문서 안 배열에 들어 있었다. 그래서 **답변을 달려면 자관을
- * UPDATE 해야 했고**, 「수정은 작성자 또는 관리자만」 규칙에 걸려 관리자가 만든 자관에는
- * 일반 회원이 답을 달 수 없었다 — 댓글이 지워지던 것과 똑같은 뿌리다 (v2.0 사용자 발견).
- *
- * 답변을 따로 저장하면 자관을 건드릴 필요가 없고, 각 답변이 자기 authorId를 가지므로
- * 「내 답변은 내가 수정·삭제」가 규칙 그대로 성립한다.
- */
-export const QA_KEY = 'ohome.qaanswers.v1';
-
-export interface QaAnswerRow extends QaAnswer {
-  id: string;
-  relId: string;   // 자관 id
-  auId: string;    // AU id (원본은 'base')
-  no: number;      // 질문 번호
-  date: string;    // 정렬용
-}
-
-export const QA_SEED: QaAnswerRow[] = [];
-
-/** 화면에서 다루는 답변 — 어디에 저장돼 있는지(분리 행 / 옛 자관 안 배열)를 함께 들고 다닌다 */
-export type MergedAnswer = QaAnswer & { rowId?: string; legacyIdx?: number };
-
-/** 질문 하나의 답변 — 옛 자관 안의 것 먼저, 그 뒤 분리 저장분 (달린 순서) */
-export function answersFor(
-  rows: QaAnswerRow[], relId: string, auId: string, no: number, legacy: QaAnswer[] = [],
-): MergedAnswer[] {
-  return [
-    ...legacy.map((a, i) => ({ ...a, legacyIdx: i })),
-    ...rows
-      .filter(r => r.relId === relId && r.auId === auId && r.no === no)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map(r => ({ ...r, rowId: r.id })),
-  ];
-}
-
 /** CP/NCP 구분 (v1.9) — CP=커플, NCP=커플 아님. 자관 기본값 + AU마다 별개 지정 가능 */
 export type RelCpTag = 'cp' | 'ncp';
+export const CP_LABEL: Record<RelCpTag, string> = { cp: 'CP', ncp: 'NCP' };
 
 /** AU 한 항목 (v1.9 확장) — 캐치프레이즈만이 아니라 프로필 전체가 AU별로 분리:
- *  중앙 일러(arts)·타임라인·문답·CP/NCP. base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
+ *  중앙 일러(arts)·타임라인·CP/NCP. base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
 /**
  * AU에서만 다르게 보여 줄 멤버 값 (v2.0 사용자 발견).
  *
@@ -353,9 +298,6 @@ export interface RelAu {
   cp?: RelCpTag;          // 없으면 자관 기본(Relation.cp)
   arts?: string[];        // AU별 중앙/그룹 일러 (base는 Relation.arts)
   timeline?: TlItem[];    // base는 Relation.timeline
-  questions?: QaEntry[];  // base는 Relation.questions
-  qaPool?: string[];      // 대기 질문 풀 (v1.9 — 리스트에서 담은 미출제 질문, 랜덤 출제 대기)
-  qaEnabled?: boolean;    // QUESTIONS 섹션 사용 여부 (＋로 추가해야 생김, base는 Relation.qaEnabled)
   fulls?: Record<string, string>;  // AU별 전신 이미지 (charId → blob id, 없으면 멤버 공통 전신)
   headerImgId?: string | null;     // AU별 헤더 이미지 (v1.9) — base를 물려받지 않음, 이 AU 것만
   headerCrop?: import("@/components/ui/CropEditor").CropValue;
@@ -366,7 +308,6 @@ export interface RelAu {
   hideRp?: boolean;
   hideLog?: boolean;
   hideTimeline?: boolean;
-  hideQa?: boolean;
   ddayDate?: string;
   sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
   freeBlocks?: { id: string; title?: string; html: string }[];
@@ -381,7 +322,7 @@ export interface Relation {
   catchphrase: string;
   kind?: 'pair' | 'multi';         // 페어(2인) / 다인(3인+) — 등록 시 선택
   fontId?: string;               // 자관 이름 폰트 (4.5 필수 요구 — 5.1 라이브러리)
-  bodyFontId?: string;           // 본문 폰트 — 카드 소개·타임라인·문답 텍스트
+  bodyFontId?: string;           // 본문 폰트 — 카드 소개·타임라인 텍스트
   arts?: string[];               // 아트 목록 (첫 장 = 대표 = 리스트 썸네일 원본)
   headerImgId?: string;          // 헤더 이미지 (v1.5 — 상단 풀폭 블러 + 페이드아웃)
   headerCrop?: import("@/components/ui/CropEditor").CropValue; // 헤더 이미지 위치 크롭 (원본 무손실)
@@ -429,14 +370,6 @@ export interface Relation {
     *  (참조가 다르므로 섞이지 않는다). 원본은 건드리지 않는다. */
    artCrops?: Record<string, import('@/components/ui/CropEditor').CropValue>;
   timeline: TlItem[];            // base AU의 타임라인
-  questions: QaEntry[];          // base AU의 문답
-  qaPool?: string[];             // base AU의 대기 질문 풀 (v1.9 — 랜덤 출제 대기)
-  qaEnabled?: boolean;           // base AU의 QUESTIONS 섹션 사용 여부 (구버전은 questions 존재로 판정)
-  /** 문답 답변 숨기기 (v2.0 사용자 요청) — 질문은 그대로 두고 **답변 내용만** 가린다.
-   *  켜면 **관리자와 이 자관 캐릭터에 권한을 받은 회원만** 볼 수 있다(사용자 확정).
-   *  **화면에서 가리는 것일 뿐 완전한 차단이 아니다** — 답변은 공개로 저장돼 있어 주소를 직접
-   *  다루는 사람에게는 보일 수 있다. 설정 화면에도 그대로 적어 둔다. */
-  qaHide?: boolean;
 }
 
 const parseRelDate = (dateStr?: string): Date | undefined => {
