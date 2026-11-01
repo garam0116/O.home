@@ -375,12 +375,14 @@ const parseRelDate = (dateStr?: string): Date | undefined => {
   return target;
 };
 
-/** 디데이 계산은 UTC 날짜 단위로, D-Day 위젯 plusOne처럼 시작일을 1일로 센다 */
+/** 디데이 계산 — D-Day 위젯 plusOne처럼 시작일을 1일로 센다.
+ *  '오늘'은 보는 사람의 현지 날짜(위젯과 동일)로 잡는다. UTC 날짜를 쓰면 한국 시간 오전 9시 전에는
+ *  UTC가 아직 전날이라 디데이가 하루 적게 나왔다 */
 export function relDday(dateStr?: string, now = new Date()): string | undefined {
   const target = parseRelDate(dateStr);
   if (!target) return undefined;
   const today = new Date(0);
-  today.setUTCFullYear(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  today.setUTCFullYear(now.getFullYear(), now.getMonth(), now.getDate());
   today.setUTCHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - target.getTime()) / 86400000);
   return `D${days < 0 ? `-${Math.abs(days)}` : `+${days + 1}`}`;
