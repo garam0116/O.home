@@ -14,6 +14,7 @@ export const FIRESTORE_RULES = `rules_version = '2';
 //   members/{uid}         { code, at }        ← 가입코드를 맞힌 회원 (회원 권한의 근거)
 //   profiles/{uid}        { nickname, avatarUrl, avatarColor }
 //   settings/{key}        { value }           ← 테마·메뉴·폰트·메인 위젯 등
+//   counters/{kind}       { n }               ← 번호 발급 (글 주소 /board/1 등, v2.4)
 //   <콘텐츠>/{id}          { data, authorId, visibility, sort }
 // ============================================================
 
@@ -98,6 +99,17 @@ service cloud.firestore {
     match /settings/{key} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // ── 번호 발급 카운터 (v2.4) — 글 주소 /board/1 의 번호 ─────────
+    //    종류마다 문서 하나 { n }. 누구나 읽고, 회원은 값을 **올리기만** 할 수 있다 —
+    //    줄이거나 같은 값을 다시 쓰면 이미 나간 번호가 또 나가게 되므로 막는다.
+    match /counters/{kind} {
+      allow read: if true;
+      allow create: if isMember() && request.resource.data.n is int;
+      allow update: if isMember() && request.resource.data.n is int
+        && request.resource.data.n > resource.data.n;
+      allow delete: if isAdmin();
     }
 
     // ── 콘텐츠 ─────────────────────────────────────────────────

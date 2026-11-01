@@ -1,12 +1,12 @@
 'use client';
 // EditableDesc 주입
 // 자관 리스트 (4.5) — 4:3 가로 썸네일 · 공개범위 3단계 · 멤버 색 점
-import React, { Suspense, useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { Relation, REL_SEED, relDday, relPath } from '@/lib/charStore';
-import { useSectionParam, filterSection, sectionSetter, secQuery, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, sectionHref, MAIN_SEC, secSubHref } from '@/lib/sectionStore';
 import { SearchBar } from '@/components/ui/Kit';
 import { useToast } from '@/components/ui/Toast';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -32,16 +32,6 @@ function RelsInner() {
   const [relsAll, setRelsAll] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
   // 여러 개로 만든 자관 목록 — 주소(`/rels/r/별명`, v2.4)가 가리키는 것만, 저장은 이 목록 자리만 교체
   const sec = useSectionParam('rels');
-  /* 옛 주소(`/rels?s=2nd`)·id 주소로 들어오면 지금 주소로 바꿔 둔다 (v2.4) — 공유해 둔 옛 링크도
-     열리고 주소창에는 `/rels/r/2nd`가 남는다. 지워진 목록이면 기본 목록으로 */
-  const sp = useSearchParams();
-  const { key } = useParams<{ key?: string }>();
-  const canon = sectionHref('rels', sec.id);
-  const sq = sp.get('s');
-  const cur = key ? `/rels/r/${decodeURIComponent(key)}` : sq ? `/rels?s=${sq}` : '/rels';
-  useEffect(() => {
-    if (cur !== canon) router.replace(canon);
-  }, [cur, canon, router]);
   const rels = filterSection(relsAll, sec.id);
   const setRels = sectionSetter(relsAll, sec.id, setRelsAll);
   const [q, setQ] = useState('');
@@ -92,7 +82,7 @@ function RelsInner() {
         <EditableDesc k="rels-desc" def="자관 목록 · 4:3 가로 썸네일 · 공개범위: 전체공개/멤버공개/나만보기" />
         <div className="head-actions">
           <SearchBar onSearch={setQ} />
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/rels/new' + secQuery('rels', sec.id))}>＋ ADD RELATION</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(secSubHref('rels', sec.id, 'new'))}>＋ ADD RELATION</button>}
         </div>
       </div>
       <div className="g3 rels-grid">

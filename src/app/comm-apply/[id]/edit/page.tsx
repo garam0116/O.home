@@ -9,13 +9,16 @@ import { ApplicantForm } from '@/components/comm/ApplicantForm';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { useNoKey } from '@/lib/itemNo';
 
 export default function ApplicantEditPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const toast = useToast();
   const [apps, setApps, loaded] = useLocalList<Applicant>('ohome.commapply.v1', APPLY_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(apps, rawKey, k => `/comm-apply/${k}/edit`);
   const [comms] = useLocalList<CommItem>('ohome.comm.v1', COMM_SEED);
   const [settings] = useCommSettings();
   const [delAsk, setDelAsk] = useState(false);

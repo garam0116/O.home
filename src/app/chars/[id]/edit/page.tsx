@@ -1,6 +1,6 @@
 'use client';
 // 캐릭터 프로필 편집 페이지 (4.4) — 전용 페이지 (모달 아님)
-// ?au=<relId:auId> 로 진입하면 그 AU 전용 프로필 편집 (v1.9 사용자 확정) —
+// /chars/{…}/au/{자관}/{AU 번호}/edit 로 진입하면 그 AU 전용 프로필 편집 (v1.9 사용자 확정, 주소 v2.4) —
 // 아예 새 프로필처럼 이름·스펙·아트·탭 전부 그 AU만의 값으로 작성. base는 건드리지 않음.
 import React, { Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -10,16 +10,24 @@ import { Character, CHAR_SEED, charGrant, charWithAu, Relation, REL_SEED , findB
 import { CharEditForm } from '@/components/chars/CharEditForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
+import { useNoKey } from '@/lib/itemNo';
+import { auKeyFromPath, auPathOf, charPath } from '@/lib/charStore';
+import { CHAR_RESERVED } from '@/lib/sectionStore';
 
 function CharEditInner() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey, rel: auRel, au: auNo } = useParams<{ id: string; rel?: string; au?: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const params = useSearchParams();
-  const auKey = params.get('au');   // `${relId}:${auId}`
   const [chars, setChars, loaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [rels] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  /* 주소 (v2.4) — /chars/{…}/edit, AU는 /chars/{…}/au/{자관}/{AU 번호}/edit.
+     옛 `?au=자관id:AUid`로 들어오면 새 주소로 바꿔 둔다 */
+  const legacyAu = params.get('au');
+  const auKey = auKeyFromPath(rels, auRel, auNo) ?? legacyAu;   // `${relId}:${auId}`
+  const id = useNoKey(chars, rawKey, k => `/chars/${k}${auPathOf(rels, auKey)}/edit`,
+    { slug: true, force: !!legacyAu });
 
   // 별명 주소로도 열린다 (v2.0 사용자 요청 — 주소를 나중에 바꿔도 옛 주소가 살아 있게)
   const ch = findByKey(chars, id);
@@ -41,7 +49,7 @@ function CharEditInner() {
     return rels.find(r => r.id === relId)?.aus.find(a => a.id === auId)?.label ?? auKey;
   })();
 
-  const back = auKey ? `/chars/${ch.id}?au=${encodeURIComponent(auKey)}` : `/chars/${ch.id}`;
+  const back = `${charPath(ch)}${auPathOf(rels, auKey)}`;
 
   // AU 프로필 초기값 (v1.9 사용자 확정) — 이미 등록된 AU면 그 값, 처음이면 "아예 새 등록"처럼 빈 폼
   // (이름·스펙·아트·탭 전부 비움 — 폰트·대표색 등 스타일 기본만 base에서)
@@ -64,7 +72,7 @@ function CharEditInner() {
       </div>
       <CharEditForm
         initial={formInitial}
-        existingIds={chars.filter(c => c.id !== ch.id).flatMap(c => [c.id, ...(c.slug ? [c.slug] : [])])}
+        existingIds={chars.filter(c => c.id !== ch.id).flatMap(c => [c.id, ...(c.slug ? [c.slug] : [])]).concat(CHAR_RESERVED)}
         auMode={!!auKey}
         onCancel={() => router.push(back)}
         onSave={c => {

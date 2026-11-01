@@ -8,7 +8,7 @@ import {
   useLocalList, BOARD_SEED, GUEST_SEED, Post, GuestEntry, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
-import { Character, CHAR_SEED } from '@/lib/charStore';
+import { Character, CHAR_SEED, charPath } from '@/lib/charStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
 import { useBoards } from '@/lib/boardStore';
 import { collectMyItems, MyItem } from '@/lib/myActivity';
@@ -192,7 +192,7 @@ export default function MyPage() {
               {myChars.map(c => (
                 <div key={c.id}
                   data-tip={c.name}
-                  onClick={() => router.push(`/chars/${c.id}`)}
+                  onClick={() => router.push(charPath(c))}
                   style={{
                     aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', position: 'relative',
                     cursor: 'pointer', background: c.color, border: '1px solid var(--line)',

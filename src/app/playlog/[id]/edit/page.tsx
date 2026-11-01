@@ -9,13 +9,16 @@ import { PlayRecord, PLAYLOG_SEED } from '@/lib/galleryStore';
 import { PlaylogForm } from '@/components/trpg/PlaylogForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { useNoKey } from '@/lib/itemNo';
 
 export default function PlaylogEditPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const toast = useToast();
   const [records, setRecords, loaded] = useLocalList<PlayRecord>('ohome.playlog.v1', PLAYLOG_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(records, rawKey, k => `/playlog/${k}/edit`);
   // 큰 글씨 — 추가 섹션 항목이면 그 이름, 눌렀을 때도 그 목록으로 (v2.0 사용자 제보)
   const tt = useSectionTitle('playlog', records.find(x => x.id === id)?.secId, 'EDIT RECORD');
   const r = records.find(x => x.id === id);

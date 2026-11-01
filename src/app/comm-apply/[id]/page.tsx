@@ -12,12 +12,15 @@ import { getBlob } from '@/lib/blobStore';
 import { HtmlBody } from '@/components/ui/HtmlBody';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
+import { useNoKey, itemPath } from '@/lib/itemNo';
 
 export default function ApplicantDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [apps, setApps, loaded] = useLocalList<Applicant>('ohome.commapply.v1', APPLY_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(apps, rawKey, k => `/comm-apply/${k}`);
   const [comms] = useLocalList<CommItem>('ohome.comm.v1', COMM_SEED);
   const [settings, , setLoaded] = useCommSettings();
   const [delAsk, setDelAsk] = useState(false);
@@ -62,7 +65,7 @@ export default function ApplicantDetailPage() {
         <PageTitle>APPLICANT</PageTitle>
         <EditableDesc k="commapply-detail-desc" def="신청 상세" />
         <div className="head-actions">
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`/comm-apply/${a.id}/edit`)}>EDIT</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`${itemPath('/comm-apply', a)}/edit`)}>EDIT</button>}
           {isAdmin && <button className="btn btn-dark" onClick={() => setDelAsk(true)}>DELETE</button>}
         </div>
       </div>
@@ -101,7 +104,7 @@ export default function ApplicantDetailPage() {
             <div style={{ display: 'flex', gap: 10 }}>
               <b style={{ minWidth: 76, color: 'var(--faint)', fontWeight: 600 }}>커미션</b>
               <span style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
-                onClick={() => router.push(`/comm/${comm.id}`)}>{comm.name} ›</span>
+                onClick={() => router.push(itemPath('/comm', comm))}>{comm.name} ›</span>
             </div>
           )}
         </div>

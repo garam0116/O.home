@@ -1,3 +1,4 @@
+import { numbersOf, findByNo } from './itemNo';
 // 캐릭터·자관 데이터 저장소 — localStorage (→ Supabase 이전 예정)
 // 기획서 4.4(캐릭터), 4.5(자관)
 export type Visibility = 'public' | 'member' | 'private'; // 공개범위 3단계
@@ -19,6 +20,8 @@ export interface CharTab {
 
 export interface Character {
   id: string;
+  /** 번호 (v2.4) — 별명이 없을 때의 주소 /chars/{번호}. 올린 순서대로, 서버 카운터에서 받는다 */
+  no?: number;
   name: string;          // 대표 이름 (전용 폰트 적용 대상)
   sub: string;           // 한글명 · 소속 한 줄
   color: string;         // 대표 테마색 (말풍선·리스트 점)
@@ -280,6 +283,8 @@ export interface RelSideSlot {
 
 export interface RelAu {
   id: string;
+  /** 자관 안에서의 AU 번호 (v2.4) — 주소 /rels/{자관}/au/{번호}/edit. 만든 순서대로 */
+  no?: number;
   label: string;
   catchphrase: string;
   /** AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름을 그대로 쓴다 */
@@ -315,6 +320,8 @@ export interface RelAu {
 
 export interface Relation {
   id: string;
+  /** 번호 (v2.4) — 별명이 없을 때의 주소 /rels/{번호} */
+  no?: number;
   /** 페이지 주소 별명 (v2.0 사용자 요청) — /rels/{별명}. 나중에 수정 화면에서 바꿀 수 있다.
    *  참조(AU 프로필 키·로그 연동 등)는 언제나 id로 저장되므로 바꿔도 끊어지지 않는다. */
   slug?: string;
@@ -412,7 +419,43 @@ export const findChar = (chars: Character[], id: string) => chars.find(c => c.id
 /** 주소로 항목 찾기 — id로도, 별명으로도 열린다 (별명을 바꿔도 옛 주소가 살아 있게) */
 export const findByKey = <T extends { id: string; slug?: string }>(list: T[], key: string) =>
   list.find(x => x.id === key || (x.slug ?? '') === key);
-/** 이 캐릭터의 주소 — 별명을 정했으면 그것, 아니면 id */
-export const charPath = (c: { id: string; slug?: string }) => `/chars/${c.slug?.trim() || c.id}`;
-/** 이 자관의 주소 — 별명을 정했으면 그것, 아니면 id */
-export const relPath = (r: { id: string; slug?: string }) => `/rels/${r.slug?.trim() || r.id}`;
+/** 주소 값 — 별명 → 번호(v2.4) → id. 번호가 아직 저장되지 않은 예전 항목만 id가 나오고,
+ *  그 주소로 들어와도 상세 페이지가 번호 주소로 바꿔 준다 */
+const pathKey = (x: { id: string; slug?: string; no?: number }) => x.slug?.trim() || (x.no ? String(x.no) : x.id);
+/** 이 캐릭터의 주소 — 별명을 정했으면 그것, 아니면 번호 */
+export const charPath = (c: { id: string; slug?: string; no?: number }) => `/chars/${pathKey(c)}`;
+/** 이 자관의 주소 — 별명을 정했으면 그것, 아니면 번호 */
+export const relPath = (r: { id: string; slug?: string; no?: number }) => `/rels/${pathKey(r)}`;
+
+/* ---------- AU 주소 (v2.4 사용자 요청 — 주소에 ?·임의 문자열 없이) ----------
+   자관 AU 편집     /rels/{자관}/au/{AU 번호}/edit
+   캐릭터의 AU 보기 /chars/{캐릭터}/au/{자관}/{AU 번호}  (· /edit)
+   AU 번호는 자관 안에서 만든 순서대로 — 기본(base)은 번호 없이 원래 주소다. */
+export function auNos(rel: Relation): Map<string, number> {
+  return numbersOf(rel.aus.filter(a => a.id !== 'base'));
+}
+/** AU 주소 값(번호 또는 예전 id) → AU id */
+export function auIdOf(rel: Relation, key: string): string | undefined {
+  const list = rel.aus.filter(a => a.id !== 'base');
+  return findByNo(list, key, auNos(rel))?.id;
+}
+/** AU 번호 (주소에 쓸 값) */
+export const auKeyOf = (rel: Relation, auId: string) => String(auNos(rel).get(auId) ?? auId);
+/** 캐릭터 AU 키(`자관id:AUid`) → 주소 뒷부분 `/au/{자관}/{AU 번호}` */
+export function auPathOf(rels: Relation[], auKey: string | null | undefined): string {
+  if (!auKey) return '';
+  const [relId, auId] = auKey.split(':');
+  const rel = rels.find(r => r.id === relId);
+  if (!rel) return '';
+  return `/au/${pathKey(rel)}/${auKeyOf(rel, auId)}`;
+}
+/** 주소의 자관·AU 값 → 캐릭터 AU 키(`자관id:AUid`) */
+export function auKeyFromPath(rels: Relation[], relKey?: string, auKey?: string): string | null {
+  if (!relKey || !auKey) return null;
+  const rk = decodeURIComponent(relKey);
+  const nums = numbersOf(rels);
+  const rel = rels.find(r => (r.slug ?? '').trim() === rk) ?? findByNo(rels, rk, nums);
+  if (!rel) return null;
+  const auId = auIdOf(rel, decodeURIComponent(auKey));
+  return auId ? `${rel.id}:${auId}` : null;
+}

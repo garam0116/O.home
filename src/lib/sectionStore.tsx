@@ -15,7 +15,7 @@
  * 섹션을 지워도 **항목 데이터는 남긴다**(3장 원칙) — 메뉴에서만 사라진다.
  */
 import { useCallback, useEffect, useReducer } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getRawSetting, setSetting } from './settingStore';
 import { newId } from './postStore';
 
@@ -75,22 +75,26 @@ export function secKeyOf(kind: SectionKind, id: string): string {
   return s?.slug?.trim() || id;
 }
 
-/** 쿼리 대신 **경로**로 갈리는 종류 (v2.4 사용자 요청) — `/rels?s=2nd` 대신 `/rels/r/2nd`.
- *  `/rels/{별명}`은 자관 상세가 이미 쓰고 있어 겹치지 않게 사이에 한 칸(`r`)을 둔다. */
-export const PATH_SEC: Partial<Record<SectionKind, string>> = { rels: 'r' };
+/** 쿼리 대신 **경로**로 갈리는 목록 (v2.4 사용자 요청) — `/gallery?s=fan` 대신 `/gallery/g/fan`.
+ *  가운데 한 칸은 주소 첫 글자(사용자 확정) — 상세 주소(`/gallery/3`, `/chars/eden`)와 겹치지 않게 둔다. */
+export const PATH_SEC: Record<SectionKind, string> = {
+  gallery: 'g', roadview: 'l', trpg: 't', dotori: 'd', playlog: 'p', comm: 'c',
+  diary: 'd', threads: 't', sched: 'c', chars: 'c', rels: 'r',
+};
 
 /** 자관 상세 주소(`/rels/{별명}`)로 쓸 수 없는 값 — 목록 주소 `/rels/r/…`·새로 만들기 `/rels/new`와 겹친다 */
 export const REL_RESERVED = ['r', 'new'];
+/** 캐릭터 상세 주소(`/chars/{별명}`)로 쓸 수 없는 값 — 같은 이유 */
+export const CHAR_RESERVED = ['c', 'new'];
 
-/** 이 섹션의 주소 — 기본은 원래 주소 그대로, 나머지는 ?s=별명(없으면 id).
- *  경로로 갈리는 종류(PATH_SEC)는 `/rels/r/별명` */
-export const sectionHref = (kind: SectionKind, id: string) => {
-  if (id === MAIN_SEC) return SECTION_META[kind].href;
-  const seg = PATH_SEC[kind];
-  return seg
-    ? `${SECTION_META[kind].href}/${seg}/${secKeyOf(kind, id)}`
-    : `${SECTION_META[kind].href}?s=${secKeyOf(kind, id)}`;
-};
+/** 이 섹션의 주소 — 기본은 원래 주소 그대로, 나머지는 `/gallery/g/별명`(별명이 없으면 id) (v2.4) */
+export const sectionHref = (kind: SectionKind, id: string) =>
+  (id === MAIN_SEC
+    ? SECTION_META[kind].href
+    : `${SECTION_META[kind].href}/${PATH_SEC[kind]}/${secKeyOf(kind, id)}`);
+
+/** 이 섹션 아래의 페이지 — 새로 쓰기 등. `/gallery/write` · `/gallery/g/fan/write` (v2.4) */
+export const secSubHref = (kind: SectionKind, id: string, sub: string) => `${sectionHref(kind, id)}/${sub}`;
 
 /** 주소 값(id 또는 별명) → 그 섹션의 id. 못 찾으면 undefined */
 export function findSecId(kind: SectionKind, key: string): string | undefined {
@@ -169,11 +173,31 @@ export function useSectionParam(kind: SectionKind): { id: string; name: string; 
   const params = useParams<{ key?: string }>();
   const { list } = useSections();
   const items = list(kind);
-  // 경로로 갈리는 종류는 `/rels/r/{key}`의 key를, 아니면(또는 옛 주소면) `?s=`를 읽는다 (v2.4)
-  const pathKey = PATH_SEC[kind] && params?.key ? decodeURIComponent(params.key) : null;
+  // 목록은 `/gallery/g/{key}`의 key를, 옛 주소면 `?s=`를 읽는다 (v2.4)
+  const pathKey = params?.key ? decodeURIComponent(params.key) : null;
   const want = pathKey ?? sp.get('s') ?? MAIN_SEC;
   // 별명으로도 찾는다 (v2.0) — 예전에 공유한 id 주소도 그대로 열려야 한다
   const found = items.find(s => s.id === want || (s.slug ?? '') === want) ?? items[0];
+
+  /* 옛 주소·id 주소로 들어오면 지금 주소로 바꿔 둔다 (v2.4) — `/gallery?s=fan` → `/gallery/g/fan`,
+     `/gallery/write?s=fan` → `/gallery/g/fan/write`. 공유해 둔 옛 링크도 열리고 주소창에는 새 주소가 남는다.
+     목록·새로 쓰기 페이지에서만 — 수정 페이지(`/gallery/3/edit`)도 이 훅을 쓰지만 손대지 않는다. */
+  const pathname = usePathname();
+  const router = useRouter();
+  const base = SECTION_META[kind].href;
+  let rest = pathname.startsWith(base) ? pathname.slice(base.length) : null;
+  if (rest !== null && rest.startsWith(`/${PATH_SEC[kind]}/`)) {
+    const after = rest.slice(PATH_SEC[kind].length + 2);
+    const i = after.indexOf('/');
+    rest = i < 0 ? '' : after.slice(i);
+  }
+  const canon = rest !== null && ['', '/new', '/write'].includes(rest) ? sectionHref(kind, found.id) + rest : null;
+  const qs = sp.toString();
+  const cur = pathname + (qs ? `?${qs}` : '');
+  useEffect(() => {
+    if (canon && loaded && decodeURIComponent(cur) !== canon) router.replace(canon);
+  }, [canon, cur, router]);
+
   return { id: found.id, name: found.name, items };
 }
 
@@ -212,12 +236,6 @@ export function sectionSetter<T extends { secId?: string }>(
     setAll([...mine, ...others]);
   };
 }
-
-/** 새로 만들기 페이지로 넘길 때 지금 섹션을 달고 간다 — 기본 섹션이면 아무것도 안 붙인다.
- *  **별명(slug)을 정했으면 별명으로** (v2.0 사용자 제보) — 메뉴 주소는 별명인데 여기서 만든
- *  주소만 id면, 같은 페이지인데 주소 문자열이 달라 메뉴 타이틀·이름 찾기가 전부 빗나간다. */
-export const secQuery = (kind: SectionKind, id: string) =>
-  (id === MAIN_SEC ? '' : `?s=${secKeyOf(kind, id)}`);
 
 /** 주소의 ?s= 값을 그 섹션의 대표 표기(별명 우선)로 통일 (v2.0 사용자 제보).
  *  옛 공유 주소·구버전이 만든 id 주소로 들어와도 메뉴 타이틀·이름이 제대로 잡히게 —

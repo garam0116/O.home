@@ -5,7 +5,7 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secSubHref } from '@/lib/sectionStore';
 import {
   useLocalList, newId, fmtDate, Comment,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
@@ -24,6 +24,7 @@ import { Modal, useConfirmDelete } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
+import { itemPath } from '@/lib/itemNo';
 
 // 접기 문구 (게시판 6.2와 동일)
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
@@ -274,7 +275,7 @@ function ThreadsPageInner() {
           <SearchBar onSearch={setQ} />
           {isAdmin && (
             <button className="btn btn-dark" style={{ whiteSpace: 'nowrap' }}
-              onClick={() => router.push('/threads/new' + secQuery('threads', sec.id))}>＋ NEW THREAD</button>
+              onClick={() => router.push(secSubHref('threads', sec.id, 'new'))}>＋ NEW THREAD</button>
           )}
         </div>
       </div>
@@ -335,7 +336,7 @@ function ThreadsPageInner() {
                     {isAdmin && (
                       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                         <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: 10.5 }}
-                          onClick={() => router.push(`/threads/${sel.id}/edit`)}>EDIT</button>
+                          onClick={() => router.push(`${itemPath('/threads', sel)}/edit`)}>EDIT</button>
                         <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: 10.5 }}
                           onClick={() => removeWork(sel)}>DELETE</button>
                       </div>

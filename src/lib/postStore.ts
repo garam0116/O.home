@@ -1,11 +1,12 @@
 'use client';
 // 게시판·방명록 타입 + 공용 목록 저장소 훅
 // v2.0: 서버(Supabase) 연결이 있으면 DB, 없으면 localStorage — 화면 코드는 동일하다.
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { PostMode } from './sanitize';
 import { isServerMode } from './supabase';
 import { TABLE_OF, fetchList, syncList, subscribeTable } from './db';
 import { currentUserId } from './currentUser';
+import { NUMBERED, maxNo, reserveNos, type NoRow } from './itemNo';
 
 /** 목록 저장 실패 알림 (v2.0) — 조용히 되돌리면 "쓴 게 바로 지워진다"로만 보여 원인을 알 수 없다.
  *  ListSync가 받아 화면에 띄운다 (설정 저장 실패 알림과 같은 방식) */
@@ -259,10 +260,34 @@ export function useLocalList<T extends { id?: string }>(key: string, seed: T[]):
       return;
     }
     setList(next);
+    latestLocal.current = next;
     try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* 무시 */ }
   }, [key, store, table, generation]);
 
-  return [store ? shared.rows as T[] : list, update, store ? shared.loaded : loaded];
+  /* 번호 붙이기 (v2.4) — 번호를 매기는 목록에 번호 없이 새 항목이 들어오면 서버에서 번호를 받아 붙인다.
+     작성 화면이 미리 번호를 받아 두는 게 원칙이고(저장 직후 그 번호 주소로 이동해야 하므로),
+     이것은 그걸 빠뜨린 경로(복사·가져오기 등)를 위한 안전망이다. */
+  const latestLocal = useRef<T[]>(list);
+  latestLocal.current = list;
+  const save = useCallback((next: T[]) => {
+    const kind = NUMBERED[key];
+    const prevRows = (store ? store.snapshot.rows : latestLocal.current) as { id?: string }[];
+    update(next);
+    if (!kind) return;
+    const had = new Set(prevRows.map(r => r.id));
+    const rows = next as unknown as NoRow[];
+    const fresh = rows.filter(r => !had.has(r.id) && !(typeof r.no === 'number' && r.no > 0));
+    if (!fresh.length) return;
+    const freshIds = new Set(fresh.map(r => r.id));
+    void reserveNos(kind, fresh.length, maxNo(rows.filter(r => !freshIds.has(r.id)))).then(start => {
+      const assign = new Map(fresh.map((r, i) => [r.id, start + i]));
+      const latest = (store ? store.snapshot.rows : latestLocal.current) as unknown as NoRow[];
+      if (!latest.some(r => assign.has(r.id) && !r.no)) return;
+      update(latest.map(r => (assign.has(r.id) && !r.no ? { ...r, no: assign.get(r.id) } : r)) as unknown as T[]);
+    });
+  }, [key, store, update]);
+
+  return [store ? shared.rows as T[] : list, save, store ? shared.loaded : loaded];
 }
 
 /* ---------- 시드 (데모) ---------- */

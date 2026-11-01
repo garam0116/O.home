@@ -3,6 +3,8 @@ import type { Visibility } from './charStore';
 
 /* ---------- 일기 ---------- */
 export interface DiaryPost {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;

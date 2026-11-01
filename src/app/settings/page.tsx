@@ -3,7 +3,7 @@
 // 나머지 카테고리는 해당 기능 마일스톤에서 함께 구현.
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth, inviteCode, setInviteCode } from '@/lib/auth';
-import { useMembers } from '@/lib/members';
+import { useMembers, memberNumbers, memberPath } from '@/lib/members';
 import { useTheme } from '@/lib/ThemeProvider';
 import { ThemeVars } from '@/lib/theme';
 import { ColorField } from '@/components/ui/ColorField';
@@ -32,7 +32,7 @@ import { SectionsBlock } from '@/components/settings/SectionList';
 import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection, cleanSlug } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
 import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf } from '@/lib/siteStore';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
 import { Character, CHAR_SEED, Relation, REL_SEED } from '@/lib/charStore';
@@ -63,6 +63,14 @@ const CATEGORIES = [
   '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', '커미션', 'TRPG', '감상타래', '메모장',
   '폰트', 'BGM', '회원/보안', '데이터 백업',
 ] as const;
+/** 탭 주소 (v2.4 사용자 요청 — 주소에 ?·한글 인코딩 없이) — /settings/menu 처럼 */
+const TAB_SLUG: Record<(typeof CATEGORIES)[number], string> = {
+  '디자인': 'design', '메인 페이지': 'main', '위젯': 'widgets', '메뉴 관리': 'menu', '게시판 관리': 'board',
+  '커미션': 'commission', 'TRPG': 'trpg', '감상타래': 'threads', '메모장': 'memo',
+  '폰트': 'fonts', 'BGM': 'bgm', '회원/보안': 'members', '데이터 백업': 'backup',
+};
+const tabOfSlug = (v: string | null | undefined) =>
+  v ? (CATEGORIES.find(c => TAB_SLUG[c] === v || c === v) ?? null) : null;
 
 /** 색 항목 한 쌍 렌더 헬퍼 */
 function CP({ label, k, def }: { label?: string; k: keyof ThemeVars; def?: string }) {
@@ -903,6 +911,7 @@ function MemberPane() {
   void regVer;
 
   const members = useMembers();
+  const memberNos = memberNumbers(members);   // 회원 주소 /members/{번호} (v2.4)
   const serverOn2 = isServerMode();
   // 계정 삭제는 서비스 콘솔에서만 가능 — 바로 열 수 있게 이 홈의 프로젝트 주소를 만들어 둔다
   const authConsoleUrl = (() => {
@@ -995,7 +1004,7 @@ function MemberPane() {
           <div key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--line)', flexWrap: 'wrap' }}>
             {/* 이름 클릭 → 회원 정보 페이지 (v1.9) */}
             <b style={{ fontSize: 12.5, cursor: 'pointer' }} data-tip="회원 정보 보기"
-              onClick={() => router.push(`/members/${m.id}`)}>{m.nickname}</b>
+              onClick={() => router.push(memberPath(m, memberNos))}>{m.nickname}</b>
             {/* Firebase 계정 id(uid)는 28자라 줄에서 자리를 다 먹는다 — 앞 7자만, 전체는 툴팁으로 */}
             <small style={{ color: 'var(--faint)', fontSize: 10.5 }} data-tip={m.id.length > 7 ? m.id : undefined}>
               {m.id.length > 7 ? `${m.id.slice(0, 7)}…` : m.id}
@@ -2043,8 +2052,8 @@ function MenuPane() {
       );
     }
     // 갤러리 글쓰기 권한 (v2.0 사용자 요청) — 갤러리(섹션)마다 · 「글쓰기 멤버」로 특정 회원까지
-    if (href === '/gallery' || href.startsWith('/gallery?s=')) {
-      const key = href === '/gallery' ? MAIN_SEC : href.slice('/gallery?s='.length);
+    if (href === '/gallery' || href.startsWith('/gallery/g/')) {
+      const key = href === '/gallery' ? MAIN_SEC : href.slice('/gallery/g/'.length);
       // 메뉴 주소에는 별명(slug)이 적혀 있을 수 있다 — id로 통일해 저장
       const gsec = sectionsOf(secMap, 'gallery').find(s2 => s2.id === key || s2.slug === key);
       if (!gsec) return null;
@@ -3046,16 +3055,19 @@ function SettingsInner() {
   const { isAdmin } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const route = useParams<{ tab?: string }>();
   const [tab, setTabState] = useState<(typeof CATEGORIES)[number]>('디자인');
-  // 탭별 주소 (v1.9 사용자 요청) — /settings?tab=… : 뒤로가기로 이전 탭 복귀, 회원 상세에서 돌아오기 등
-  const urlTab = params.get('tab');
+  // 탭별 주소 (v1.9 사용자 요청, v2.4 경로형) — /settings/menu : 뒤로가기로 이전 탭 복귀, 회원 상세에서 돌아오기 등
+  const legacyTab = params.get('tab');
+  const urlTab = tabOfSlug(route.tab ? decodeURIComponent(route.tab) : legacyTab);
   useEffect(() => {
-    if (urlTab && (CATEGORIES as readonly string[]).includes(urlTab)) setTabState(urlTab as (typeof CATEGORIES)[number]);
-    else if (!urlTab) setTabState('디자인');
-  }, [urlTab]);
+    setTabState(urlTab ?? '디자인');
+    // 옛 주소(/settings?tab=메뉴 관리)·한글 주소로 들어오면 새 주소로
+    if (urlTab && (legacyTab || route.tab !== TAB_SLUG[urlTab])) router.replace(`/settings/${TAB_SLUG[urlTab]}`);
+  }, [urlTab, legacyTab, route.tab, router]);
   const setTab = (t: (typeof CATEGORIES)[number]) => {
     setTabState(t);
-    router.push(`/settings?tab=${encodeURIComponent(t)}`);
+    router.push(`/settings/${TAB_SLUG[t]}`);
   };
 
   /* 메뉴 보관함 (v2.3 사용자 요청) — 지금 쓰지 않는 탭을 메뉴 맨 아래로 접어 둔다.

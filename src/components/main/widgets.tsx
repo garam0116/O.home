@@ -21,6 +21,7 @@ import { useSched, eventColor } from '@/lib/schedStore';
 import { StickyMemo, MEMO_SEED, MEMO_SIZE_W, useMemoSettings } from '@/lib/memoStore';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
 import { normalizeInternalLink } from '@/lib/link';
+import { itemPath } from '@/lib/itemNo';
 import {
   Applicant, APPLY_SEED, useCommSettings, badgeStyle, maskName, inTrash,
 } from '@/lib/commStore';
@@ -179,7 +180,7 @@ export function DiaryWidget() {
     <div className="panel widget" style={{ margin: 0 }}>
       <h4>DIARY <span className="more" onClick={() => router.push('/diary')}>더보기 ›</span></h4>
       {latest.map(p => (
-        <div key={p.id} className="diary-mini" onClick={() => router.push(`/diary#${p.id}`)}>
+        <div key={p.id} className="diary-mini" onClick={() => router.push(itemPath('/diary', p))}>
           <div className="t"><span className="tt">{p.title}</span> <small>{p.date.slice(5).replace('-', '.')}</small></div>
         </div>
       ))}
@@ -210,7 +211,7 @@ export function LatestWidget() {
       .filter(p => canViewHref(menuSet, sectionHref('gallery', p.secId ?? MAIN_SEC), viewer))
       .filter(p => p.visibility === 'public' && !p.fold).map(p => ({
       id: `b-${p.id}`, date: p.date, ref: p.images[0], ph: p.phList[0] ?? 'cool',
-      href: `/gallery/${p.id}`, tip: `갤러리 · ${p.title}`,
+      href: itemPath('/gallery', p), tip: `갤러리 · ${p.title}`,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
   const phFallback = ['cool', 'warm', 'red'];

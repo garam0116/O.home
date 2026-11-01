@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocalList, newId } from '@/lib/postStore';
-import { useSectionParam, secStamp, secQuery, MAIN_SEC } from '@/lib/sectionStore';
+import { useSectionParam, secStamp, MAIN_SEC, sectionHref } from '@/lib/sectionStore';
 import { ThreadWork, THREAD_SEED, useThreadSettings, threadCats } from '@/lib/threadStore';
 import { useFonts } from '@/lib/fontStore';
 import { useBlobUrl } from '@/lib/blobStore';
@@ -94,7 +94,7 @@ export function ThreadForm({ editId }: { editId?: string }) {
       setWorks([{ ...w, ...secStamp(sec.id) }, ...works]);
       toast('타래가 시작되었습니다');
     }
-    router.push('/threads' + secQuery('threads', secId));
+    router.push(sectionHref('threads', secId));
   };
 
   return (
@@ -166,7 +166,7 @@ export function ThreadForm({ editId }: { editId?: string }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
-            <button className="btn btn-ghost" onClick={() => router.push('/threads' + secQuery('threads', secId))}>CANCEL</button>
+            <button className="btn btn-ghost" onClick={() => router.push(sectionHref('threads', secId))}>CANCEL</button>
             <button className="btn btn-dark" onClick={save}>{orig ? 'SAVE' : 'ADD'}</button>
           </div>
         </div>

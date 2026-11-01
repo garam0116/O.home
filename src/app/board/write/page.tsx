@@ -2,10 +2,11 @@
 // 게시판 글쓰기/수정 (4.2 / 5.2 다중 게시판) — MD/HTML 모드 선택 + 미리보기 팝업 + 접기/비밀글/공지 설정
 // ?edit=<글 id> 로 진입하면 수정 모드 (작성자·관리자만)
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, BOARD_SEED, Post, newId, FoldType } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID, postNumbers, nextPostNo } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, postNumbers, findPostByKey, findBoardByKey } from '@/lib/boardStore';
+import { allocNo } from '@/lib/itemNo';
 import { renderBody } from '@/lib/sanitize';
 import { KInput, KTextarea, KCheck } from '@/components/ui/Kit';
 import { CropEditor, CropImg, CropValue } from '@/components/ui/CropEditor';
@@ -49,12 +50,28 @@ function WriteInner() {
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const params = useSearchParams();
-  const editPid = params.get('edit');
+  /* 주소 (v2.4) — 새 글 `/board/write` · `/board/b/{게시판}/write`, 수정 `/board/{번호}/edit`.
+     옛 주소(`?b=`, `?edit=`)로 들어오면 아래에서 새 주소로 바꿔 준다 */
+  const route = useParams<{ key?: string; id?: string }>();
+  const editKey = route.id ? decodeURIComponent(route.id) : params.get('edit');
   const [posts, setPosts, postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
-  const editing = editPid ? posts.find(p => p.id === editPid) : undefined;
-  const bid = editing?.boardId ?? params.get('b') ?? MAIN_BOARD_ID;
-  const { boards } = useBoards();
+  const nums = useMemo(() => postNumbers(posts), [posts]);
+  const editing = editKey ? findPostByKey(posts, editKey, nums) : undefined;
+  const editPid = editing?.id ?? null;
+  const { boards, loaded: boardsLoaded } = useBoards();
+  const wantBoard = route.key ? decodeURIComponent(route.key) : params.get('b');
+  const bid = editing?.boardId ?? (wantBoard ? findBoardByKey(wantBoard, boards)?.id : undefined) ?? MAIN_BOARD_ID;
   const board = boards.find(b => b.id === bid) ?? boards[0];
+
+  // 지금 주소로 맞추기 — 수정은 글 번호, 새 글은 게시판 주소 아래
+  const canon = editKey
+    ? (editing ? `/board/${nums.get(editing.id) ?? editing.id}/edit` : null)
+    : boardsLoaded ? (board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`) : null;
+  const qs = params.toString();
+  const cur = (typeof window === 'undefined' ? '' : window.location.pathname) + (qs ? `?${qs}` : '');
+  useEffect(() => {
+    if (canon && decodeURIComponent(cur) !== canon) router.replace(canon);
+  }, [canon, cur, router]);
   // 대표 썸네일 비율 — 갤러리형 게시판은 카드와 같은 5:6, 기본형은 목록 썸네일과 같은 16:9 (v2.3)
   const galleryThumb = board.skin === 'gallery' || board.skin === 'gallery2';
   const thumbRatio = galleryThumb ? '5/6' : '16/9';
@@ -91,6 +108,7 @@ function WriteInner() {
 
   // 수정 모드 — 저장본 로드가 끝나면 폼을 한 번 채움 (본문은 저장 모드 그대로: md→Markdown, html→HTML)
   const hydrated = useRef(false);
+  const saving = useRef(false);
   useEffect(() => {
     if (!editPid || !postsLoaded || hydrated.current) return;
     const p = posts.find(x => x.id === editPid);
@@ -119,8 +137,8 @@ function WriteInner() {
     );
   }
 
-  const post = () => {
-    if (thumbBusy) return;
+  const post = async () => {
+    if (thumbBusy || saving.current) return;
     if (thumbInvalid) { toast('썸네일은 올바른 http(s) 이미지 URL을 입력해 주세요'); return; }
     if (!title.trim() || !body.trim()) { toast('제목과 내용을 입력해 주세요'); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { toast('일자를 입력해 주세요'); return; }
@@ -139,9 +157,12 @@ function WriteInner() {
         thumbSrc, thumbCrop,
       } : p)));
       toast('수정되었습니다');
-      router.push(`/board/${postNumbers(posts).get(editing.id) ?? editing.id}`);
+      router.push(`/board/${nums.get(editing.id) ?? editing.id}`);
       return;
     }
+    // 글 번호는 서버 카운터에서 받는다 (v2.4) — 못 보는 글과 번호가 겹치지 않게
+    saving.current = true;   // 번호를 받는 사이 두 번 눌러 글이 둘 생기지 않게
+    const no = await allocNo('ohome.board.v1', posts).finally(() => { saving.current = false; });
     const p: Post = {
       id: newId(), title: title.trim(), body,
       mode: writeMode === 'md' ? 'md' : 'html',
@@ -152,7 +173,7 @@ function WriteInner() {
       comments: [],
       boardId: board.id,   // 소속 게시판 (5.2 다중 게시판)
       thumbSrc, thumbCrop,
-      no: nextPostNo(posts),   // 글 번호 (v2.4) — 주소 /board/{번호}
+      no,   // 글 번호 (v2.4) — 주소 /board/{번호}
     };
     setPosts([p, ...posts]);
     toast('등록되었습니다');
@@ -299,7 +320,7 @@ function WriteInner() {
           </div>
           <div className="form-actions">
             <button className="btn btn-onbk"
-              onClick={() => router.push(editing ? `/board/${postNumbers(posts).get(editing.id) ?? editing.id}` : boardHref(board.id, boards))}>CANCEL</button>
+              onClick={() => router.push(editing ? `/board/${nums.get(editing.id) ?? editing.id}` : boardHref(board.id, boards))}>CANCEL</button>
             <button className="btn btn-accent" disabled={thumbBusy} onClick={post}>{editing ? 'SAVE' : 'POST'}</button>
           </div>
         </div>

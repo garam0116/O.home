@@ -244,6 +244,35 @@ begin
   end loop;
 end $$;
 
+-- ── 9-1. 번호 발급 (v2.4) — 글 주소 /board/1 의 번호 ──────────────
+-- 종류마다 카운터 한 줄. 회원은 비공개 글을 못 보므로 「보이는 마지막 번호 + 1」로는
+-- 번호가 겹칠 수 있어, 서버 함수가 줄을 잠그고 올려 준다(동시에 받아도 겹치지 않는다).
+create table if not exists public.counters (
+  kind text primary key,
+  n    bigint not null default 0
+);
+alter table public.counters enable row level security;
+drop policy if exists "counters_select" on public.counters;
+create policy "counters_select" on public.counters for select using (true);
+
+create or replace function public.reserve_no(k text, cnt int, floor_n bigint)
+returns bigint language plpgsql security definer set search_path = public as $$
+declare cur bigint;
+begin
+  if auth.uid() is null then raise exception 'login required'; end if;
+  if cnt < 0 then raise exception 'bad count'; end if;
+  insert into public.counters (kind, n) values (k, 0) on conflict (kind) do nothing;
+  select n into cur from public.counters where kind = k for update;
+  cur := greatest(cur, coalesce(floor_n, 0));
+  update public.counters set n = cur + cnt where kind = k;
+  return cur + 1;
+end $$;
+revoke all on function public.reserve_no(text, int, bigint) from public;
+grant execute on function public.reserve_no(text, int, bigint) to authenticated;
+
+-- 회원 번호 — 회원 주소 /members/{번호} (v2.4)
+alter table public.profiles add column if not exists no bigint;
+
 -- ── 10. 스키마 캐시 갱신 (중요) ──────────────────────────────
 -- PostgREST(= REST API)는 테이블·컬럼 목록을 캐시해 둔다. SQL로 컬럼을 새로 추가해도
 -- 캐시가 갱신되기 전에는 API가 그 컬럼을 모른다 —

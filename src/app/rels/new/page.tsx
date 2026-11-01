@@ -4,11 +4,12 @@ import React, { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, newId } from '@/lib/postStore';
-import { Character, CHAR_SEED, Relation, REL_SEED, RelMember } from '@/lib/charStore';
+import { Character, CHAR_SEED, Relation, REL_SEED, RelMember, relPath } from '@/lib/charStore';
 import { useSectionParam, secStamp, sectionHref, useSectionTitle, REL_RESERVED } from '@/lib/sectionStore';
 import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
+import { allocNo } from '@/lib/itemNo';
 
 function RelNewInner() {
   const router = useRouter();
@@ -39,13 +40,15 @@ function RelNewInner() {
         myChars={chars.filter(c => c.own)}
         existingIds={rels.flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])]).concat(REL_RESERVED)}
         onCancel={() => router.push(sectionHref('rels', sec.id))}
-        onSave={v => {
+        onSave={async v => {
+          const no = await allocNo('ohome.rels.v1', rels);   // 별명이 없으면 주소 /rels/{번호} (v2.4)
           // 팔레트는 캐릭터 쪽을 상세에서 그대로 읽는다 — 여기서 복사해 두면 나중에 캐릭터 색을
           // 바꿔도 자관이 따라오지 않는다 (v2.0 — 상세 페이지와 같은 규칙으로 통일)
           const members: RelMember[] = v.pickedCharIds.map(cid =>
             ({ charId: cid, quote: '', keywords: [], desc: '', palette: [] }));
           const rel: Relation = {
             id: v.slug ?? newId(),   // 지정한 페이지 주소 (v1.9) — 비우면 자동
+            no,
             name: v.name, catchphrase: v.catchphrase, kind: v.kind,
             fontId: v.fontId, bodyFontId: v.bodyFontId, visibility: v.visibility,
             arts: v.arts, thumbId: v.thumbId, thumbCrop: v.thumbCrop,
@@ -66,7 +69,7 @@ function RelNewInner() {
           };
           setRels([...rels, rel]);
           toast('자관이 등록되었습니다 — 상대 캐릭터·한마디 등은 상세에서 이어서');
-          router.push(`/rels/${rel.id}`);
+          router.push(relPath(rel));
         }}
       />
     </section>

@@ -2,9 +2,9 @@
 // 다이어리 (4.14) — 아코디언 목록: 제목+날짜 한 줄, 클릭 시 그 자리에서 펼침 ·
 // 페이지네이션 · 공개범위(비공개는 관리자만)
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, MAIN_SEC } from '@/lib/sectionStore';
 import { useLocalList } from '@/lib/postStore';
 import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
 import { renderBody } from '@/lib/sanitize';
@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { BlobImg } from '@/lib/blobStore';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
+import { itemPath, numbersOf, findByNo } from '@/lib/itemNo';
 
 const PAGE_SIZE = 10;
 
@@ -40,11 +41,30 @@ function DiaryPageInner() {
   const { user, isAdmin } = useAuth();
   const [postsAll, setPostsAll, loaded] = useLocalList<DiaryPost>('ohome.diary.v1', DIARY_SEED);
   // 여러 개로 만든 섹션 (v2.0) — 주소의 ?s= 가 가리키는 것만 보여 준다
-  const sec = useSectionParam('diary');
+  const secParam = useSectionParam('diary');
+  /* 일기 하나의 주소 (v2.4) — /diary/{번호}. 그 일기가 든 목록을 보여 주고 펼쳐 둔다.
+     예전 주소(/diary#id)로 들어오면 번호 주소로 바꿔 둔다 */
+  const { id: entryKey } = useParams<{ id?: string }>();
+  const entryNums = useMemo(() => numbersOf(postsAll), [postsAll]);
+  const entry = entryKey ? findByNo(postsAll, decodeURIComponent(entryKey), entryNums) : undefined;
+  const entrySec = entry ? (entry.secId ?? MAIN_SEC) : null;
+  const sec = entrySec
+    ? { ...secParam, id: entrySec, name: secParam.items.find(x => x.id === entrySec)?.name ?? secParam.name }
+    : secParam;
   const posts = filterSection(postsAll, sec.id);
   // 저장은 이 섹션 자리만 교체 — 걸러진 목록을 그대로 넘겨도 다른 섹션이 지워지지 않는다
   const setPosts = sectionSetter(postsAll, sec.id, setPostsAll);
   const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => {
+    if (entry) { setOpen(entry.id); return; }
+    const h = decodeURIComponent(window.location.hash.slice(1));
+    const old = h ? postsAll.find(p => p.id === h) : undefined;
+    if (old) router.replace(itemPath('/diary', { id: old.id, no: entryNums.get(old.id) }));
+  }, [entry, postsAll, entryNums, router]);
+  useEffect(() => {
+    if (entry && entryKey !== String(entryNums.get(entry.id))) router.replace(`/diary/${entryNums.get(entry.id)}`);
+    if (entry) document.getElementById(entry.id)?.scrollIntoView({ block: 'center' });
+  }, [entry, entryKey, entryNums, router]);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [delFor, setDelFor] = useState<DiaryPost | null>(null);
@@ -54,11 +74,6 @@ function DiaryPageInner() {
   const [view, setView] = useState<{ y: number; m: number }>({ y: now.getFullYear(), m: now.getMonth() });
   const [monthFilter, setMonthFilter] = useState(false);
 
-  // 메인 위젯에서 특정 일기로 진입 — /diary#id (4.14)
-  useEffect(() => {
-    const h = window.location.hash.slice(1);
-    if (h) setOpen(h);
-  }, [loaded]);
 
   if (!loaded) return <section className="page" />;
 
@@ -138,7 +153,7 @@ function DiaryPageInner() {
                   {isAdmin && (
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', padding: '0 0 14px' }}>
                       <button className="btn btn-ghost" style={{ padding: '4px 11px', fontSize: 10.5 }}
-                        onClick={() => router.push(`/diary/${p.id}/edit`)}>EDIT</button>
+                        onClick={() => router.push(`${itemPath('/diary', p)}/edit`)}>EDIT</button>
                       <button className="btn btn-ghost" style={{ padding: '4px 11px', fontSize: 10.5 }}
                         onClick={() => setDelFor(p)}>DELETE</button>
                     </div>

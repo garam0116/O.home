@@ -11,7 +11,7 @@ import {
 } from '@/lib/postStore';
 import {
   useBoardSettings, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm, perPageOf,
-  findBoardByKey, postNumbers, postHref, withPostNumbers,
+  findBoardByKey, postNumbers, postHref,
 } from '@/lib/boardStore';
 import { SearchBar, Pager } from '@/components/ui/Kit';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -35,7 +35,7 @@ function BoardInner() {
   const { boards, loaded: boardsLoaded } = useBoards();
   const board = (want ? findBoardByKey(want, boards) : undefined) ?? boards[0];
   const bid = board.id;
-  const [posts, setPosts, postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   // 글 번호 (v2.4) — 글 주소 /board/{번호}
   const nums = useMemo(() => postNumbers(posts), [posts]);
 
@@ -47,13 +47,6 @@ function BoardInner() {
     if (canon && cur !== canon) router.replace(canon);
   }, [canon, cur, router]);
 
-  /* 번호가 없는 예전 글에 번호를 저장해 둔다 (v2.4) — 관리자만(모든 글을 볼 수 있고 고칠 수 있다).
-     한 번 저장되면 그 뒤로는 글을 지워도 다른 글 번호가 밀리지 않는다 */
-  useEffect(() => {
-    if (!isAdmin || !postsLoaded) return;
-    const next = withPostNumbers(posts);
-    if (next) setPosts(next);
-  }, [isAdmin, postsLoaded, posts, setPosts]);
   // 댓글 수 — 댓글은 글과 따로 저장된다 (v2.0). 옛 글 안에 남아 있던 것도 함께 센다
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
   const cmtCount = (p: Post) => commentsFor(cmtRows, 'post', p.id, p.comments).length;
@@ -116,7 +109,7 @@ function BoardInner() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <SearchBar onSearch={v => { setQ(v); setPage(1); }} />
           {allow(board.permWrite) && !!user && (
-            <button className="btn btn-dark" onClick={() => router.push(`/board/write?b=${board.id}`)}>✎ WRITE</button>
+            <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>✎ WRITE</button>
           )}
         </div>
       </div>

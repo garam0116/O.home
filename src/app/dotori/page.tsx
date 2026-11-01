@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secSubHref } from '@/lib/sectionStore';
 import { useLocalList } from '@/lib/postStore';
 import {
   DotoriItem, DotoriStatus, DOTORI_SEED, DOTORI_STATUS_KEYS, useTrpgSettings, dotoriBadgeStyle,
@@ -15,6 +15,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
+import { itemPath } from '@/lib/itemNo';
 
 type Tab = 'all' | DotoriStatus;
 
@@ -96,7 +97,7 @@ function DotoriPageInner() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <SearchBar placeholder="시나리오·라이터·태그 검색" onSearch={setQ} />
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/dotori/new' + secQuery('dotori', sec.id))}>＋ ADD</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(secSubHref('dotori', sec.id, 'new'))}>＋ ADD</button>}
         </div>
       </div>
 
@@ -111,7 +112,7 @@ function DotoriPageInner() {
               e.preventDefault();
               setOrdFor({ id: it.id, x: e.clientX, y: e.clientY });
             }}
-            onClick={() => { if (isAdmin && !editOn) router.push(`/dotori/${it.id}/edit`); }}>
+            onClick={() => { if (isAdmin && !editOn) router.push(`${itemPath('/dotori', it)}/edit`); }}>
             <div className="th">
               <CroppedBlobImg fileRef={it.imgId} crop={it.thumbCrop} ph={it.ph} />
               {/* 뱃지 — 공수표·일정 확정만, 이미지 우상단 (4.15) */}

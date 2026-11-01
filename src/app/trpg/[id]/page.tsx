@@ -8,7 +8,7 @@ import { sectionHref, MAIN_SEC, secStamp, useSectionTitle } from '@/lib/sectionS
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, showAsHtml, decodeLogText, logNo, saveLogBody } from '@/lib/galleryStore';
-import { Relation, REL_SEED, Character, CHAR_SEED, charGrant } from '@/lib/charStore';
+import { Relation, REL_SEED, Character, CHAR_SEED, charGrant, relPath } from '@/lib/charStore';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { getBlob, putBlob, useBlobUrl } from '@/lib/blobStore';
 import { useImageSource, resolveImageRef, type ImageSource } from '@/components/ui/ImageSource';
@@ -18,6 +18,7 @@ import { KInput, KSelect, KDate, KTextarea } from '@/components/ui/Kit';
 import { ColorField } from '@/components/ui/ColorField';
 import { CropEditor, CropImg, CropValue } from '@/components/ui/CropEditor';
 import { useToast } from '@/components/ui/Toast';
+import { useNoKey } from '@/lib/itemNo';
 
 /** 로그 렌더 프레임 — 대형 문서도 안정적으로 로드되도록 srcdoc 대신 Blob URL 사용 */
 function LogFrame({ frameRef, html, title, onFrameLoad }: {
@@ -41,11 +42,13 @@ function LogFrame({ frameRef, html, title, onFrameLoad }: {
 }
 
 export default function TrpgDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const [logs, setLogs, loaded] = useLocalList<TrpgLog>('ohome.trpg.v1', TRPG_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(logs, rawKey, k => `/trpg/${k}`);
   // 본문은 목록과 분리 저장 (v2.0 — 나만보기 로그도 목록엔 뜨게 하려고 목록 문서의 질의 조건이
   // listHidden으로 느슨해졌는데, 본문까지 같이 있으면 그 질의로 본문도 함께 새어 나간다).
   // 이 목록에 없는 id는 "권한이 없어 애초에 안 받아졌다"는 뜻 — 서버가 알아서 걸러 준다
@@ -335,7 +338,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
         <PageTitle href={tt.href}>{tt.title}</PageTitle>
         <p>{logNo(l)}{[l.writer, l.withText].filter(Boolean).map(x => ` · ${x}`).join('')}{l.date ? ` · ${l.date.replace(/-/g, '.')}` : ''}</p>
         <div className="head-actions">
-          {rel && <button className="btn btn-dark" onClick={() => router.push(`/rels/${rel.id}`)}>{rel.name} ›</button>}
+          {rel && <button className="btn btn-dark" onClick={() => router.push(relPath(rel))}>{rel.name} ›</button>}
           {isAdmin && <button className="btn btn-dark" onClick={() => {
             setE({
               noText: l.noText ?? '', title: l.title, catchphrase: l.catchphrase ?? '', writer: l.writer,
