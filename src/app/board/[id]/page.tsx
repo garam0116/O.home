@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useHrefBlock } from '@/components/shell/MenuGuard';
 import { useAuth } from '@/lib/auth';
 import {
-  useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate,
+  useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate, fmtListDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
 import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey } from '@/lib/boardStore';
@@ -149,7 +149,8 @@ export default function BoardDetailPage() {
           {post.secret && '🔒 '}{post.title}
         </h2>
         <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
-          {post.notice ? '공지 · ' : ''}{post.author} · {fmtDate(post.date)} · {post.mode.toUpperCase()}
+          {post.notice ? '공지 · ' : ''}{post.author} · {fmtListDate(post.date)}
+          {/* 작성 방식(HTML/MD)은 표시하지 않는다 (사용자 요청) — 수정 화면은 원래 방식으로 열린다 */}
           {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
           {(post.tags ?? []).map(t => (
             <span key={t} style={{ marginLeft: 7, color: 'color-mix(in srgb,var(--accent) 65%,var(--faint))' }}>#{t}</span>
