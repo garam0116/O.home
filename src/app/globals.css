@@ -1536,15 +1536,17 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .board-thumb{position:relative;flex-shrink:0;width:80px;aspect-ratio:16/9;border-radius:6px;overflow:hidden}
 /* 게시판 목록 — 오른쪽 화살표 칸 + 썸네일 확대 (v2.5 사용자 요청).
    화살표는 평소 숨김, PC는 마우스를 올렸을 때 · 모바일은 손가락을 대고 있을 때만 나타난다 */
-.board-list .brow{grid-template-columns:70px 1fr 90px 90px 14px;padding-right:14px;-webkit-tap-highlight-color:transparent}
+.board-list .brow{grid-template-columns:70px 1fr 90px 90px 26px;padding-right:14px;-webkit-tap-highlight-color:transparent}
 /* 확대는 scale 속성으로 — img에 크롭 위치용 인라인 transform이 있어 transform을 쓰면 덮어써진다 */
 .board-thumb img{transition:scale .35s ease}
-.board-list .go,.bgal-card .go{display:grid;place-items:center;opacity:0;transform:translateX(-4px);transition:opacity .18s,transform .18s;pointer-events:none}
-.board-list .go{color:var(--faint)}
-.bgal-card .go{position:absolute;right:14px;bottom:20px;z-index:3;color:#fff}
-.bgal-2 .bgal-card .go{right:22px;bottom:24px;color:#7a808a}
-.bgal-1 .bgal-card.no-thumb .go{color:var(--faint)}
-.bgal-card:has(.go) .bgal-tx{padding-right:18px}
+/* 화살표 — 반투명 어두운 원 안에 흰 꺾쇠 (사용자 참고 이미지). 밝은 행·사진 위 어디서든 보이게 */
+.board-list .go,.bgal-card .go{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(20,22,26,.38);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:#fff;opacity:0;transform:translateX(-4px);transition:opacity .18s,transform .18s;pointer-events:none}
+.bgal-card .go{position:absolute;right:16px;bottom:17px;z-index:3;width:28px;height:28px}
+.bgal-2 .bgal-card .go{right:22px;bottom:25px}
+/* 사진 위(갤러리형 1)는 참고 이미지처럼 반투명 흰 원 — 밝은 바탕(행·흰 띠·사진 없는 카드)은 어두운 원 유지 */
+.bgal-1 .bgal-card:not(.no-thumb) .go{background:rgba(255,255,255,.24)}
+.bgal-1 .bgal-card:has(.go) .bgal-tx{padding-right:34px}
+.bgal-2 .bgal-card:has(.go) .bgal-tx{padding-right:48px}
 @media (hover:hover){
   .board-list .brow:hover .go,.bgal-card:hover .go{opacity:1;transform:none}
   .brow:hover .board-thumb img,.bgal-card:hover img{scale:1.06}
@@ -1605,7 +1607,10 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .board-post,.board-comments-body{padding:0}
   .board-detail .cmt-input{padding-left:0;padding-right:0;background:none}
   .brow{grid-template-columns:48px minmax(0,1fr) 64px;gap:8px;padding:12px}
-  .board-list .brow{grid-template-columns:48px minmax(0,1fr) 64px 12px;padding-right:8px}
+  .board-list .brow{grid-template-columns:48px minmax(0,1fr) 64px 24px;padding-right:10px}
+  .board-list .go{width:24px;height:24px}
+  .bgal-card .go{width:26px;height:26px;right:12px;bottom:12px}
+  .bgal-2 .bgal-card .go{right:16px;bottom:19px}
   .brow .dt{display:none}
   .board-thumb{width:56px}
 }

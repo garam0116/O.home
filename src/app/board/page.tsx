@@ -25,11 +25,11 @@ function firstImage(body: string): string | null {
   return md ? md[1] : null;
 }
 
-/** 호버(PC)·터치(모바일) 때만 나타나는 오른쪽 화살표 (v2.5 사용자 요청) */
+/** 호버(PC)·터치(모바일) 때만 나타나는 오른쪽 화살표 — 반투명 원 + 흰 화살표 (v2.5 사용자 요청) */
 function Chevron() {
   return (
     <span className="go" aria-hidden>
-      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M3 8h9.5M8.5 4 12.5 8 8.5 12" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
     </span>
   );
 }
