@@ -143,6 +143,129 @@ export function DdayEditor({ conf }: { conf: WidgetConf }) {
   );
 }
 
+/* ---------- 디데이 (사진 카드) — settings.items: {id, title, date, plusOne?, imgId?, crop?}[] ----------
+   카드마다 사진을 깔고 이름(왼쪽 위) · 디데이(오른쪽 아래, 크게) · 시작일(그 아래)을 얹는다.
+   카드 비율은 고정(DDAY_CARD_RATIO)이라 위젯 폭이 바뀌어도 크롭 위치가 그대로 재현된다. */
+export const DDAY_CARD_RATIO = 2.75;
+export interface DdayCardItem {
+  id: string; title: string; date: string; plusOne?: boolean;
+  imgId?: string; crop?: CropValue;
+}
+
+function DdayCardCrop({ it, onClose, onApply }: {
+  it: DdayCardItem; onClose: () => void; onApply: (c: CropValue) => void;
+}) {
+  const src = useBlobUrl(it.imgId);
+  if (!src) return null;
+  return <CropEditor open src={src} aspect={DDAY_CARD_RATIO} aspectLabel="카드 비율" initial={it.crop} onClose={onClose} onApply={onApply} />;
+}
+
+export function DdayCardEditor({ conf }: { conf: WidgetConf }) {
+  const { updateWidget } = useMainStore();
+  const toast = useToast();
+  const del = useConfirmDelete();
+  const { fonts, familyOf } = useFonts();
+  const items = (conf.settings.items as DdayCardItem[]) ?? [];
+  const fontId = (conf.settings.fontId as string | undefined) ?? 'default';
+  const color = conf.settings.color as string | undefined;
+  const [cropFor, setCropFor] = useState<string | null>(null);
+  const [fileFor, setFileFor] = useState<string | null>(null);
+  const [nt, setNt] = useState('');
+  const [nd, setNd] = useState('');
+  const inputId = `ddcF-${conf.id}`;
+
+  const setMeta = (patch: Record<string, unknown>) =>
+    updateWidget(conf.id, { settings: { ...conf.settings, ...patch } }, { persist: true });
+  const set = (next: DdayCardItem[]) => setMeta({ items: next });
+  const patchItem = (id: string, p: Partial<DdayCardItem>) => set(items.map(x => (x.id === id ? { ...x, ...p } : x)));
+
+  const setImage = (id: string, ref: string) => { patchItem(id, { imgId: ref, crop: undefined }); setCropFor(id); };
+
+  const add = () => {
+    if (!nt.trim()) { toast('이름을 입력해 주세요'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nd)) { toast('날짜를 YYYY-MM-DD 형식으로 입력해 주세요'); return; }
+    set([...items, { id: `dc${Date.now().toString(36)}`, title: nt.trim(), date: nd }]);
+    setNt(''); setNd('');
+    toast('추가되었습니다 — 썸네일을 눌러 사진을 넣어 주세요');
+  };
+
+  const row = (it: DdayCardItem, i: number) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '1px dashed var(--line)', width: '100%', flexWrap: 'wrap' }}>
+      <span className="drag-h">⠿</span>
+      {/* 썸네일 — 눌러서 사진 넣기·교체 */}
+      <WidgetImageSource onSelect={url => setImage(it.id, url)}
+        onFiles={async files => { if (files[0]) setImage(it.id, await putBlob(files[0])); }}>
+        <div style={{ width: 88, aspectRatio: String(DDAY_CARD_RATIO), borderRadius: 6, overflow: 'hidden', position: 'relative', flexShrink: 0, border: '1.5px dashed var(--line)', cursor: 'pointer' }}
+          onClick={() => { setFileFor(it.id); document.getElementById(inputId)?.click(); }}>
+          {it.imgId
+            ? <CroppedBlobImg fileRef={it.imgId} crop={it.crop} ph="" />
+            : <div className="ph" style={{ position: 'absolute', inset: 0 }}><span style={{ fontSize: 8 }}>IMAGE</span></div>}
+        </div>
+      </WidgetImageSource>
+      <div style={{ display: 'grid', gap: 6, flex: 1, minWidth: 180 }}>
+        <KInput value={it.title} placeholder="이름" onChange={e => patchItem(it.id, { title: e.target.value })} />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <KDate value={it.date} style={{ maxWidth: 122 }} onChange={v => patchItem(it.id, { date: v })} />
+          <span data-tip="시작일을 1일로 세는 기념일 카운트 — 당일이 D+1 (커플 기념일 등)">
+            <KCheck label="+1D" checked={!!it.plusOne} onChange={v => patchItem(it.id, { plusOne: v })} />
+          </span>
+          {it.imgId && (
+            <>
+              <button className="btn btn-ghost" style={{ height: 24, padding: '0 9px', fontSize: 10, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => setCropFor(it.id)}>✂ 위치</button>
+              <button className="btn btn-ghost" style={{ height: 24, padding: '0 9px', fontSize: 10, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => patchItem(it.id, { imgId: undefined, crop: undefined })}>사진 제거</button>
+            </>
+          )}
+        </div>
+      </div>
+      <button className="btn btn-ghost" style={{ height: 24, padding: '0 11px', fontSize: 10.5, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}
+        onClick={() => del.ask(`${it.title ? `「${it.title}」` : `${i + 1}번째 카드`}를 삭제하시겠습니까?`,
+          () => set(items.filter(x => x.id !== it.id)), '원본 사진 파일은 지워지지 않습니다.')}>DELETE</button>
+    </div>
+  );
+
+  const cropTarget = items.find(x => x.id === cropFor);
+
+  return (
+    <div>
+      <input id={inputId} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={async e => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          const target = fileFor;
+          setFileFor(null);
+          if (f && target) setImage(target, await putBlob(f));
+        }} />
+      <DragList items={items} keyOf={it => it.id} onReorder={set} render={row} />
+      {items.length === 0 && <p className="hint">등록된 디데이가 없습니다</p>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <KInput placeholder="이름" value={nt} onChange={e => setNt(e.target.value)} />
+        <KDate value={nd} style={{ maxWidth: 122 }} onChange={setNd} />
+        <button className="btn btn-dark" style={{ whiteSpace: 'nowrap' }} onClick={add}>＋ ADD</button>
+      </div>
+      <p className="hint" style={{ marginTop: 6 }}>
+        썸네일을 눌러 사진을 넣고 [✂ 위치]로 보이는 부분을 고르세요 — 원본은 잘리지 않습니다 · +1D — 시작일을 1일로 세는 기념일 카운트 (당일 = D+1)
+      </p>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
+        <span className="cp-lb">글씨 폰트</span>
+        <KSelect minWidth={150} value={fontId}
+          onChange={v => setMeta({ fontId: v })}
+          options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> }))} />
+        <span className="cp-lb">글씨색</span>
+        <ColorField value={color ?? '#ffffff'} onChange={hex => setMeta({ color: hex })} />
+      </div>
+
+      {cropTarget && (
+        <DdayCardCrop it={cropTarget}
+          onClose={() => setCropFor(null)}
+          onApply={c => { patchItem(cropTarget.id, { crop: c }); setCropFor(null); }} />
+      )}
+      {del.element}
+    </div>
+  );
+}
+
 /* ---------- TO-DO — settings.items: {text, done}[] ---------- */
 export interface TodoSetItem { text: string; done: boolean }
 

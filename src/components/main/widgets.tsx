@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck } from '@/components/ui/Kit';
 import { ColorField } from '@/components/ui/ColorField';
 import { useFonts } from '@/lib/fontStore';
-import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DecoEditor, TodoEditor, TodoSetItem } from '@/components/main/widgetEditors';
+import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem } from '@/components/main/widgetEditors';
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
@@ -275,10 +275,56 @@ export function DdayWidget({ conf }: { conf: WidgetConf }) {
       })}
       {items.length === 0 && <p className="hint">등록된 D-day가 없습니다</p>}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="D-day 관리"
+      <Modal open={open} onClose={() => setOpen(false)} title="심플 디데이 관리"
         desc="추가 · 수정 · 삭제 · ⠿ 드래그로 순서 조정 — 환경설정 「위젯」에서도 관리 가능"
         actions={<button className="btn btn-dark" onClick={() => setOpen(false)}>CLOSE</button>}>
         {open && <DdayEditor conf={conf} />}
+      </Modal>
+    </div>
+  );
+}
+
+/* ---------- 디데이 (사진 카드) — 사진 위에 이름 · 디데이 · 시작일 ---------- */
+export function DdayCardWidget({ conf }: { conf: WidgetConf }) {
+  const { isAdmin } = useAuth();
+  const { editOn } = useMainStore();
+  const { familyOf } = useFonts();
+  const [open, setOpen] = useState(false);
+  const items = (conf.settings.items as DdayCardItem[]) ?? [];
+  const fontId = conf.settings.fontId as string | undefined;
+  const color = (conf.settings.color as string | undefined) ?? '#ffffff';
+  useEditEvent(conf.id, () => setOpen(true));
+  return (
+    <div className="ddc-wgt" style={{ cursor: isAdmin ? 'pointer' : undefined, fontFamily: fontId ? familyOf(fontId) : undefined, color }}
+      onClick={e => { if ((e.target as HTMLElement).closest('.modal-ov')) return; if (isAdmin && !editOn) setOpen(true); }}>
+      {items.map(it => {
+        const d = ddayLabel(it.date, it.plusOne);
+        return (
+          <div className="ddc-card" key={it.id} style={{ aspectRatio: String(DDAY_CARD_RATIO) }}>
+            <div className="ddc-bg">
+              {it.imgId
+                ? <CroppedBlobImg fileRef={it.imgId} crop={it.crop} ph="" />
+                : <div className="ph" style={{ position: 'absolute', inset: 0 }} />}
+            </div>
+            <span className="ddc-title">{it.title}</span>
+            <div className="ddc-d">
+              <b>{d.label}</b>
+              <small>{it.date.replace(/-/g, '.')}</small>
+            </div>
+          </div>
+        );
+      })}
+      {items.length === 0 && (
+        <div className="panel widget" style={{ margin: 0 }}>
+          <h4>디데이 {isAdmin && <span className="more">관리 ›</span>}</h4>
+          <p className="hint">등록된 디데이가 없습니다</p>
+        </div>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="디데이 관리"
+        desc="사진 · 이름 · 시작일 — ⠿ 드래그로 순서 조정 · 환경설정 「위젯」에서도 관리 가능"
+        actions={<button className="btn btn-dark" onClick={() => setOpen(false)}>CLOSE</button>}>
+        {open && <DdayCardEditor conf={conf} />}
       </Modal>
     </div>
   );
@@ -656,6 +702,7 @@ export function renderWidget(conf: WidgetConf) {
     case 'diary': return <DiaryWidget />;
     case 'latest': return <LatestWidget />;
     case 'dday': return <DdayWidget conf={conf} />;
+    case 'ddaycard': return <DdayCardWidget conf={conf} />;
     case 'todo': return <TodoWidget conf={conf} />;
     case 'upcoming': return <UpcomingWidget />;
     case 'freetext': return <FreeTextWidget conf={conf} />;
