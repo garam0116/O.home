@@ -1,6 +1,6 @@
 ﻿'use client';
 // 역극 (4.9) — 실시간 채팅형. 방 개설(자관 기반/자유) · 참여자에게만 존재 노출 ·
-// 캐릭터 선택 발화(테마색 말풍선) · 지문(/desc) · 메시지 수정/삭제 · 완결/공개 전환 · HTML 내보내기
+// 캐릭터 선택 발화(테마색 말풍선) · 지문(/desc) · 메시지 수정/삭제 · 완결 · HTML 내보내기
 // ※ 실시간 송수신·입력 중 표시·참여자 전원 동의는 Supabase Realtime 연동 시 활성화 (현재 localStorage)
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth';
@@ -176,7 +176,7 @@ export default function RpPage() {
       id: newId(), title: nTitle.trim(), relId: nRel === 'none' ? undefined : nRel,
       // 원래 설정(base)이면 남기지 않는다 — 예전 방과 같은 모습이라 되돌리기도 쉽다
       auId: nRel !== 'none' && nAu !== 'base' ? nAu : undefined,
-      memberIds: members, status: 'ongoing', isPublic: false,
+      memberIds: members, status: 'ongoing',
       createdBy: user.id, created: new Date().toISOString(), lastRead: {}, messages: [],
     };
     setRooms([room, ...rooms]);
@@ -301,7 +301,7 @@ ${rows}
   };
   const roomSub = (r: RpRoom) => [
     roomLabel(r),
-    r.status === 'done' ? (r.isPublic ? '완결 · 공개 전환됨' : '완결') : '진행중',
+    r.status === 'done' ? '완결' : '진행중',
   ].join(' · ');
 
   // 회원 계정(오너) 이름은 화면에 내지 않는다 — 계정은 접근 권한용일 뿐 (v2.0 사용자 요청).
@@ -354,7 +354,7 @@ ${rows}
                   <small>{roomLabel(sel)}</small>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span className="pill">{sel.status === 'done' ? (sel.isPublic ? '완결 · 공개' : '완결') : '진행중'}</span>
+                  <span className="pill">{sel.status === 'done' ? '완결' : '진행중'}</span>
                   {/* 삭제된 캐릭터가 남아 있으면 재연동 (v1.9) */}
                   {canManage && brokenChars.length > 0 && (
                     <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5, color: 'var(--accent)' }}
@@ -366,14 +366,9 @@ ${rows}
                   )}
                   {canManage && sel.status === 'done' && (
                     <>
-                      {/* 완결 취소 — 다시 진행중으로 (공개 상태였다면 비공개로 복귀) */}
+                      {/* 완결 취소 — 다시 진행중으로 */}
                       <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                        onClick={() => patchRoom({ status: 'ongoing', isPublic: false })}>REOPEN</button>
-                      {/* 공개 전환 — 참여자 전원 동의 흐름은 Supabase 연동 시 (현재는 개설자/관리자 전환) */}
-                      <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                        onClick={() => patchRoom({ isPublic: !sel.isPublic })}>
-                        {sel.isPublic ? 'UNPUBLISH' : 'PUBLISH'}
-                      </button>
+                        onClick={() => patchRoom({ status: 'ongoing' })}>REOPEN</button>
                       <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                         onClick={exportHtml}>EXPORT</button>
                     </>
@@ -577,7 +572,7 @@ ${rows}
 
       {/* 완결 확인 (삭제 아님 — END/CANCEL) */}
       <ConfirmModal open={endAsk} title="역극을 완결 처리하시겠습니까?"
-        body="완결 후에는 공개 전환과 로그 내보내기를 사용할 수 있습니다."
+        body="완결 후에는 로그 내보내기를 사용할 수 있습니다."
         onClose={() => setEndAsk(false)}
         buttons={[
           { label: 'END', kind: 'dark', onClick: () => { patchRoom({ status: 'done' }); setEndAsk(false); } },

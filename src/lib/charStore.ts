@@ -155,12 +155,10 @@ export interface RelMember {
   quoteMarkColor?: string;       // 히어로 대사 따옴표색 (기본 포인트 소프트)
 }
 
-export interface TlSay { charId: string; text: string }
-export interface TlItem { era?: string; desc?: string; says: TlSay[] }
 
 
 /** AU 한 항목 (v1.9 확장) — 캐치프레이즈만이 아니라 프로필 전체가 AU별로 분리:
- *  중앙 일러(arts)·타임라인. base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
+ *  중앙 일러(arts). base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
 /**
  * AU에서만 다르게 보여 줄 멤버 값 (v2.0 사용자 발견).
  *
@@ -298,17 +296,11 @@ export interface RelAu {
   mset?: Record<string, RelAuMember>;
   quotes?: string[];
   arts?: string[];        // AU별 중앙/그룹 일러 (base는 Relation.arts)
-  timeline?: TlItem[];    // base는 Relation.timeline
   fulls?: Record<string, string>;  // AU별 전신 이미지 (charId → blob id, 없으면 멤버 공통 전신)
   headerImgId?: string | null;     // AU별 헤더 이미지 (v1.9) — base를 물려받지 않음, 이 AU 것만
   headerCrop?: import("@/components/ui/CropEditor").CropValue;
   // AU별 페이지 테마 (v1.9 사용자 확정) — 미지정이면 base(원본) 테마 따라가기
   theme?: { mode: 'site' | 'custom'; color?: string; tone?: 'dark' | 'light' };
-  /** 상세 하단의 역극/로그 연동 리스트 숨김 (v2.0 사용자 요청) — AU마다 따로.
-   *  원본(base)의 설정은 aus의 base 항목에 담긴다 */
-  hideRp?: boolean;
-  hideLog?: boolean;
-  hideTimeline?: boolean;
   ddayDate?: string;
   sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
   freeBlocks?: { id: string; title?: string; html: string }[];
@@ -325,7 +317,7 @@ export interface Relation {
   catchphrase: string;
   kind?: 'pair' | 'multi';         // 페어(2인) / 다인(3인+) — 등록 시 선택
   fontId?: string;               // 자관 이름 폰트 (4.5 필수 요구 — 5.1 라이브러리)
-  bodyFontId?: string;           // 본문 폰트 — 카드 소개·타임라인 텍스트
+  bodyFontId?: string;           // 본문 폰트 — 카드 소개 텍스트
   arts?: string[];               // 아트 목록 (첫 장 = 대표 = 리스트 썸네일 원본)
   headerImgId?: string;          // 헤더 이미지 (v1.5 — 상단 풀폭 블러 + 페이드아웃)
   headerCrop?: import("@/components/ui/CropEditor").CropValue; // 헤더 이미지 위치 크롭 (원본 무손실)
@@ -371,7 +363,6 @@ export interface Relation {
     *  **이미지 참조를 키로** 두어 여러 장을 각각 잡을 수 있고, AU의 일러도 같은 자리에 담긴다
     *  (참조가 다르므로 섞이지 않는다). 원본은 건드리지 않는다. */
    artCrops?: Record<string, import('@/components/ui/CropEditor').CropValue>;
-  timeline: TlItem[];            // base AU의 타임라인
 }
 
 const parseRelDate = (dateStr?: string): Date | undefined => {

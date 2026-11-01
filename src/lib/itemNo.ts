@@ -23,8 +23,6 @@ export const NUMBERED: Record<string, string> = {
   'ohome.comm.v1': 'commissions',
   'ohome.commapply.v1': 'applicants',
   'ohome.diary.v1': 'diary',
-  'ohome.dotori.v1': 'dotori',
-  'ohome.playlog.v1': 'playlog',
   'ohome.threads.v1': 'threads',
   'ohome.trpg.v1': 'trpg_logs',
   'ohome.tchars.v1': 'trpg_chars',

@@ -66,9 +66,6 @@ export interface RelFormValue {
   quoteColors?: Record<string, { fg?: string; mark?: string }>; // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   fullFront?: string;                          // 앞에 보일 캐릭터 id
   auName?: string;           // AU별 자관명 (v2.0 사용자 요청 — AU 편집일 때만)
-  hideTimeline?: boolean;    // 섹션 숨김 — 원본/base 포함 AU별 (v2.0 사용자 요청)
-  hideRp?: boolean;
-  hideLog?: boolean;
   pickedCharIds: string[];   // 등록 시 연동할 내 캐릭터 (수정 모드에선 빈 배열)
 }
 
@@ -197,10 +194,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const { fonts, familyOf } = useFonts();
   const isNew = !initial;
   const auObj = auId ? initial?.aus.find(a => a.id === auId) : undefined;
-  const sectionAu = auObj ?? initial?.aus.find(a => a.id === 'base');
-  const [hideTimeline, setHideTimeline] = useState(!!sectionAu?.hideTimeline);
-  const [hideRp, setHideRp] = useState(!!sectionAu?.hideRp);
-  const [hideLog, setHideLog] = useState(!!sectionAu?.hideLog);
 
   const [kind, setKind] = useState<'pair' | 'multi'>(initial?.kind ?? 'pair');
   const [name, setName] = useState(initial?.name ?? '');
@@ -451,9 +444,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       themeColor: themeMode === 'custom' ? themeColor : undefined,
       themeTone: themeMode === 'custom' ? themeTone : undefined,
       auName: auObj ? auName.trim() : undefined,
-      hideTimeline: hideTimeline || undefined,
-      hideRp: hideRp || undefined,
-      hideLog: hideLog || undefined,
       fulls: pairMembers.length
         ? Object.fromEntries(await Promise.all(pairMembers.map(async m => {
           const d = fulls[m.charId];
@@ -973,7 +963,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
             <p className="hint" style={{ margin: '2px 0 0' }}>이름 폰트 — 상세 대형 타이틀에 적용</p>
             <KSelect value={fontId} onChange={setFontId}
               options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span> }))} />
-            <p className="hint" style={{ margin: '2px 0 0' }}>본문 폰트 — 카드 소개·타임라인 텍스트에 적용</p>
+            <p className="hint" style={{ margin: '2px 0 0' }}>본문 폰트 — 카드 소개 텍스트에 적용</p>
             <KSelect value={bodyFontId} onChange={setBodyFontId}
               options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: deVarFamily(f.family) }}>{f.name}</span> }))} />
             <div>
@@ -1008,13 +998,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   ? '이 페이지에 들어가면 홈페이지 전체 팔레트가 이 색 기준으로 전환되고, 벗어나면 원래 테마로 돌아옵니다'
                   : '이 페이지도 홈페이지 테마를 그대로 사용합니다'}
               </p>
-            </div>
-            {/* 섹션 표시 (v2.0 사용자 요청) — 원본 또는 편집 중인 AU에만 적용 */}
-            <div style={{ display: 'grid', gap: 7 }}>
-              <label className="k-label" style={{ margin: 0 }}>섹션 표시</label>
-              <KCheck label="타임라인 숨김" checked={hideTimeline} onChange={setHideTimeline} />
-              <KCheck label="역극 리스트 숨김" checked={hideRp} onChange={setHideRp} />
-              <KCheck label="로그 리스트 숨김" checked={hideLog} onChange={setHideLog} />
             </div>
             {/* 페이지 배경 (v2.0 사용자 요청) — 이 페이지에 있는 동안의 바탕 그라데이션. AU마다 따로 */}
             {(

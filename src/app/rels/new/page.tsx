@@ -63,9 +63,7 @@ function RelNewInner() {
             pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle,
             members, thumbClass: '', ...secStamp(sec.id),
             illustMode: v.kind === 'pair' ? 'duo' : 'one',
-            aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase,
-              hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog }],
-            timeline: [],
+            aus: [{ id: 'base', label: '원본', catchphrase: v.catchphrase }],
           };
           setRels([...rels, rel]);
           toast('자관이 등록되었습니다 — 상대 캐릭터·한마디 등은 상세에서 이어서');

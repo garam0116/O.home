@@ -90,7 +90,7 @@ export default function GuestbookPage() {
   ).slice().sort((a, b) => b.date.localeCompare(a.date));
 
   // 방명록이 쌓이면 페이지로 (v2.0 사용자 요청) — 한 페이지 15개.
-  // 답글이 달리면 한 칸이 길어지므로 도토리(12개)보다 조금만 늘렸다.
+  // 답글이 달리면 한 칸이 길어지므로 다른 목록(12개)보다 조금만 늘렸다.
   const PER_GB = 15;
   const [page, setPage] = useState(1);
   const pages = Math.max(1, Math.ceil(visible.length / PER_GB));

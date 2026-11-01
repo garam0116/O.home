@@ -112,8 +112,6 @@ export const COLLECTION_OF: Record<string, string> = {
   // "나만보기여도 목록엔 표시" 조건을 안전하게 만족하려면 본문을 아예 다른 문서에 둬야 한다
   'ohome.trpgbody.v1': 'trpg_log_bodies',
   'ohome.tchars.v1': 'trpg_chars',
-  'ohome.dotori.v1': 'dotori',
-  'ohome.playlog.v1': 'playlog',
   'ohome.rp.v1': 'rp_rooms',
   'ohome.threads.v1': 'threads',
   'ohome.diary.v1': 'diary',

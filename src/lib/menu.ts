@@ -18,8 +18,6 @@ export const FEATURES: { href: string; label: string }[] = [
   { href: '/loadb', label: '로드비' },
   { href: '/tchars', label: '캐릭터' },   // TRPG 캐릭터 — 자놀 캐릭터와는 href로 구분
   { href: '/trpg', label: '로그 백업' },
-  { href: '/dotori', label: '도토리' },
-  { href: '/playlog', label: '플레이기록' },
   { href: '/comm', label: '커미션' },
   { href: '/comm-apply', label: '신청자 리스트' },
   { href: '/cal', label: '스케줄러' },
@@ -52,8 +50,6 @@ export const DEFAULT_MENU: MenuItem[] = [
     children: [
       { label: '캐릭터', href: '/tchars' },
       { label: '로그 백업', href: '/trpg' },
-      { label: '도토리', href: '/dotori' },
-      { label: '플레이기록', href: '/playlog' },
     ],
   },
   {
