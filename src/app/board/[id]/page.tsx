@@ -133,15 +133,6 @@ export default function BoardDetailPage() {
       <div className="page-head">
         <PageTitle href={boardHref(board.id, boards)}>{boardTitle}</PageTitle>
         {/* 글쓴이·작성일은 제목 바로 아래에 이미 있다 — 게시판명 아래 중복 표기는 없앴다 (사용자 요청) */}
-        <div className="head-actions">
-          {/* 수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
-          {isAuthor && (
-            <button className="btn btn-dark" onClick={() => router.push(`/board/${no ?? post.id}/edit`)}>EDIT</button>
-          )}
-          {canManage && (
-            <button className="btn btn-dark" onClick={() => setDelAsk(true)}>DELETE</button>
-          )}
-        </div>
       </div>
 
       <div className="panel board-post">
@@ -150,6 +141,14 @@ export default function BoardDetailPage() {
         </h2>
         <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
           {post.notice ? '공지 · ' : ''}{post.author} · {fmtListDate(post.date)}
+          {/* EDIT/DELETE — 큰 제목 옆이 아니라 작성자·작성일 옆에 같은 글씨 크기로 (사용자 요청).
+              수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
+          {isAuthor && (
+            <button className="btn btn-dark post-meta-btn" onClick={() => router.push(`/board/${no ?? post.id}/edit`)}>EDIT</button>
+          )}
+          {canManage && (
+            <button className="btn btn-dark post-meta-btn" onClick={() => setDelAsk(true)}>DELETE</button>
+          )}
           {/* 작성 방식(HTML/MD)은 표시하지 않는다 (사용자 요청) — 수정 화면은 원래 방식으로 열린다 */}
           {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
           {(post.tags ?? []).map(t => (
