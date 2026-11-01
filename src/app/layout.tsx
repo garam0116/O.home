@@ -17,7 +17,6 @@ import { SettingSync } from '@/components/shell/SettingSync';
 import { ListSync } from '@/components/shell/ListSync';
 import { NumberSync } from '@/components/shell/NumberSync';
 import { UploadBusy } from '@/components/shell/UploadBusy';
-import { SpellCheck } from '@/components/shell/SpellCheck';
 import { BoardWidth } from '@/components/shell/BoardWidth';
 import { PageFrame } from '@/lib/pageRefresh';
 import { MenuGuard } from '@/components/shell/MenuGuard';
@@ -71,7 +70,8 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
       </head>
-      <body>
+      {/* 맞춤법 검사는 쓰지 않음 — 브라우저 빨간 물결줄을 사이트 전체에서 끈다 (상속 속성) */}
+      <body spellCheck={false}>
         {/* 서버 연결 확정 후에 앱을 그림 — 설정(ohome.config.json/로컬/env)을 한 번 읽는다 (v2.0) */}
         <ServerBoot>
         <ThemeProvider>
@@ -103,8 +103,6 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   <NumberSync />
                   {/* 이미지 올리는 중 표시 (v2.0) — 느린 업로드를 다시 누르지 않게 */}
                   <UploadBusy />
-                  {/* 맞춤법 검사 밑줄 숨김 — 디자인 탭 (v2.0) */}
-                  <SpellCheck />
                   {/* 게시판 본문 폭 — 목록·상세 공통 (v2.3) */}
                   <BoardWidth />
                   </SetupGate>

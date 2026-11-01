@@ -546,7 +546,6 @@ function DesignPane() {
         </div>
       </div>
 
-      <SpellCheckRow />
       <BoardWidthRow />
     </div>
   );
@@ -565,22 +564,6 @@ function BoardWidthRow() {
         )}
         <KStep value={boardWOf(site)} min={BOARD_W.min} max={BOARD_W.max} step={10} suffix="px"
           onChange={v => set({ boardW: v })} />
-      </div>
-    </div>
-  );
-}
-
-/** 맞춤법 검사 밑줄 (v2.0 사용자 요청) — 페이지 전체의 빨간 물결줄을 끈다.
- *  다른 로고·탭제목 설정과 같은 드래프트/SAVE 흐름을 탄다. */
-function SpellCheckRow() {
-  const { site, set } = useSiteDraft();
-  const off = !!site.noSpell;
-  return (
-    <div className="set-row">
-      <div className="l"><b>맞춤법 검사 밑줄</b><small>입력칸·에디터에 브라우저가 그리는 빨간 물결줄 — 끄면 사이트 전체에서 보이지 않습니다</small></div>
-      <div className="mini-seg">
-        <button className={!off ? 'on' : ''} onClick={() => set({ noSpell: false })}>표시</button>
-        <button className={off ? 'on' : ''} onClick={() => set({ noSpell: true })}>숨김</button>
       </div>
     </div>
   );
