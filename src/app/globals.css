@@ -428,6 +428,8 @@ a{color:inherit;text-decoration:none}
 /* 진한 버튼 — 테마 변수 연동 (라이트 모드는 뮤트 톤 기본, 환경설정 > 디자인 「진한 버튼」) */
 .btn-dark{background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff);height:35px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 .btn-dark:hover{background:var(--btn-dark-hv,#33373e)}
+/* 게시글 작성자·작성일 줄의 EDIT/DELETE — 그 줄과 같은 글씨 크기의 작은 버튼 (사용자 요청) */
+.btn.post-meta-btn{height:20px;padding:0 8px;font-size:inherit;border-radius:6px;vertical-align:middle;margin:-2px 0 0 6px}
 .btn-ghost{border:1.5px solid var(--line);color:var(--sub);background:#fff}
 .btn-ghost:hover{border-color:var(--steel-3);color:var(--ink)}
 .btn-accent{background:var(--accent);color:#fff}
