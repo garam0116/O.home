@@ -10,7 +10,7 @@ const SHOW_AT = 240; // 이만큼 내려가면 표시
 
 type Pos = { bottom: number; side: 'left' | 'right'; inset: number };
 
-export function TopButton({ anchor, left }: { anchor: React.RefObject<HTMLElement | null> | null; left?: boolean }) {
+export function TopButton({ anchor, left, hide }: { anchor: React.RefObject<HTMLElement | null> | null; left?: boolean; hide?: boolean }) {
   const [show, setShow] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<Pos>({ bottom: 20, side: left ? 'left' : 'right', inset: 20 });
@@ -38,7 +38,7 @@ export function TopButton({ anchor, left }: { anchor: React.RefObject<HTMLElemen
       const vw = window.innerWidth;
       const full = r.width >= vw * 0.9; // 모바일 풀폭 바
       const inset = full ? EDGE : side === 'left' ? r.left : vw - r.right;
-      // 접힌 원형 디스크일 때는 버튼을 디스크 가운데 위에 맞춤
+      // 원형 레코드판일 때는 버튼을 디스크 가운데 위에 맞춤
       const bw = btnRef.current?.offsetWidth ?? 34;
       const center = !full && r.width < 70 ? (r.width - bw) / 2 : 0;
       setPos({ bottom: window.innerHeight - r.top + GAP, side, inset: Math.max(0, inset + center) });
@@ -59,7 +59,7 @@ export function TopButton({ anchor, left }: { anchor: React.RefObject<HTMLElemen
     <button
       ref={btnRef}
       type="button"
-      className={`top-btn ${show ? 'on' : ''}`}
+      className={`top-btn ${show && !hide ? 'on' : ''}`}
       aria-label="맨 위로"
       data-tip="맨 위로"
       onClick={toTop}

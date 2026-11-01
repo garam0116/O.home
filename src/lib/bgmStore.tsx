@@ -9,7 +9,13 @@ export interface BgmTrack {
   title: string;
   desc: string;
   videoId: string;   // 유튜브 영상 ID
+  /** 커버 이미지(레코드판 라벨·팝업 상단) — 업로드 파일 id 또는 http(s) 주소. 없으면 유튜브 썸네일 */
+  cover?: string;
 }
+
+/** 유튜브 썸네일 주소 — mq(320×180, 레터박스 없음)·hq(480×360)·maxres(1280×720, 없는 영상도 있음) */
+export const ytThumb = (videoId: string, q: 'mqdefault' | 'hqdefault' | 'maxresdefault' = 'hqdefault') =>
+  `https://i.ytimg.com/vi/${videoId}/${q}.jpg`;
 
 export interface BgmSettings {
   volume: number;              // 0~100 기본 볼륨
@@ -33,7 +39,7 @@ const STORAGE_KEY = 'ohome.bgm.v1';
 interface BgmCtx {
   state: BgmState;
   setTracks: (t: BgmTrack[]) => void;
-  addTrack: (title: string, desc: string, urlOrId: string) => boolean;
+  addTrack: (title: string, desc: string, urlOrId: string, cover?: string) => boolean;
   removeTrack: (id: string) => void;
   setSettings: (patch: Partial<BgmSettings>) => void;
 }
@@ -69,11 +75,12 @@ export function BgmStoreProvider({ children }: { children: React.ReactNode }) {
     setState(s => { const n = { ...s, tracks }; persist(n); return n; });
   }, []);
 
-  const addTrack = useCallback((title: string, desc: string, urlOrId: string): boolean => {
+  const addTrack = useCallback((title: string, desc: string, urlOrId: string, cover?: string): boolean => {
     const vid = parseVideoId(urlOrId);
     if (!vid || !title.trim()) return false;
     setState(s => {
-      const n = { ...s, tracks: [...s.tracks, { id: newId(), title: title.trim(), desc: desc.trim(), videoId: vid }] };
+      const track: BgmTrack = { id: newId(), title: title.trim(), desc: desc.trim(), videoId: vid, ...(cover ? { cover } : {}) };
+      const n = { ...s, tracks: [...s.tracks, track] };
       persist(n); return n;
     });
     return true;

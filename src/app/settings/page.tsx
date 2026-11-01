@@ -39,7 +39,7 @@ import { useLocalList } from '@/lib/postStore';
 import {
   TextSettingEditor, DdayEditor, TodoEditor, BannerEditor, DecoEditor,
 } from '@/components/main/widgetEditors';
-import { useBgm, BgmTrack, parseVideoId } from '@/lib/bgmStore';
+import { useBgm, BgmTrack, parseVideoId, ytThumb } from '@/lib/bgmStore';
 import { useFonts, fontCssUrl, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc, getPageText, setPageText } from '@/components/ui/PageText';
@@ -2588,7 +2588,36 @@ function CommPane() {
   );
 }
 
-/** BGM 트랙 한 줄 — 인라인 수정(제목/설명/URL) + 삭제 확인 */
+/** BGM 커버 이미지 선택 — 업로드 / 주소 붙여넣기 / 지우기. 비워 두면 유튜브 썸네일 (v2.1) */
+function BgmCoverPick({ value, videoId, onChange }: { value?: string; videoId: string | null; onChange: (v: string | undefined) => void }) {
+  const custom = useBlobUrl(value);
+  const source = useImageSource(url => onChange(url));
+  const fileRef = useRef<HTMLInputElement>(null);
+  const shown = custom ?? (videoId ? ytThumb(videoId, 'mqdefault') : undefined);
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flex: 'none', background: 'var(--line)', display: 'block' }}>
+        {shown && <img src={shown} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+      </span>
+      <small style={{ color: 'var(--faint)', fontSize: 11 }}>{value ? '커버: 직접 지정' : '커버: 유튜브 썸네일'}</small>
+      <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={async e => {
+          const f = e.target.files?.[0];
+          if (f) onChange(await putBlob(f));
+          e.target.value = '';
+        }} />
+      <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
+        onClick={() => fileRef.current?.click()}>{value ? 'CHANGE' : 'UPLOAD'}</button>
+      <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
+        onClick={() => source.open()}>🔗 이미지 주소</button>
+      {value && <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
+        onClick={() => onChange(undefined)}>REMOVE</button>}
+      {source.element}
+    </div>
+  );
+}
+
+/** BGM 트랙 한 줄 — 인라인 수정(제목/설명/URL/커버) + 삭제 확인 */
 function BgmTrackRow({ t, onPatch, onDelete }: {
   t: BgmTrack; onPatch: (p: Partial<BgmTrack>) => void; onDelete: () => void;
 }) {
@@ -2597,6 +2626,8 @@ function BgmTrackRow({ t, onPatch, onDelete }: {
   const [title, setTitle] = useState(t.title);
   const [desc, setDesc] = useState(t.desc);
   const [url, setUrl] = useState(t.videoId);
+  const [cover, setCover] = useState<string | undefined>(t.cover);
+  const thumb = useBlobUrl(t.cover) ?? ytThumb(t.videoId, 'mqdefault');
 
   if (editing) {
     return (
@@ -2611,13 +2642,14 @@ function BgmTrackRow({ t, onPatch, onDelete }: {
             onClick={() => {
               const vid = parseVideoId(url);
               if (!title.trim() || !vid) { toast('제목과 올바른 유튜브 URL(또는 영상 ID)을 입력해 주세요'); return; }
-              onPatch({ title: title.trim(), desc: desc.trim(), videoId: vid });
+              onPatch({ title: title.trim(), desc: desc.trim(), videoId: vid, cover });
               setEditing(false);
               toast('곡이 수정되었습니다');
             }}>SAVE</button>
           <button className="btn btn-ghost" style={{ whiteSpace: 'nowrap' }}
-            onClick={() => { setEditing(false); setTitle(t.title); setDesc(t.desc); setUrl(t.videoId); }}>CANCEL</button>
+            onClick={() => { setEditing(false); setTitle(t.title); setDesc(t.desc); setUrl(t.videoId); setCover(t.cover); }}>CANCEL</button>
         </div>
+        <BgmCoverPick value={cover} videoId={parseVideoId(url)} onChange={setCover} />
       </div>
     );
   }
@@ -2626,6 +2658,8 @@ function BgmTrackRow({ t, onPatch, onDelete }: {
     <div className="set-row" style={{ width: '100%' }}>
       <div className="l" style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
         <span className="drag-h">⠿</span>
+        <img src={thumb} alt="" referrerPolicy="no-referrer"
+          style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flex: 'none', background: 'var(--line)' }} />
         <div><b>{t.title}</b><small>{t.desc || t.videoId}</small></div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
@@ -2646,10 +2680,11 @@ function BgmPane() {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [url, setUrl] = useState('');
+  const [cover, setCover] = useState<string | undefined>();
 
   const add = () => {
-    if (addTrack(title, desc, url)) {
-      setTitle(''); setDesc(''); setUrl('');
+    if (addTrack(title, desc, url, cover)) {
+      setTitle(''); setDesc(''); setUrl(''); setCover(undefined);
       toast('곡이 추가되었습니다');
     } else {
       toast('제목과 올바른 유튜브 URL(또는 영상 ID)을 입력해 주세요');
@@ -2659,7 +2694,7 @@ function BgmPane() {
   return (
     <div className="set-sec">
       <h3>BGM</h3>
-      <div className="d">유튜브 곡 목록 관리 — 미니 플레이어 리스트에 노출 · 화면은 숨기고 소리만 재생</div>
+      <div className="d">유튜브 곡 목록 관리 — 플레이어 팝업 리스트에 노출 · 화면은 숨기고 소리만 재생 · 커버 이미지(레코드판·팝업)는 직접 지정하거나, 비워 두면 유튜브 썸네일</div>
 
       <DragList
         items={state.tracks}
@@ -2679,6 +2714,9 @@ function BgmPane() {
         <KInput placeholder="유튜브 URL 또는 영상 ID" value={url} onChange={e => setUrl(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
         <button className="btn btn-dark" onClick={add}>＋ ADD</button>
       </div>
+      <div style={{ marginTop: 8 }}>
+        <BgmCoverPick value={cover} videoId={parseVideoId(url)} onChange={setCover} />
+      </div>
 
       <div className="set-row" style={{ marginTop: 16 }}>
         <div className="l"><b>기본 볼륨</b></div>
@@ -2692,7 +2730,7 @@ function BgmPane() {
         </div>
       </div>
       <div className="set-row">
-        <div className="l"><b>셔플</b></div>
+        <div className="l"><b>셔플</b><small>방문자 기본값 — 플레이어 팝업에서 각자 켜고 끌 수 있음 (사이트 설정은 그대로)</small></div>
         <KToggle checked={state.settings.shuffle} onChange={v => setSettings({ shuffle: v })} />
       </div>
       <div className="set-row">
