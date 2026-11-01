@@ -190,6 +190,8 @@ export function BgmPlayer() {
   const armedRef = useRef(false);
   useEffect(() => {
     if (!settings.autoplay || !settings.enabled || tracks.length === 0) return;
+    // 모바일(좁은 화면·터치 전용 기기)에서는 자동 재생하지 않음 — 버튼으로만 재생
+    if (window.matchMedia('(max-width: 620px), (hover: none) and (pointer: coarse)').matches) return;
     const fire = (ev: Event) => {
       remove();
       // 플레이어 자체를 조작하는 클릭(재생/이전/다음 등)은 버튼 핸들러에 맡김 —

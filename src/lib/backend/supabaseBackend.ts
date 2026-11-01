@@ -86,8 +86,12 @@ export async function createSupabaseBackend(
       return error ? { ok: false, error: error.message } : { ok: true };
     },
 
-    async signUp(id, password, nickname) {
-      const { error } = await sb.auth.signUp({ email: id, password, options: { data: { nickname } } });
+    async signUp(id, password, nickname, invite = '') {
+      // 가입코드는 스키마의 가입 트리거(handle_new_user)가 확인한다 — 틀리면 계정 자체가 만들어지지 않는다
+      const { error } = await sb.auth.signUp({ email: id, password, options: { data: { nickname, invite } } });
+      if (error && /database error saving new user/i.test(error.message)) {
+        return { ok: false, error: '가입코드가 올바르지 않습니다.' };
+      }
       return error ? { ok: false, error: error.message } : { ok: true };
     },
 
