@@ -158,12 +158,9 @@ export interface RelMember {
 export interface TlSay { charId: string; text: string }
 export interface TlItem { era?: string; desc?: string; says: TlSay[] }
 
-/** CP/NCP 구분 (v1.9) — CP=커플, NCP=커플 아님. 자관 기본값 + AU마다 별개 지정 가능 */
-export type RelCpTag = 'cp' | 'ncp';
-export const CP_LABEL: Record<RelCpTag, string> = { cp: 'CP', ncp: 'NCP' };
 
 /** AU 한 항목 (v1.9 확장) — 캐치프레이즈만이 아니라 프로필 전체가 AU별로 분리:
- *  중앙 일러(arts)·타임라인·CP/NCP. base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
+ *  중앙 일러(arts)·타임라인. base(원본)는 Relation 최상위 필드를 그대로 사용 (기존 데이터 호환) */
 /**
  * AU에서만 다르게 보여 줄 멤버 값 (v2.0 사용자 발견).
  *
@@ -300,7 +297,6 @@ export interface RelAu {
   /** AU별 멤버 표시값 — 없으면 자관 기본 (위 RelAuMember 설명 참조) */
   mset?: Record<string, RelAuMember>;
   quotes?: string[];
-  cp?: RelCpTag;          // 없으면 자관 기본(Relation.cp)
   arts?: string[];        // AU별 중앙/그룹 일러 (base는 Relation.arts)
   timeline?: TlItem[];    // base는 Relation.timeline
   fulls?: Record<string, string>;  // AU별 전신 이미지 (charId → blob id, 없으면 멤버 공통 전신)
@@ -341,8 +337,8 @@ export interface Relation {
   nameColor?: string;            // 자관명(히어로 타이틀) 글씨색 (v1.9 — 미지정: 테마)
   cpColor?: string;              // 캐치프레이즈 글씨색 (미지정: 테마)
   ddayColor?: string;            // 디데이 글씨색 — 미지정: 기존 var(--faint) (v2.0 사용자 요청)
-  cpTagBg?: string;              // CP/NCP 뱃지 배경색 (v2.0 — 미지정: 기본 pill)
-  cpTagFg?: string;              // CP/NCP 뱃지 글씨색 (v2.0)
+  cpTagBg?: string;              // LOG/LOREBOOK 버튼 배경색 (예전 CP/NCP 뱃지 색 — 미지정: 기본 pill)
+  cpTagFg?: string;              // LOG/LOREBOOK 버튼 글씨색
   nameShadowColor?: string;      // 자관명 그림자 색 (v2.0 — 미지정: 검정)
   nameShadow?: number;           // 자관명 그림자 강도 % — 0~200, 미지정 100(기존 세기와 동일)
   // 헤더 이미지가 없을 때 대신 깔 배경 그라데이션 (v2.0 사용자 요청) — 색 2개 + 각도.
@@ -369,7 +365,6 @@ export interface Relation {
   thumbClass: string;
   illustMode: 'duo' | 'one';     // 2인: 전신 2장 / 일러 1장 (v1.8)
   aus: RelAu[];                  // AU 리스트 (첫 항목 = 원본 base)
-  cp?: RelCpTag;                 // 자관 기본 CP/NCP (등록 시 선택, v1.9)
   fullFront?: string;            // 전신 모드에서 앞에 보일 캐릭터 id (v1.9 — 미리보기에서 클릭 선택)
   pairRight?: string;            // 페어에서 오른쪽 자리에 둘 캐릭터 id (v2.0 — 없으면 등록 순서대로)
   /** 상세 중앙 일러가 어디를 보여 줄지 (v2.0 사용자 요청) — 리스트 썸네일(thumbCrop)과 별개.

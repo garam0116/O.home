@@ -11,7 +11,7 @@ import { useLocalList, newId } from '@/lib/postStore';
 import {
   Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, TlItem, findChar, Visibility, CharGrant,
   auMember, auStyle, fullShadow,
-  RelAu, RelCpTag, charWithAu, CP_LABEL,
+  RelAu, charWithAu,
   findByKey, charPath, relDday, relDdayDate, auPathOf, auKeyOf, relPath,
 } from '@/lib/charStore';
 import { putBlob } from '@/lib/blobStore';
@@ -32,6 +32,7 @@ import { PageTitle } from '@/components/ui/PageText';
 import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { useNoKey, maxNo, itemPath } from '@/lib/itemNo';
+import { safeLink } from '@/lib/link';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -319,7 +320,6 @@ export default function RelDetailPage() {
   const [auOpen, setAuOpen] = useState(false);
   const [auLabel, setAuLabel] = useState('');
   const [auCatch, setAuCatch] = useState('');
-  const [auCp, setAuCp] = useState<RelCpTag>('cp');       // 새 AU의 CP/NCP (v1.9)
   const [delAsk, setDelAsk] = useState(false);   // 자관 삭제 확인
   const [auDelAsk, setAuDelAsk] = useState<string | null>(null);  // AU 삭제 확인 (v2.0 — 자관 삭제와 별개)
   const del = useConfirmDelete();                // 멤버·타임라인 등 개별 삭제 확인
@@ -383,7 +383,9 @@ export default function RelDetailPage() {
       return next;
     })(),
   });
-  const auCpTag: RelCpTag | undefined = au?.cp ?? rel?.cp;
+  // LOG / LOREBOOK 바로가기 — 예전 CP/NCP 뱃지 자리 (사용자 요청으로 CP/NCP 대체)
+  const logHref = safeLink(rel?.logUrl);
+  const lorebookHref = safeLink(rel?.lorebookUrl);
   const showTimeline = !au?.hideTimeline;
   const ddayDate = au?.ddayDate ?? rel?.ddayDate;
   const dday = relDday(ddayDate);
@@ -532,6 +534,19 @@ export default function RelDetailPage() {
         asAu(rel.members.find(m => m.charId === rel.pairRight) ?? null)]
       : [asAu(rel.members[0] ?? null), asAu(rel.members[1] ?? null)])
     : [];
+  /** 페어 인용구 — 멤버가 있으면 멤버 한마디, 없으면 빈 자리 카드의 한마디.
+   *  PC는 히어로 양옆(.quote), 모바일은 카드 위/아래(.rel-mq)에 같은 내용을 그린다 */
+  const quoteEl = (i: 0 | 1, cls: string) => {
+    if (!isDuo) return null;
+    const src = pairSlots[i] ?? sideSlotOf(i === 0 ? 'l' : 'r');
+    if (!src?.quote) return null;
+    return (
+      <div className={cls} style={{
+        color: src.quoteColor,
+        ['--q-mark' as string]: src.quoteMarkColor,
+      } as React.CSSProperties}>{src.quote}</div>
+    );
+  };
 
   /** 이 멤버를 반대쪽 자리로 (좌 ↔ 우).
    *  오른쪽을 왼쪽으로 옮길 때는 **반대쪽 캐릭터를 오른쪽으로 지정**한다 (v2.0 사용자 제보) —
@@ -655,18 +670,15 @@ export default function RelDetailPage() {
         ]} />
 
       <div className="rel-hero">
-        {isDuo && (pairSlots[0]?.quote || (!pairSlots[0] && sideSlotOf('l')?.quote)) && (
-          <div className="quote l" style={{
-            color: pairSlots[0] ? pairSlots[0].quoteColor : sideSlotOf('l')?.quoteColor,
-            ['--q-mark' as string]: pairSlots[0] ? pairSlots[0].quoteMarkColor : sideSlotOf('l')?.quoteMarkColor,
-          } as React.CSSProperties}>{pairSlots[0] ? pairSlots[0].quote : sideSlotOf('l')?.quote}</div>
-        )}
-        {/* CP/NCP 뱃지 — 자관명 위 가운데 (v2.0 사용자 요청) · 색은 자관 수정에서 */}
-        {auCpTag && (
-          <div className="cp-top">
-            <span className="pill" style={auSt.cpTagBg || auSt.cpTagFg
-              ? { background: auSt.cpTagBg, color: auSt.cpTagFg, borderColor: auSt.cpTagBg }
-              : undefined}>{CP_LABEL[auCpTag]}</span>
+        {quoteEl(0, 'quote l')}
+        {/* LOG / LOREBOOK 바로가기 — 자관명 위 가운데 (예전 CP/NCP 뱃지 자리 · 색은 자관 수정에서) */}
+        {(logHref || lorebookHref) && (
+          <div className="rel-links">
+            {[['LOG', logHref], ['LOREBOOK', lorebookHref]].map(([lb, href]) => href && (
+              <a key={lb} href={href} className="pill" style={auSt.cpTagBg || auSt.cpTagFg
+                ? { background: auSt.cpTagBg, color: auSt.cpTagFg, borderColor: auSt.cpTagBg }
+                : undefined}>{lb}</a>
+            ))}
           </div>
         )}
         {/* 자관명·캐치프레이즈 글씨색 — 직접 지정 시 (v1.9 사용자 요청, 미지정: 테마) */}
@@ -682,16 +694,15 @@ export default function RelDetailPage() {
         {dday && ddayDateLabel && <div className="rel-dday-detail" style={{ color: auSt.ddayColor }}>
           {dday.startsWith('D-') ? 'UNTIL' : 'SINCE'} {ddayDateLabel} · {dday}
         </div>}
-        {isDuo && (pairSlots[1]?.quote || (!pairSlots[1] && sideSlotOf('r')?.quote)) && (
-          <div className="quote r" style={{
-            color: pairSlots[1] ? pairSlots[1].quoteColor : sideSlotOf('r')?.quoteColor,
-            ['--q-mark' as string]: pairSlots[1] ? pairSlots[1].quoteMarkColor : sideSlotOf('r')?.quoteMarkColor,
-          } as React.CSSProperties}>{pairSlots[1] ? pairSlots[1].quote : sideSlotOf('r')?.quote}</div>
-        )}
+        {quoteEl(1, 'quote r')}
       </div>
 
       {isDuo ? (
         <div className="rel-body" style={{ fontFamily: familyOf(auBodyFont) }}>
+          {/* 모바일 전용 인용구 — 왼쪽 캐릭터는 카드 위, 오른쪽 캐릭터는 카드 아래 (PC는 히어로 쪽) */}
+          {quoteEl(0, 'rel-mq l')}
+          {quoteEl(1, 'rel-mq r')}
+          <div className="rel-side l">
           {pairSlots[0]
             ? <MiniProf member={pairSlots[0]} char={charOf(pairSlots[0].charId)} isAdmin={isAdmin}
                 auUnregistered={auUnregOf(pairSlots[0].charId)}
@@ -701,6 +712,7 @@ export default function RelDetailPage() {
                 onRemove={() => removeMember(pairSlots[0]!.charId)} />
             : sideSlotOf('l') ? <SideSlotCard slot={sideSlotOf('l')!} />
               : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+          </div>
           <div className={`rel-center ${single ? 'one-mode' : ''}`}
             style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line-dark)' }}>
             {/* 전신 — 등록 이미지(AU별 우선) + 크기/앞뒤는 자관 수정의 미리보기에서 (v1.9) */}
@@ -755,6 +767,7 @@ export default function RelDetailPage() {
               </div>
             )}
           </div>
+          <div className="rel-side r">
           {pairSlots[1]
             ? <MiniProf member={pairSlots[1]} char={charOf(pairSlots[1].charId)} isAdmin={isAdmin}
                 auUnregistered={auUnregOf(pairSlots[1].charId)}
@@ -764,6 +777,7 @@ export default function RelDetailPage() {
                 onRemove={() => removeMember(pairSlots[1]!.charId)} />
             : sideSlotOf('r') ? <SideSlotCard slot={sideSlotOf('r')!} />
               : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+          </div>
         </div>
       ) : (
         /* 다인 자관 — 프로토타입 multi-body: 좌 멤버 리스트(430px) + 우 그룹 일러 */
@@ -1045,7 +1059,7 @@ export default function RelDetailPage() {
       {/* ---------- AU 추가/관리 모달 (v1.8 — AU별 이미지·카드 분리는 후속) ---------- */}
       <Modal open={auOpen} onClose={() => setAuOpen(false)} small title="AU 관리"
         dirty={!!(auLabel || auCatch)}
-        desc="AU를 클릭하면 프로필 전체(일러·타임라인·CP/NCP)가 그 AU의 것으로 전환됩니다 — 일러·캐치프레이즈는 그 AU를 선택한 상태에서 EDIT"
+        desc="AU를 클릭하면 프로필 전체(일러·타임라인)가 그 AU의 것으로 전환됩니다 — 일러·캐치프레이즈는 그 AU를 선택한 상태에서 EDIT"
         actions={<button className="btn btn-dark" onClick={() => setAuOpen(false)}>닫기</button>}>
         <div style={{ display: 'grid', gap: 8 }}>
           {rel.aus.map(a => (
@@ -1066,13 +1080,6 @@ export default function RelDetailPage() {
                     });
                   }}
                   style={{ fontSize: 11.5, padding: '5px 9px', minWidth: 0, flex: 1 }} />
-                {/* AU별 CP/NCP — 이름 줄 오른쪽 정렬 (v1.9 사용자 요청) */}
-                <div className="mini-seg" style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                  {(['cp', 'ncp'] as RelCpTag[]).map(t => (
-                    <button key={t} className={(a.cp ?? rel.cp) === t ? 'on' : ''}
-                      onClick={() => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, cp: t } : x)) })}>{CP_LABEL[t]}</button>
-                  ))}
-                </div>
                 {a.id !== 'base' && (
                   <>
                     {/* 순서 변경 (v2.0 사용자 요청) — 원본(base)은 항상 맨 앞 고정 */}
@@ -1119,17 +1126,12 @@ export default function RelDetailPage() {
               <KInput placeholder="캐치프레이즈" value={auCatch} onChange={e => setAuCatch(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <div className="mini-seg">
-                {(['cp', 'ncp'] as RelCpTag[]).map(t => (
-                  <button key={t} className={auCp === t ? 'on' : ''} onClick={() => setAuCp(t)}>{CP_LABEL[t]}</button>
-                ))}
-              </div>
               <button className="btn btn-dark" style={{ whiteSpace: 'nowrap', marginLeft: 'auto' }} onClick={() => {
                 if (!auLabel.trim()) { toast('AU 이름을 입력해 주세요'); return; }
                 // AU 번호 — 자관 안에서 만든 순서대로 (주소 /rels/{…}/au/{번호}, v2.4)
                 const na: RelAu = {
                   id: newId(), no: maxNo(rel.aus.filter(a => a.id !== 'base')) + 1,
-                  label: auLabel.trim(), catchphrase: auCatch.trim(), cp: auCp, timeline: [],
+                  label: auLabel.trim(), catchphrase: auCatch.trim(), timeline: [],
                 };
                 updateRel({ aus: [...rel.aus, na] });
                 setAuLabel(''); setAuCatch('');
