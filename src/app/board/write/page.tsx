@@ -55,9 +55,9 @@ function WriteInner() {
   const bid = editing?.boardId ?? params.get('b') ?? MAIN_BOARD_ID;
   const { boards } = useBoards();
   const board = boards.find(b => b.id === bid) ?? boards[0];
-  // 대표 썸네일 비율 — 갤러리형 게시판은 카드와 같은 4:5, 기본형은 목록 썸네일과 같은 16:9 (v2.3)
+  // 대표 썸네일 비율 — 갤러리형 게시판은 카드와 같은 5:6, 기본형은 목록 썸네일과 같은 16:9 (v2.3)
   const galleryThumb = board.skin === 'gallery' || board.skin === 'gallery2';
-  const thumbRatio = galleryThumb ? '4/5' : '16/9';
+  const thumbRatio = galleryThumb ? '5/6' : '16/9';
   const [title, setTitle] = useState('');
   const [writeMode, setWriteMode] = useState<'editor' | 'md' | 'html'>('editor'); // 에디터가 기본
   const [body, setBody] = useState('');
@@ -325,9 +325,9 @@ function WriteInner() {
           : <p className="pv-empty">아직 작성한 내용이 없습니다.</p>}
       </Modal>
 
-      {/* 대표 썸네일 위치 지정 — 갤러리형 4:5 / 기본형 16:9 (v2.3) */}
+      {/* 대표 썸네일 위치 지정 — 갤러리형 5:6 / 기본형 16:9 (v2.3) */}
       {cropOpen && thumbUrl && (
-        <CropEditor open src={thumbUrl} aspect={galleryThumb ? 4 / 5 : '16:9'} aspectLabel={galleryThumb ? '4:5' : undefined} initial={thumbCrop}
+        <CropEditor open src={thumbUrl} aspect={galleryThumb ? 5 / 6 : '16:9'} aspectLabel={galleryThumb ? '5:6' : undefined} initial={thumbCrop}
           onClose={() => setCropOpen(false)}
           onApply={c => { setThumbCrop(c); setCropOpen(false); }} />
       )}

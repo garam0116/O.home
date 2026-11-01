@@ -1547,33 +1547,34 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .brow .who,.brow .dt{font-size:calc(11.5px*var(--fs,1));color:var(--faint);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brow>b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .brow b .cmt{color:var(--accent);font-size:calc(11px*var(--fs,1));margin-left:5px}
-/* 게시판 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 · 4:5 (3:4보다 살짝 낮게, 사용자 요청) */
+/* 게시판 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 · 5:6 (3:4 → 4:5 → 5:6, 세로를 두 번 줄임 · 사용자 요청) */
 .bgal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.bgal-card{position:relative;aspect-ratio:4/5;border-radius:var(--radius);overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#eceef1,#dfe2e7);box-shadow:var(--sh-sm);transition:transform .2s}
+.bgal-card{position:relative;aspect-ratio:5/6;border-radius:var(--radius);overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#eceef1,#dfe2e7);box-shadow:var(--sh-sm);transition:transform .2s}
 .bgal-card:hover{transform:translateY(-2px)}
 .bgal-card img{transition:filter .2s}
 .bgal-card:hover img{filter:brightness(.95)}
 .bgal-ph{position:absolute;inset:0;display:grid;place-items:center;padding-bottom:18%;font-family:var(--serif);font-size:calc(40px*var(--fs,1));color:var(--faint);opacity:.7}
-.bgal-badge{position:absolute;left:10px;top:10px;z-index:2;display:flex;gap:4px}
+.bgal-badge{position:absolute;left:14px;top:14px;z-index:2;display:flex;gap:4px}
 .bgal-tx{position:absolute;z-index:2;display:flex;flex-direction:column;gap:2px;min-width:0}
 .bgal-tx b{font-size:calc(13.5px*var(--fs,1));font-weight:600;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bgal-tx b .cmt{font-size:calc(11px*var(--fs,1));margin-left:5px;font-weight:600}
 .bgal-tx small{font-size:calc(10.5px*var(--fs,1));letter-spacing:.04em}
-/* 1 — 하단 45%에만 옅은 그림자 + 흰 글씨 (그림이 최대한 보이게) */
-.bgal-1 .bgal-card::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(transparent,rgba(0,0,0,.45));z-index:1;pointer-events:none}
+/* 1 — 하단 그림자 + 흰 글씨. 그림자는 참고 이미지처럼 아래 60%까지 넓게 (v2.3 사용자 요청) */
+.bgal-1 .bgal-card::after{content:"";position:absolute;inset:auto 0 0 0;height:60%;background:linear-gradient(transparent,rgba(0,0,0,.12) 40%,rgba(0,0,0,.5));z-index:1;pointer-events:none}
 .bgal-1 .bgal-card.no-thumb::after{display:none}
-.bgal-1 .bgal-tx{left:14px;right:14px;bottom:12px;color:#fff}
+.bgal-1 .bgal-tx{left:20px;right:20px;bottom:20px;color:#fff} /* 제목·일자를 가장자리에서 넉넉히 띄움 (참고 이미지) */
 .bgal-1 .bgal-tx small{opacity:.78}
 .bgal-1 .bgal-tx b .cmt{color:inherit;opacity:.85}
 .bgal-1 .no-thumb .bgal-tx{color:var(--ink)}
 .bgal-1 .no-thumb .bgal-tx small{color:var(--faint);opacity:1}
 /* 2 — 반투명 흰 띠 (어떤 그림 위에서도 글씨가 잘 읽힘) */
-.bgal-2 .bgal-tx{left:8px;right:8px;bottom:8px;padding:9px 12px;border-radius:calc(var(--radius-s) - 1px);background:rgba(255,255,255,.74);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#2c3037}
+.bgal-2 .bgal-tx{left:10px;right:10px;bottom:10px;padding:11px 14px;border-radius:calc(var(--radius-s) - 1px);background:rgba(255,255,255,.74);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#2c3037}
 .bgal-2 .bgal-tx small{color:#7a808a}
 .bgal-2 .bgal-tx b .cmt{color:var(--accent)}
 @media(max-width:620px){
   .bgal{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .bgal-1 .bgal-tx{left:10px;right:10px;bottom:9px}
+  .bgal-1 .bgal-tx{left:13px;right:13px;bottom:13px}
+  .bgal-2 .bgal-tx{left:7px;right:7px;bottom:7px;padding:9px 11px}
   .bgal-tx b{font-size:calc(12.5px*var(--fs,1))}
 }
 .board-post{padding:26px 28px}
