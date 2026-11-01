@@ -299,3 +299,9 @@ export const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 };
+
+/** 게시판 목록용 날짜 — 올해 글은 MM.DD, 해가 바뀐 글은 YYYY.MM.DD (v2.5 사용자 요청) */
+export const fmtListDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.getFullYear() === new Date().getFullYear() ? fmtDate(iso) : `${d.getFullYear()}.${fmtDate(iso)}`;
+};
