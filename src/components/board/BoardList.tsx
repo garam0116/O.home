@@ -157,7 +157,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
             <button key={c} className={cat === c ? 'on' : ''} onClick={() => { setCat(c); setPage(1); }}>{c}</button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="toolrow-act">
           <SearchBar key={searchAll ? q : bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />
           {!searchAll && allow(board.permWrite) && !!user && (
             <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>✎ WRITE</button>

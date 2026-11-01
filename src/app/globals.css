@@ -83,7 +83,7 @@ a{color:inherit;text-decoration:none}
   background:var(--top-bg);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--line-dark);
 }
-.brand{font-family:var(--serif);font-size:calc(21px*var(--fs,1)*var(--brand-fit,1));letter-spacing:.32em;font-weight:600;color:var(--top-brand);cursor:pointer;white-space:nowrap}
+.brand{text-decoration:none;-webkit-tap-highlight-color:transparent;font-family:var(--serif);font-size:calc(21px*var(--fs,1)*var(--brand-fit,1));letter-spacing:.32em;font-weight:600;color:var(--top-brand);cursor:pointer;white-space:nowrap}
 .brand small{display:block;font-family:var(--font-logosub,var(--sans));font-weight:var(--fw-logosub,400);font-size:calc(8.5px*var(--fs,1)*var(--fs-logosub,1)*var(--brand-fit,1));letter-spacing:.42em;color:#8d939d;margin-top:-2px}
 /* 로고 이미지 (v2.2) — 상단바 높이 안에서 비율 유지 · 서브타이틀이 있으면 그만큼 낮게 */
 .brand.has-img{display:flex;flex-direction:column;justify-content:center;line-height:0}
@@ -1461,6 +1461,17 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .toolrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
 /* 줄바꿈으로 검색·버튼 묶음이 아랫줄로 내려가도 오른쪽 정렬 유지 (v1.9 사용자 요청) */
 .toolrow > :last-child{margin-left:auto}
+.toolrow-act{display:flex;gap:8px;align-items:center}
+/* 모바일 게시판 목록 (v2.5 사용자 요청) — 검색창을 펼쳐도 아랫줄로 내려가지 않게 한 줄 고정.
+   검색창은 남는 폭까지만 늘어나고(최대 150px), 분류 버튼·WRITE 버튼은 줄어들지 않는다 */
+@media (max-width:620px){
+  .board-page .toolrow{flex-wrap:nowrap}
+  .board-page .toolrow > *{flex-shrink:0}
+  .board-page .toolrow > .toolrow-act{flex:0 1 auto;min-width:0}
+  .toolrow-act > *{flex-shrink:0}
+  .toolrow-act > .searchbar{flex:0 1 auto;min-width:0}
+  .toolrow-act > .searchbar input{min-width:0;flex:0 1 auto}
+}
 .panel.flush{overflow:hidden;padding:4px 0}
 .board-list{padding:6px 0}
 .brow{display:grid;grid-template-columns:70px 1fr 90px 90px;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--line);font-size:calc(13px*var(--fs,1));cursor:pointer;transition:.13s}

@@ -39,7 +39,7 @@ export function TopBar() {
   const logoMRaw = useBlobUrl(site.logoImageM);
   const logoPc = logoPcRaw || logoMRaw;
   const logoM = logoPcRaw && logoMRaw && logoMRaw !== logoPcRaw ? logoMRaw : undefined;
-  const brandRef = useRef<HTMLDivElement>(null);
+  const brandRef = useRef<HTMLAnchorElement>(null);
   const brandFit = useBrandFit(brandRef, `${site.title}|${site.subtitle}|${logoPc ?? ''}|${siteLoaded}`);
   const userRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +124,13 @@ export function TopBar() {
       {/* 로고 — 텍스트·서브타이틀·정렬은 환경설정 > 디자인 (5.2) */}
       {/* 로고 이미지 (v2.2) — 지정하면 텍스트 대신 이미지 · 모바일용이 따로 있으면 620px 이하에서 교체.
           텍스트 로고는 폭이 모자라면 글자 크기·간격을 함께 줄여 맞춘다 (useBrandFit) */}
-      <div className={`brand ${logoPc ? 'has-img' : ''}`} ref={brandRef} onClick={() => nav('/')}
+      {/* 진짜 링크(<a href="/">)로 둔다 (v2.5 사용자 요청) — 아이폰에서 꾹 누르면 「새로운 탭에서 열기」 메뉴가 뜨고,
+          PC에서도 휠 클릭·Ctrl/⌘ 클릭으로 새 탭에서 열 수 있다. 보통 클릭은 기존처럼 앱 안에서 이동(nav). */}
+      <a href="/" className={`brand ${logoPc ? 'has-img' : ''}`} ref={brandRef}
+        onClick={e => {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault(); nav('/');
+        }}
         style={{ '--brand-fit': brandFit } as React.CSSProperties}>
         {siteLoaded && (logoPc ? (
           <>
@@ -135,7 +141,7 @@ export function TopBar() {
           </>
         ) : site.title)}
         {siteLoaded && site.subtitle && <small className={`al-${site.align}`}>{site.subtitle}</small>}
-      </div>
+      </a>
 
       <nav className="gnb" ref={gnbRef}>
         {visMenu.map(item =>
@@ -306,7 +312,7 @@ function MobileNav({ menu, pathname, onNav, onClose }: {
  * 화면이 옆으로 밀리고 잘렸다). 로고 칸이 받은 폭보다 글자가 넓으면 그 비율만큼 --brand-fit을 낮춰
  * 글자 크기·자간(em 단위라 함께 줄어듦)을 줄인다. 넉넉하면 1 그대로라 PC 모습은 바뀌지 않는다.
  */
-function useBrandFit(ref: React.RefObject<HTMLDivElement | null>, key: string) {
+function useBrandFit(ref: React.RefObject<HTMLElement | null>, key: string) {
   const [fit, setFit] = useState(1);
   useEffect(() => {
     const el = ref.current;
