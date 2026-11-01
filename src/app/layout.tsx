@@ -9,7 +9,6 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { TopBar } from '@/components/shell/TopBar';
 import { BgmPlayer } from '@/components/shell/BgmPlayer';
 import { TipLayer } from '@/components/ui/TipLayer';
-import { CursorLayer } from '@/components/shell/CursorLayer';
 import { ImgProtect } from '@/components/shell/ImgProtect';
 import { SetupGate } from '@/components/shell/SetupGate';
 import { DocTitle } from '@/components/shell/DocTitle';
@@ -89,8 +88,6 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   <BgmPlayer />
                   {/* 전역 커스텀 툴팁 — data-tip 요소 공통 (7장) */}
                   <TipLayer />
-                  {/* 커스텀 마우스 커서 (5.1) */}
-                  <CursorLayer />
                   {/* 이미지 저장 방지 — 메뉴 관리 > 권한에서 영역별 지정 (v1.9) */}
                   <ImgProtect />
                   {/* 브라우저 탭 제목 — 디자인 탭에서 지정 (v1.9) */}

@@ -16,7 +16,6 @@ import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { GuestIdBar } from '@/components/ui/GuestId';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
-import { pushNotif } from '@/lib/notifStore';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
 
@@ -89,32 +88,6 @@ export default function BoardDetailPage() {
       ? { ...base, target: 'post', targetId: post.id, author: user.nickname, authorId: user.id }
       : { ...base, target: 'post', targetId: post.id, author: gName.trim(), authorId: '' };
     setCmtRows([...cmtRows, c]);
-    /* 알림 (v2.0 포크 제보 — 「댓글을 달아도 알림이 안 와요」): 게시판 댓글은 여태 알림을
-       **만들지도 않았다** (로드비·방명록·역극만 있었다). 글쓴이에게, 답글이면 그 댓글 주인에게도. */
-    const me = user?.id ?? '';
-    if (post.authorId && post.authorId !== me) {
-      pushNotif({
-        type: 'comment', toUserId: post.authorId, href: `/board/${post.id}`,
-        title: `「${post.title}」에 새 댓글`, body: `${c.author} — ${c.text.slice(0, 50)}`,
-      });
-    }
-    if (replyTo) {
-      /* 뿌리 댓글 주인만이 아니라 **그 대화에 답글을 단 전원**에게 (v2.0 포크 제보 —
-         관리자가 자기 뿌리 댓글에 답하면, 사이에 답글을 단 회원이 아무것도 못 받았다).
-         글쓴이는 위에서 이미 받았으므로 뺀다. */
-      const rootAuthor = comments.find(x => x.id === replyTo)?.authorId;
-      const seen = new Set<string>();
-      for (const t of comments.filter(x => x.id === replyTo || x.parentId === replyTo)) {
-        const to = t.authorId;
-        if (!to || to === me || to === post.authorId || seen.has(to)) continue;
-        seen.add(to);
-        pushNotif({
-          type: 'comment', toUserId: to, href: `/board/${post.id}`,
-          title: to === rootAuthor ? '내 댓글에 답글이 달렸습니다' : '참여한 댓글에 새 답글이 달렸습니다',
-          body: `${c.author} — ${c.text.slice(0, 50)}`,
-        });
-      }
-    }
     setCmt(''); setReplyTo(null);
   };
 
@@ -131,14 +104,14 @@ export default function BoardDetailPage() {
     <div className={`cmt ${depth > 0 ? 'reply-depth' : ''}`}>
       <b>{c.author}</b><small>{fmtDate(c.date)}</small>
       {canComment && depth === 0 && (
-        <small style={{ cursor: 'var(--cur-pointer,pointer)', color: 'var(--accent)', marginLeft: 8 }}
+        <small style={{ cursor: 'pointer', color: 'var(--accent)', marginLeft: 8 }}
           onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}>
           {replyTo === c.id ? '답글 취소' : '답글'}
         </small>
       )}
       {/* 손님 댓글은 관리자만 지운다 (v2.0 사용자 확정) — 서버가 그렇게밖에 못 받는다 */}
       {(isAdmin || (user && c.authorId === user.id)) && (
-        <small style={{ cursor: 'var(--cur-pointer,pointer)', marginLeft: 8 }}
+        <small style={{ cursor: 'pointer', marginLeft: 8 }}
           onClick={() => removeComment(c)}>
           삭제
         </small>

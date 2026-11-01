@@ -132,7 +132,7 @@ export default function CommApplyPage() {
       || (vis === 'self' && !!user && (a.selfId ? user.id === a.selfId : true));
     return (
       <div className="ap-row" key={a.id}
-        style={{ width: '100%', cursor: 'var(--cur-pointer,pointer)' }}
+        style={{ width: '100%', cursor: 'pointer' }}
         onClick={() => { if (!editOn) router.push(`/comm-apply/${a.id}`); }}>
         {/* 드래그 핸들 — 편집모드에서만 표시 (휴지통에선 순서를 만질 일이 없다) */}
         {editOn && !trashView && <span className="drag-h">⠿</span>}

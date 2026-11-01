@@ -13,29 +13,14 @@ import { useAuth } from '@/lib/auth';
 import { useMainStore } from '@/lib/mainStore';
 import { useBlobUrl } from '@/lib/blobStore';
 import { refreshPage } from '@/lib/pageRefresh';
-import { useToast } from '@/components/ui/Toast';
 import { KToggle } from '@/components/ui/Kit';
-import {
-  Notif, NotifType, NOTIF_EVENT, NOTIF_TYPE_LABEL,
-  readNotifs, markRead, markAllRead, clearReadNotifs, notifSettings, setNotifSetting, syncNotifs, selfTestNotif,
-} from '@/lib/notifStore';
-import { subscribeTable } from '@/lib/db';
-
-const BellIcon = () => (
-  <svg viewBox="0 0 24 24">
-    <path d="M6 9.5a6 6 0 0 1 12 0c0 4.2 1.6 5.6 2.2 6.3H3.8C4.4 15.1 6 13.7 6 9.5Z" />
-    <path d="M10 18.8a2.1 2.1 0 0 0 4 0" />
-  </svg>
-);
 
 export function TopBar() {
   const { user, isAdmin, logout } = useAuth();
   const { editOn, editAvailable, gridOn, setGridOn, toggleEdit, requestExit, guardNav } = useMainStore();
   const router = useRouter();
   const pathname = usePathname();
-  const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [menuSet, , menuLoaded] = useMenuSettings(); // 메뉴 관리 (5.2) — 노출·순서·이름
   const { boards, loaded: boardsLoaded } = useBoards(); // 다중 게시판 (5.2) — 게시판 그룹에 동적 반영
   const { map: secMap } = useSections();
@@ -50,45 +35,13 @@ export function TopBar() {
   const userRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!menuOpen && !notifOpen) return;
+    if (!menuOpen) return;
     const close = (e: MouseEvent) => {
-      if (!userRef.current?.contains(e.target as Node)) { setMenuOpen(false); setNotifOpen(false); }
+      if (!userRef.current?.contains(e.target as Node)) setMenuOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, [menuOpen, notifOpen]);
-
-  // 알림 (4.13) — 발생 지점의 커스텀 이벤트로 갱신
-  const [notifs, setNotifs] = useState<Notif[]>([]);
-  const [notifVer, setNotifVer] = useState(0); // 설정 토글 리렌더용
-  useEffect(() => {
-    const load = () => { setNotifs(readNotifs()); setNotifVer(v => v + 1); };
-    load();
-    window.addEventListener(NOTIF_EVENT, load);
-    window.addEventListener('storage', load); // 다른 탭
-    return () => { window.removeEventListener(NOTIF_EVENT, load); window.removeEventListener('storage', load); };
-  }, []);
-  /* 서버에 쌓인 내 알림 받아 오기 (v2.0 포크 제보 — 기기 보관이라 남이 남긴 알림이 안 왔다).
-     접속할 때 한 번 + 실시간 신호(새 행) + 창에 돌아올 때(30초 간격 제한은 syncNotifs가 건다) */
-  useEffect(() => {
-    if (!user) return;
-    void syncNotifs(user.id, true);
-    const off = subscribeTable('notifications', () => void syncNotifs(user.id, true));
-    const onFocus = () => void syncNotifs(user.id);
-    window.addEventListener('focus', onFocus);
-    return () => { off(); window.removeEventListener('focus', onFocus); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-  const myNotifs = user ? notifs.filter(n => n.toUserId === user.id) : [];
-  const unread = myNotifs.filter(n => !n.read);
-  // 메뉴 점 — 안 읽은 알림이 가리키는 페이지 (해당 메뉴 뱃지, 4.13)
-  const dotHrefs = new Set(unread.map(n => n.href));
-  const fmtNd = (iso: string) => {
-    const d = new Date(iso);
-    return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
-  const mySet = user ? notifSettings(user.id) : null;
-  void notifVer;
+  }, [menuOpen]);
 
   // 편집모드 중에는 이동 전에 종료 확인 (v1.8)
   // 지금 보고 있는 메뉴를 다시 누르면 그 페이지를 새로 불러옴 — 다시 접속하는 느낌 (v1.9 사용자 요청)
@@ -157,14 +110,14 @@ export function TopBar() {
         {visMenu.map(item =>
           item.children ? (
             <div className="grp" key={item.label}>
-              {/* 상위 클릭 → 첫 하위 페이지 (v1.8) · 안 읽은 알림이 있는 메뉴에 점 (4.13) */}
+              {/* 상위 클릭 → 첫 하위 페이지 (v1.8) */}
               <button onClick={() => nav(item.children![0].href)}>
-                {item.label}{item.children.some(c => dotHrefs.has(c.href)) && <small className="nd">●</small>}
+                {item.label}
               </button>
               <div className="sub">
                 {item.children.map(c => (
                   <button key={c.href} onClick={() => nav(c.href)}>
-                    {c.label}{dotHrefs.has(c.href) && <small className="nd">●</small>}
+                    {c.label}
                   </button>
                 ))}
               </div>
@@ -175,7 +128,7 @@ export function TopBar() {
               className={pathname === item.href ? 'on' : ''}
               onClick={() => nav(item.href!)}
             >
-              {item.label}{dotHrefs.has(item.href!) && <small className="nd">●</small>}
+              {item.label}
             </button>
           )
         )}
@@ -183,7 +136,7 @@ export function TopBar() {
         {moreMenu.length > 0 && (
           <div className="grp more">
             <button aria-label="더보기">
-              ⋯{moreMenu.some(m => (m.children ?? [{ href: m.href! }]).some(c => dotHrefs.has(c.href!))) && <small className="nd">●</small>}
+              ⋯
             </button>
             <div className="sub">
               {moreMenu.map(item =>
@@ -192,13 +145,13 @@ export function TopBar() {
                     <div className="sub-cap">{item.label}</div>
                     {item.children.map(c => (
                       <button key={c.href} onClick={() => nav(c.href)}>
-                        {c.label}{dotHrefs.has(c.href) && <small className="nd">●</small>}
+                        {c.label}
                       </button>
                     ))}
                   </div>
                 ) : (
                   <button key={item.label} onClick={() => nav(item.href!)}>
-                    {item.label}{dotHrefs.has(item.href!) && <small className="nd">●</small>}
+                    {item.label}
                   </button>
                 ))}
             </div>
@@ -232,56 +185,12 @@ export function TopBar() {
       {user ? (
         <div className="user-wrap" ref={userRef}>
           <div className="user-chip" onClick={() => setMenuOpen(o => !o)}>
-            {/* 알림 종 (4.13) — 클릭 시 알림 드롭다운 (프로필 메뉴와 별개) */}
-            <span className="badge-dot" data-n={String(Math.min(9, unread.length))}
-              onClick={e => { e.stopPropagation(); setMenuOpen(false); setNotifOpen(o => !o); }}>
-              <BellIcon />
-            </span>
             {/* 기본 아바타는 이니셜 없이 단색/그라데이션 (v1.9) */}
             <div className="avatar" style={!avatarSrc && user.avatarColor ? { background: user.avatarColor } : undefined}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {avatarSrc && <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
             </div>
             {user.nickname} <span style={{ fontSize: 9, color: '#8d939d' }}>▾</span>
-          </div>
-          {/* 알림 드롭다운 — 목록 + 모두 읽음 + 항목별 on/off (4.13) */}
-          <div className={`user-menu notif-menu ${notifOpen ? 'open' : ''}`}>
-            <div className="nh">
-              <b>알림</b>
-              {unread.length > 0 && (
-                <button className="all" onClick={() => markAllRead(user.id)}>모두 읽음</button>
-              )}
-              {/* 읽은 알림은 하루 뒤 저절로 사라지지만, 바로 치우고 싶을 때 (v2.0 사용자 요청) */}
-              {myNotifs.some(n => n.read) && (
-                <button className="all" onClick={() => clearReadNotifs(user.id)}>읽은 알림 정리</button>
-              )}
-            </div>
-            {myNotifs.length === 0 && <p className="empty">알림이 없습니다</p>}
-            {myNotifs.slice(0, 12).map(n => (
-              <button key={n.id} className={`nt ${n.read ? 'rd' : ''}`}
-                onClick={() => { markRead(n.id); setNotifOpen(false); nav(n.href); }}>
-                <b>{n.title}</b>
-                {n.body && <span>{n.body}</span>}
-                <small>{fmtNd(n.date)}</small>
-              </button>
-            ))}
-            {mySet && (
-              <div className="nset">
-                {(Object.keys(NOTIF_TYPE_LABEL) as NotifType[])
-                  .filter(k => k !== 'guest' || isAdmin) // 방명록 알림은 관리자 항목
-                  .map(k => (
-                    <label key={k} className="row">
-                      <span>{NOTIF_TYPE_LABEL[k]}</span>
-                      <KToggle checked={mySet[k]} onChange={v => setNotifSetting(user.id, k, v)} />
-                    </label>
-                  ))}
-                {/* 전달 자가진단 (v2.0) — 서버 저장→읽기를 실제로 해 보고 결과를 알려 준다 */}
-                <button className="all" style={{ marginTop: 2 }}
-                  onClick={async () => { toast(await selfTestNotif(user.id)); void syncNotifs(user.id, true); }}>
-                  알림 전달 확인
-                </button>
-              </div>
-            )}
           </div>
           <div className={`user-menu ${menuOpen ? 'open' : ''}`}>
             <button onClick={() => { setMenuOpen(false); nav('/mypage'); }}>정보수정</button>

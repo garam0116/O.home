@@ -252,7 +252,7 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
       {slides.length > 1 && <span className="drag-h">⠿</span>}
       {/* 눌러서 이 장면의 이미지를 다른 것으로 교체 */}
       <WidgetImageSource onSelect={url => selectUrl(url, sl.id)} onFiles={files => void selectFiles(Array.from(files), sl.id)}>
-        <div style={{ width: 84, aspectRatio: String(ratio), borderRadius: 7, overflow: 'hidden', position: 'relative', flexShrink: 0, border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+        <div style={{ width: 84, aspectRatio: String(ratio), borderRadius: 7, overflow: 'hidden', position: 'relative', flexShrink: 0, border: '1.5px dashed var(--line)', cursor: 'pointer' }}
           onClick={() => { setSwapFor(sl.id); document.getElementById(inputId)?.click(); }}>
           <CroppedBlobImg fileRef={sl.imgId} crop={fit === 'contain' ? undefined : sl.crop} ph="" />
         </div>
@@ -288,7 +288,7 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
 
       {slides.length === 0
         ? (
-          <div tabIndex={0} className="ph" style={{ width: 160, aspectRatio: String(ratio), borderRadius: 8, border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+          <div tabIndex={0} className="ph" style={{ width: 160, aspectRatio: String(ratio), borderRadius: 8, border: '1.5px dashed var(--line)', cursor: 'pointer' }}
             {...imageSource.handlers} {...fileDrop(files => void selectFiles(Array.from(files), null))}
             onClick={() => { setSwapFor(null); document.getElementById(inputId)?.click(); }}>
             <span style={{ fontSize: 9 }}>IMAGE</span>
@@ -418,7 +418,7 @@ export function BannerEditor({ conf, onSaved, onClose }: {
         patch(d.id, { file: undefined, localUrl: undefined, img: '', imgId: url, crop: undefined });
         setCropFor(d.id);
       }} onFiles={files => selectFile(d.id, files[0])}>
-        <div style={{ width: 96, aspectRatio: String(bannerRatio), borderRadius: 7, overflow: 'hidden', position: 'relative', flexShrink: 0, border: '1.5px dashed var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+        <div style={{ width: 96, aspectRatio: String(bannerRatio), borderRadius: 7, overflow: 'hidden', position: 'relative', flexShrink: 0, border: '1.5px dashed var(--line)', cursor: 'pointer' }}
           onClick={() => { setFileFor(d.id); document.getElementById('bnSlideF')?.click(); }}>
           <SlidePreview d={d} />
         </div>

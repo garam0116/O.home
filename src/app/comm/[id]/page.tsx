@@ -131,7 +131,7 @@ export default function CommDetailPage() {
       <div style={{ maxWidth: 920, margin: '0 auto' }}>
       {/* 1. 커미션 이름 — 최상단 중앙 (4.18) */}
       <div className="cm-hero">
-        <h2 style={{ fontFamily: familyOf(c.titleFontId), cursor: 'var(--cur-pointer,pointer)', userSelect: 'none' }}
+        <h2 style={{ fontFamily: familyOf(c.titleFontId), cursor: 'pointer', userSelect: 'none' }}
           data-tip="커미션 목록으로" onClick={() => router.push('/comm')}>{c.name}</h2>
         {c.sub && <small>{c.sub}</small>}
         {badge && <div style={{ marginTop: 10 }}><span style={badgeStyle(badge, settings.badgeShape)}>{badge.label}</span></div>}

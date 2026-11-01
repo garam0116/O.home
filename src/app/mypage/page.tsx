@@ -134,7 +134,7 @@ export default function MyPage() {
             {/* 프로필 이미지 — 클릭하면 단색/이미지 선택 모달 (v1.9, 이니셜 표시 없음) */}
             <div style={{ display: 'grid', gap: 8, justifyItems: 'center' }}>
               <div tabIndex={0} style={{
-                width: 84, height: 84, borderRadius: '50%', overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
+                width: 84, height: 84, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer',
                 background: avatarSrc ? undefined : (user.avatarColor ?? 'linear-gradient(135deg,#6b7280,#3c434d)'),
                 border: '1px solid var(--line)',
               }} onClick={() => { setAvColor(user.avatarColor ?? '#6b7280'); setAvOpen(true); }} data-tip="프로필 이미지 변경"
@@ -195,7 +195,7 @@ export default function MyPage() {
                   onClick={() => router.push(`/chars/${c.id}`)}
                   style={{
                     aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', position: 'relative',
-                    cursor: 'var(--cur-pointer,pointer)', background: c.color, border: '1px solid var(--line)',
+                    cursor: 'pointer', background: c.color, border: '1px solid var(--line)',
                   }}>
                   {(c.thumbId ?? c.arts?.[0]) && (
                     <CroppedBlobImg fileRef={c.thumbId ?? c.arts?.[0]} crop={c.thumbCrop} ph={c.thumbClass} />
@@ -212,14 +212,14 @@ export default function MyPage() {
             <h4 style={{ fontSize: 11.5, letterSpacing: '.12em', color: 'var(--faint)', marginBottom: 14 }}>
               MY POSTS {myItems.length > 0 && <span style={{ color: 'var(--accent)' }}>{myItems.length}</span>}
               {myItems.length > 6 && (
-                <span style={{ float: 'right', fontSize: 11, color: 'var(--accent)', cursor: 'var(--cur-pointer,pointer)', letterSpacing: 0 }}
+                <span style={{ float: 'right', fontSize: 11, color: 'var(--accent)', cursor: 'pointer', letterSpacing: 0 }}
                   onClick={() => router.push('/mypage/posts')}>더보기 ›</span>
               )}
             </h4>
             {myItems.length === 0 && <p className="hint" style={{ margin: 0 }}>작성한 글이 없습니다</p>}
             <div style={{ display: 'grid', gap: 2 }}>
               {myItems.slice(0, 6).map((it, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line)', cursor: 'var(--cur-pointer,pointer)' }}
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
                   onClick={() => router.push(it.href)}>
                   <span className="pill" style={{ flexShrink: 0 }}>{it.kind}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.text}</span>

@@ -5,7 +5,7 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter, secQuery, sectionHref } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
 import {
   useLocalList, newId, fmtDate, Comment,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
@@ -24,7 +24,6 @@ import { Modal, useConfirmDelete } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
-import { pushNotif, notifyAdmins } from '@/lib/notifStore';
 
 // 접기 문구 (게시판 6.2와 동일)
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
@@ -241,26 +240,6 @@ function ThreadsPageInner() {
       ? { ...base, target: 'thread' as const, targetId: sel.id, author: user.nickname, authorId: user.id }
       : { ...base, target: 'thread' as const, targetId: sel.id, author: gName.trim(), authorId: '' };
     setCmtRows([...cmtRows, c]);
-    /* 알림 (v2.0) — 타래는 관리자의 것이라 관리자에게, 답글이면 그 댓글 주인에게도 */
-    notifyAdmins({
-      type: 'comment', href: sectionHref('threads', sel.secId ?? 'main'),
-      title: `「${sel.title}」 타래에 새 댓글`, body: `${c.author} — ${c.text.slice(0, 50)}`,
-    });
-    if (replyTo) {
-      // 뿌리 주인만이 아니라 그 대화에 답글을 단 전원에게 (v2.0 포크 제보 — 게시판과 동일)
-      const rootAuthor = comments.find(x => x.id === replyTo)?.authorId;
-      const seen = new Set<string>();
-      for (const t of comments.filter(x => x.id === replyTo || x.parentId === replyTo)) {
-        const to = t.authorId;
-        if (!to || to === (user?.id ?? '') || seen.has(to)) continue;
-        seen.add(to);
-        pushNotif({
-          type: 'comment', toUserId: to, href: sectionHref('threads', sel.secId ?? 'main'),
-          title: to === rootAuthor ? '내 댓글에 답글이 달렸습니다' : '참여한 댓글에 새 답글이 달렸습니다',
-          body: `${c.author} — ${c.text.slice(0, 50)}`,
-        });
-      }
-    }
     setCmt(''); setReplyTo(null);
   };
   // 댓글 삭제 — 답글도 함께. 손님 댓글은 관리자만 지운다 (게시판 v2.0 확정과 동일)
@@ -443,14 +422,14 @@ function ThreadsPageInner() {
                         <div key={x.id} className={`cmt ${i > 0 ? 'reply-depth' : ''}`}>
                           <b>{x.author}</b><small>{fmtDate(x.date)}</small>
                           {i === 0 && (
-                            <small style={{ cursor: 'var(--cur-pointer,pointer)', color: 'var(--accent)', marginLeft: 8 }}
+                            <small style={{ cursor: 'pointer', color: 'var(--accent)', marginLeft: 8 }}
                               onClick={() => setReplyTo(replyTo === x.id ? null : x.id)}>
                               {replyTo === x.id ? '답글 취소' : '답글'}
                             </small>
                           )}
                           {/* 손님 댓글은 관리자만 지운다 (v2.0 확정) — 서버가 그렇게밖에 못 받는다 */}
                           {(isAdmin || (user && x.authorId === user.id)) && (
-                            <small style={{ cursor: 'var(--cur-pointer,pointer)', marginLeft: 8 }}
+                            <small style={{ cursor: 'pointer', marginLeft: 8 }}
                               onClick={() => removeComment(x)}>삭제</small>
                           )}
                           <p>{x.text}</p>

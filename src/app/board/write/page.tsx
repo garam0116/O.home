@@ -243,7 +243,7 @@ function WriteInner() {
                     data-tip={thumbSrc === src ? '썸네일 위치 조정' : '대표로 선택'}
                     onClick={() => { if (thumbBusy) return; setThumbInput(''); if (thumbSrc !== src) { setThumbSrc(src); setThumbCrop(undefined); } setCropOpen(true); }}
                     style={{
-                      width: 104, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'var(--cur-pointer,pointer)',
+                      width: 104, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', cursor: 'pointer',
                       position: 'relative', flexShrink: 0,
                       outline: thumbSrc === src ? '2px solid var(--accent)' : '1px solid var(--line)', outlineOffset: 2,
                     }}>

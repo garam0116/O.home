@@ -146,7 +146,7 @@ function PlaylogPageInner() {
                     {r.url ? (
                       <a href={r.url} target="_blank" rel="noreferrer" data-tip="링크 열기 (새 탭)"><ClipIcon /></a>
                     ) : r.logId ? (
-                      <a data-tip="백업 로그 보기" style={{ cursor: 'var(--cur-pointer,pointer)' }}
+                      <a data-tip="백업 로그 보기" style={{ cursor: 'pointer' }}
                         onClick={() => router.push(`/trpg/${r.logId}`)}><ClipIcon /></a>
                     ) : null}
                   </td>

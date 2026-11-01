@@ -100,7 +100,7 @@ export default function ApplicantDetailPage() {
           {comm && (
             <div style={{ display: 'flex', gap: 10 }}>
               <b style={{ minWidth: 76, color: 'var(--faint)', fontWeight: 600 }}>커미션</b>
-              <span style={{ color: 'var(--accent)', cursor: 'var(--cur-pointer,pointer)', fontWeight: 600 }}
+              <span style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}
                 onClick={() => router.push(`/comm/${comm.id}`)}>{comm.name} ›</span>
             </div>
           )}

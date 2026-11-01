@@ -104,10 +104,10 @@ h1{font-family:'Noto Serif KR','Nanum Myeongjo',serif;font-size:22px;letter-spac
 #vw{position:fixed;inset:0;background:rgba(15,17,20,.9);display:none;align-items:center;justify-content:center;z-index:50}
 #vw.on{display:flex}
 #vw img{max-width:92vw;max-height:90vh;border-radius:10px}
-#vw .nav{position:fixed;top:50%;transform:translateY(-50%);font-size:34px;color:#fff;background:none;border:none;cursor:var(--cur-pointer,pointer);padding:18px;opacity:.75}
+#vw .nav{position:fixed;top:50%;transform:translateY(-50%);font-size:34px;color:#fff;background:none;border:none;cursor:pointer;padding:18px;opacity:.75}
 #vw .nav:hover{opacity:1}
 #vw .prev{left:8px}#vw .next{right:8px}
-#vw .x{position:fixed;top:14px;right:20px;font-size:26px;color:#fff;background:none;border:none;cursor:var(--cur-pointer,pointer);opacity:.75}
+#vw .x{position:fixed;top:14px;right:20px;font-size:26px;color:#fff;background:none;border:none;cursor:pointer;opacity:.75}
 </style></head><body>
 <h1>${esc(commName)} — COMMISSION FORM</h1>
 ${rows}

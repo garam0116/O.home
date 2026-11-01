@@ -51,7 +51,7 @@ function CommListPageInner() {
         {/* 우측 스택: 슬롯(위) + 검색·등록(아래) — 제목 옆 배치라 리스트와 멀어지지 않음 (사용자 확정) */}
         <div className="head-actions stack">
           <Tip tip={isAdmin ? '슬롯 관리' : `현재 남은 슬롯은 ${totalRemain}개 입니다`}>
-            <span className="cm-total-slot" style={isAdmin ? { cursor: 'var(--cur-pointer,pointer)' } : undefined}
+            <span className="cm-total-slot" style={isAdmin ? { cursor: 'pointer' } : undefined}
               onClick={() => { if (isAdmin) openSlot(); }}>
               SLOT {settings.totalUsed}/{settings.totalSlot}
             </span>

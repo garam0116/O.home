@@ -12,7 +12,6 @@ import { DragList } from '@/components/ui/DragList';
 import { useMainStore, WidgetConf, WIDGET_META, MULTI_TYPES, widgetLabel } from '@/lib/mainStore';
 import { useConfirmDelete, ConfirmModal, Modal } from '@/components/ui/Modal';
 import { exportBackup, importBackup, resetGroups, RESET_CONTENT, RESET_EXTRA } from '@/lib/backup';
-import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
 import { newId } from '@/lib/postStore';
 import { useCommSettings, badgeStyle, CommBadge, CommSettings } from '@/lib/commStore';
 import {
@@ -33,15 +32,10 @@ import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection } from
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
 import { useSiteDraft } from '@/lib/siteStore';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCursorSettings, CursorState, CURSOR_STATE_LABEL } from '@/lib/cursorStore';
-import { RelQuestionSet, RELQ_SEED, RELQ_KEY, CP_LABEL } from '@/lib/relqStore';
-import { SymbolInput } from '@/components/ui/SymbolInput';
-import { allBlobs, putBlobAs, useBlobUrl, getBlob } from '@/lib/blobStore';
-import { parseAni } from '@/lib/aniCursor';
+import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
 import { Character, CHAR_SEED, Relation, REL_SEED } from '@/lib/charStore';
 import { useLocalList } from '@/lib/postStore';
-import { Mood, MOOD_SEED, moodTint } from '@/lib/diaryStore';
 import {
   TextSettingEditor, DdayEditor, TodoEditor, BannerEditor, DecoEditor,
 } from '@/components/main/widgetEditors';
@@ -57,13 +51,13 @@ import type { BackendConfig, BackendKind } from '@/lib/backend/types';
 import { CONTENT_COLLECTIONS } from '@/lib/backend/types';
 import { visFloorOf } from '@/lib/visFloor';
 import { validateConfig, configFileText, saveLocalConfig, parseFirebaseSnippet, serverConfig, serverConfigSource } from '@/lib/serverConfig';
-import { migrateTo, findOrphanFiles, isFileUrl } from '@/lib/transfer';
+import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
 
 const CATEGORIES = [
-  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', '자관 질문', '커미션', 'TRPG', '감상타래', '메모장',
-  '폰트', '마우스 커서', 'BGM', '무드 리스트', '회원/보안', '데이터 백업',
+  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', '커미션', 'TRPG', '감상타래', '메모장',
+  '폰트', 'BGM', '회원/보안', '데이터 백업',
 ] as const;
 
 /** 색 항목 한 쌍 렌더 헬퍼 */
@@ -609,7 +603,7 @@ function MainPagePane() {
       />
       <p className="hint">토글을 끄면 <b>모바일에서만</b> 빠지고 PC 메인에는 그대로 표시됩니다 · 순서는 <b>모바일 세로 나열 순서</b> — PC 배치는 메인에서 편집모드로 자유 조정</p>
       <p className="hint">메인에서 위젯을 완전히 빼거나 더하려면 편집모드에서 — 추가는 상단바 [＋ 위젯], 삭제는 위젯 우클릭 → 위젯 삭제</p>
-      <p className="hint">고정 요소: 슬라이드 배너(최상단) · 회원정보창 — 순서 목록에 포함되지 않음</p>
+      <p className="hint">슬라이드 배너(최상단)·회원정보창은 모바일에서 항상 맨 위에 표시되어 순서 목록에 포함되지 않음</p>
     </div>
   );
 }
@@ -802,138 +796,6 @@ function BoardPane() {
   );
 }
 
-/** 자관 질문 탭 (v1.9) — 질문 세트(CP/NCP) 관리. 자관 상세의 QUESTIONS 섹션 추가 시 세트를 골라 넣는다 */
-function RelQPane() {
-  const [sets, setSets] = useLocalList<RelQuestionSet>(RELQ_KEY, RELQ_SEED);
-  const [selId, setSelId] = useState<string | null>(null);
-  const del = useConfirmDelete();
-  const relqToast = useToast();
-  const txtRef = useRef<HTMLInputElement>(null);   // txt 일괄 업로드 (줄바꿈 = 질문)
-  const sel = sets.find(s => s.id === selId) ?? sets[0];
-  const patchSet = (id: string, p: Partial<RelQuestionSet>) =>
-    setSets(sets.map(s => (s.id === id ? { ...s, ...p } : s)));
-
-  // 질문은 txt로 수백 개씩 올리는 경우가 있어 한 화면에 다 깔면 끝없이 길어진다 (v2.0 사용자 요청)
-  const PER_Q = 12;
-  const [qPage, setQPage] = useState(1);
-  const qTotal = sel?.questions.length ?? 0;
-  const qPages = Math.max(1, Math.ceil(qTotal / PER_Q));
-  // 세트를 바꾸거나 질문이 줄어 페이지가 사라지면 마지막 페이지로 당긴다
-  const qCur = Math.min(qPage, qPages);
-  useEffect(() => { setQPage(1); }, [sel?.id]);
-  const qStart = (qCur - 1) * PER_Q;
-  // 화면에 보이는 건 이 페이지뿐이라, 수정·삭제·정렬은 전체 배열 기준 위치로 되돌려 계산해야 한다
-  const qShown = (sel?.questions ?? []).slice(qStart, qStart + PER_Q);
-  return (
-    <div className="set-sec">
-      <h3>자관 질문</h3>
-      <div className="d">질문 세트를 CP(커플)/NCP(커플 아님)로 구분해 관리 — 자관 상세에서 QUESTIONS 섹션을 추가할 때 세트를 골라 넣습니다</div>
-
-      <h3 style={{ marginTop: 20 }}>질문 세트</h3>
-      <div className="d">이름은 자유 수정 · CP/NCP 구분 · ⠿ 드래그로 순서</div>
-      <DragList items={sets} keyOf={s => s.id} onReorder={setSets}
-        render={s => (
-          /* 컴팩트 행 (v1.9 — 위아래 여백 최소) */
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', padding: '3px 0' }}>
-            <span className="drag-h" style={{ fontSize: 11 }}>⠿</span>
-            <KInput value={s.name} onChange={e => patchSet(s.id, { name: e.target.value })}
-              style={{ width: 140, fontSize: 12, padding: '5px 10px' }} />
-            <div className="mini-seg">
-              {(['cp', 'ncp'] as const).map(t => (
-                <button key={t} className={s.cat === t ? 'on' : ''}
-                  onClick={() => patchSet(s.id, { cat: t })}>{CP_LABEL[t]}</button>
-              ))}
-            </div>
-            <small style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: 10.5 }}>질문 {s.questions.length}개</small>
-            <button className="btn btn-ghost" style={{ padding: '3px 9px', fontSize: 10.5 }}
-              onClick={() => del.ask(`세트 「${s.name}」를 삭제하시겠습니까?`,
-                () => setSets(sets.filter(x => x.id !== s.id)),
-                '이미 자관에 넣은 질문들은 그대로 유지됩니다.')}>DELETE</button>
-          </div>
-        )} />
-      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }}
-          onClick={() => setSets([...sets, { id: newId(), name: '새 세트', cat: 'cp', questions: [] }])}>＋ ADD SET</button>
-      </div>
-
-      <hr style={{ margin: '24px 0', border: 'none', borderTop: '1.5px solid var(--line)' }} />
-
-      <h3>질문 목록</h3>
-      <div className="d">txt 파일은 줄바꿈을 기준으로 질문을 카운트합니다.</div>
-      {sets.length > 1 && (
-        <div className="mini-seg" style={{ marginBottom: 12 }}>
-          {sets.map(s => (
-            <button key={s.id} className={sel?.id === s.id ? 'on' : ''} onClick={() => setSelId(s.id)}>{s.name}</button>
-          ))}
-        </div>
-      )}
-      {sel && (
-        <>
-          {/* 정렬은 이 페이지 안에서만 — 되돌려 담을 때 앞뒤 페이지는 그대로 둔다 */}
-          <DragList items={qShown.map((q, i) => ({ q, key: `${sel.id}-${qStart + i}` }))} keyOf={x => x.key}
-            onReorder={list => patchSet(sel.id, {
-              questions: [
-                ...sel.questions.slice(0, qStart),
-                ...list.map(x => x.q),
-                ...sel.questions.slice(qStart + PER_Q),
-              ],
-            })}
-            render={({ q }, i) => {
-              const gi = qStart + i;   // 전체 배열에서의 실제 위치
-              return (
-              /* 컴팩트 행 — 질문이 100개 단위라 갭 최소화 (v1.9) */
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', padding: '2px 0' }}>
-                <span className="drag-h" style={{ fontSize: 11 }}>⠿</span>
-                <small style={{ color: 'var(--faint)', fontSize: 10, minWidth: 26, textAlign: 'right' }}>{gi + 1}</small>
-                <KInput value={q}
-                  onChange={e => patchSet(sel.id, { questions: sel.questions.map((x, j) => (j === gi ? e.target.value : x)) })}
-                  style={{ flex: 1, minWidth: 0, fontSize: 12, padding: '5px 10px' }} />
-                <span className="fx" style={{ fontSize: 10, padding: '2px 4px' }}
-                  onClick={() => {
-                    // 내용이 있으면 경고 모달, 방금 추가한 빈 줄은 바로 삭제
-                    const remove = () => patchSet(sel.id, { questions: sel.questions.filter((_, j) => j !== gi) });
-                    if (q.trim()) del.ask(`질문을 삭제하시겠습니까?`, remove, `"${q.slice(0, 40)}${q.length > 40 ? '…' : ''}"`);
-                    else remove();
-                  }}>✕</span>
-              </div>
-              );
-            }} />
-          {/* 개수는 완전히 오른쪽 끝으로, 페이저는 가운데 그대로 (v2.0 사용자 요청) —
-              한 줄에 나란히 두면 개수만큼 페이저가 왼쪽으로 밀려 가운데가 어긋난다 */}
-          {qTotal > PER_Q && (
-            <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center' }}>
-              <span />
-              <Pager page={qCur} total={qPages} onChange={setQPage} />
-              <small style={{ color: 'var(--faint)', fontSize: 10.5, justifySelf: 'end' }}>총 {qTotal}개</small>
-            </div>
-          )}
-          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            {/* txt 일괄 업로드 — 엔터 기준 한 줄 = 질문 하나 (v1.9, 100개 단위 대비) */}
-            <input ref={txtRef} type="file" accept=".txt,text/plain" style={{ display: 'none' }}
-              onChange={async e => {
-                const f = e.target.files?.[0]; e.target.value = '';
-                if (!f) return;
-                const lines = (await f.text()).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-                if (lines.length === 0) { relqToast('파일에서 질문을 찾지 못했습니다'); return; }
-                patchSet(sel.id, { questions: [...sel.questions, ...lines] });
-                relqToast(`질문 ${lines.length}개를 불러왔습니다`);
-              }} />
-            <button className="btn btn-dark" style={{ padding: '5px 12px', fontSize: 11 }}
-              onClick={() => txtRef.current?.click()}>↑ TXT 업로드</button>
-            <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }}
-              onClick={() => {
-                patchSet(sel.id, { questions: [...sel.questions, ''] });
-                // 새 빈 줄은 맨 끝에 붙으므로 그 줄이 있는 페이지로 옮겨 준다 (안 그러면 눌러도 안 보인다)
-                setQPage(Math.ceil((qTotal + 1) / PER_Q));
-              }}>＋ ADD</button>
-          </div>
-        </>
-      )}
-      {del.element}
-    </div>
-  );
-}
-
 /** 회원/보안 탭 (5.2, v1.9 mock 범위) — 가입코드 변경 + 회원 목록(가입 계정 삭제).
  *  그룹별 권한 매트릭스·가입 승인제·비밀번호 정책은 Supabase 연동 시 확장 */
 function MemberPane() {
@@ -1033,7 +895,7 @@ function MemberPane() {
           {allTags.length > 0 ? (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {allTags.map(t => (
-                <span key={t} className={`pill${filterTag === t ? ' dark' : ''}`} style={{ cursor: 'var(--cur-pointer,pointer)' }}
+                <span key={t} className={`pill${filterTag === t ? ' dark' : ''}`} style={{ cursor: 'pointer' }}
                   onClick={() => { setFilterTag(f => (f === t ? null : t)); setMPage(1); }}>{t}</span>
               ))}
             </div>
@@ -1049,7 +911,7 @@ function MemberPane() {
         return (
           <div key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--line)', flexWrap: 'wrap' }}>
             {/* 이름 클릭 → 회원 정보 페이지 (v1.9) */}
-            <b style={{ fontSize: 12.5, cursor: 'var(--cur-pointer,pointer)' }} data-tip="회원 정보 보기"
+            <b style={{ fontSize: 12.5, cursor: 'pointer' }} data-tip="회원 정보 보기"
               onClick={() => router.push(`/members/${m.id}`)}>{m.nickname}</b>
             {/* Firebase 계정 id(uid)는 28자라 줄에서 자리를 다 먹는다 — 앞 7자만, 전체는 툴팁으로 */}
             <small style={{ color: 'var(--faint)', fontSize: 10.5 }} data-tip={m.id.length > 7 ? m.id : undefined}>
@@ -1057,7 +919,7 @@ function MemberPane() {
             </small>
             {/* 태그 — ✕로 제거, ＋로 추가 (그룹화) */}
             {myTags.map(t => (
-              <span key={t} className="pill" style={{ cursor: 'var(--cur-pointer,pointer)' }} data-tip="태그 제거"
+              <span key={t} className="pill" style={{ cursor: 'pointer' }} data-tip="태그 제거"
                 onClick={() => del.ask(`태그 「${t}」를 제거하시겠습니까?`,
                   () => saveTags(m.id, myTags.filter(x => x !== t)),
                   `${m.nickname} 회원에게서만 제거됩니다.`)}>
@@ -1280,57 +1142,6 @@ function SecurityRulesRow() {
   );
 }
 
-/** 무드 리스트 탭 (5.2 — 다이어리 무드: 이름/아이콘/색 추가·수정·삭제·순서) */
-function MoodPane() {
-  const [moods, setMoods] = useLocalList<Mood>('ohome.moods.v1', MOOD_SEED);
-  const [diaries] = useLocalList<DiaryPost>('ohome.diary.v1', DIARY_SEED);
-  const del = useConfirmDelete();
-  const patchMood = (id: string, p: Partial<Mood>) =>
-    setMoods(moods.map(m => (m.id === id ? { ...m, ...p } : m)));
-  return (
-    <div className="set-sec">
-      <h3>무드 리스트</h3>
-      <div className="d">다이어리에서 고를 무드 — 이름 · 아이콘(이모지/특수문자) · 색 · ⠿ 드래그로 순서</div>
-
-      <DragList items={moods} keyOf={m => m.id} onReorder={setMoods}
-        render={m => (
-          <div className="set-row" style={{ width: '100%' }}>
-            <div className="l" style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
-              <span className="drag-h">⠿</span>
-              <span style={{
-                width: 30, height: 30, borderRadius: '50%',
-                // 줄높이 1 — 상자가 아니라 글자를 가운데로 (v2.0 사용자 발견)
-                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                background: moodTint(m.color), color: m.color, fontSize: 14,
-              }}>{m.icon}</span>
-            </div>
-            <div className="cp-group" style={{ justifyContent: 'flex-end' }}>
-              {/* 아이콘 — 클릭하면 특수문자 프리셋, 직접 입력도 가능 (v1.9) */}
-              <SymbolInput value={m.icon} onChange={v => patchMood(m.id, { icon: v })}
-                style={{ width: 46, textAlign: 'center' }} />
-              <KInput value={m.name} onChange={e => patchMood(m.id, { name: e.target.value })}
-                style={{ width: 110 }} />
-              <ColorField value={m.color} onChange={hex => patchMood(m.id, { color: hex })} />
-              <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                onClick={() => {
-                const used = diaries.filter(d => d.moodId === m.id).length;
-                del.ask(`무드 「${m.name}」를 삭제하시겠습니까?`, () => setMoods(moods.filter(x => x.id !== m.id)),
-                  used > 0 ? `이 무드로 쓴 일기 ${used}개는 유지되지만 아이콘이 기본 표시로 바뀝니다.` : undefined);
-              }}>DELETE</button>
-            </div>
-          </div>
-        )} />
-      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }}
-          onClick={() => setMoods([...moods, { id: newId(), name: '새 무드', icon: '✦', color: '#8a8f98' }])}>
-          ＋ ADD MOOD
-        </button>
-      </div>
-      {del.element}
-    </div>
-  );
-}
-
 /** 로고 컨트롤 (5.2) — 디자인 탭 로고 행에 삽입 */
 /** 브라우저 탭 제목 (v1.9 사용자 요청) — 다른 로고 설정과 같은 드래프트/SAVE 흐름 */
 function DocTitleControl() {
@@ -1415,123 +1226,6 @@ function LogoControls() {
         ))}
       </div>
     </>
-  );
-}
-
-/** 커서 이미지 규격 맞추기 (v1.9 사용자 발견) — 브라우저는 128px를 넘는 이미지를 커서로 쓰지 못하고
- *  그냥 무시해 버려서, 커스텀 커서가 곳곳에서 시스템 커서로 되돌아가 "깨져 보이는" 원인이 된다.
- *  .cur/.ani는 자체 포맷이라 그대로 두고, 일반 이미지만 128px 이내로 줄인다. */
-async function fitCursorImage(f: File): Promise<{ blob: Blob; resized: boolean }> {
-  if (/\.(cur|ani)$/i.test(f.name)) return { blob: f, resized: false };
-  const url = URL.createObjectURL(f);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, no) => {
-      const i = new Image();
-      i.onload = () => ok(i); i.onerror = no; i.src = url;
-    });
-    const max = Math.max(img.width, img.height);
-    if (max <= 128) return { blob: f, resized: false };
-    const k = 128 / max;
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(img.width * k));
-    c.height = Math.max(1, Math.round(img.height * k));
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    const blob = await new Promise<Blob | null>(ok => c.toBlob(ok, 'image/png'));
-    return blob ? { blob, resized: true } : { blob: f, resized: false };
-  } catch {
-    return { blob: f, resized: false };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-/** 마우스 커서 탭 (5.1 v1.1) — 상태별 이미지 + 핫스팟 + 전체 on/off */
-function CursorRow({ state }: { state: CursorState }) {
-  const [st, patch] = useCursorSettings();
-  const toast = useToast();
-  const entry = st.states[state];
-  // .ani는 <img>로 표시되지 않아 첫 프레임(.cur)을 뽑아 미리보기 (v1.9)
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!entry?.imgId) { setUrl(null); return; }
-    if (/^https?:\/\//i.test(entry.imgId) && !isFileUrl(entry.imgId)) { setUrl(entry.imgId); return; }
-    setUrl(null);
-    let cancelled = false;
-    let obj: string | null = null;
-    getBlob(entry.imgId).then(async b => {
-      if (!b || cancelled) return;
-      const ani = parseAni(await b.arrayBuffer());
-      if (cancelled) return;
-      obj = URL.createObjectURL(ani ? ani.frames[0] : b);
-      setUrl(obj);
-    });
-    return () => { cancelled = true; if (obj) URL.revokeObjectURL(obj); };
-  }, [entry?.imgId]);
-  const inputId = `curFile-${state}`;
-  const setEntry = (p: Partial<{ imgId: string; hx: number; hy: number }>) =>
-    patch({ states: { ...st.states, [state]: { imgId: entry?.imgId ?? '', hx: 0, hy: 0, ...entry, ...p } } });
-  const imageSource = useImageSource(url => setEntry({ imgId: url }));
-  return (
-    <div className="set-row" style={{ flexWrap: 'wrap' }} tabIndex={0}
-      onDragOver={e => e.preventDefault()} {...imageSource.handlers}>
-      <div className="l" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <span style={{
-          width: 36, height: 36, borderRadius: 9, border: '1.5px dashed var(--line)',
-          display: 'grid', placeItems: 'center', overflow: 'hidden', flexShrink: 0,
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {url ? <img src={url} alt="" style={{ maxWidth: 32, maxHeight: 32 }} /> : <span style={{ color: 'var(--faint)', fontSize: 14 }}>✛</span>}
-        </span>
-        <div><b>{CURSOR_STATE_LABEL[state].label}</b><small>{CURSOR_STATE_LABEL[state].desc}</small></div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input id={inputId} type="file" accept="image/png,image/gif,image/webp,image/x-icon,.cur,.ani" style={{ display: 'none' }}
-          onChange={async e => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (!f) return;
-            const { blob, resized } = await fitCursorImage(f);
-            setEntry({ imgId: await putBlob(blob) });
-            if (resized) toast('커서로 쓸 수 있게 128px 이내로 줄였습니다 (원본이 너무 컸음)');
-          }} />
-        <button className="btn btn-ghost" style={{ height: 33, padding: '0 12px', fontSize: 11 }}
-          onClick={() => document.getElementById(inputId)?.click()}>{entry ? 'CHANGE' : 'UPLOAD'}</button>
-        <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 이미지 주소 붙여넣기</button>
-        {entry && (
-          <>
-            <span className="cp-lb">핫스팟 X</span>
-            <KStep value={entry.hx} min={0} max={32} step={1} onChange={v => setEntry({ hx: v })} />
-            <span className="cp-lb">Y</span>
-            <KStep value={entry.hy} min={0} max={32} step={1} onChange={v => setEntry({ hy: v })} />
-            <button className="btn btn-ghost" style={{ height: 33, padding: '0 12px', fontSize: 11 }}
-              onClick={() => {
-                const next = { ...st.states };
-                delete next[state];
-                patch({ states: next });
-              }}>REMOVE</button>
-          </>
-        )}
-      </div>
-      {imageSource.element}
-    </div>
-  );
-}
-
-function CursorPane() {
-  const [st, patch] = useCursorSettings();
-  return (
-    <div className="set-sec">
-      <h3>마우스 커서</h3>
-      <div className="d">상태별 커서 등록 (png·gif·cur·ani — 32px 내외 권장) + 클릭 지점(핫스팟) — ani는 애니메이션 재생 · cur/ani는 내장 핫스팟 사용 · 등록하지 않은 상태는 기본 커서</div>
-      <p className="hint" style={{ margin: '-6px 0 10px' }}>
-        브라우저는 128px가 넘는 이미지를 커서로 쓰지 못합니다 — 큰 이미지를 올리면 자동으로 줄여서 등록합니다
-      </p>
-      <div className="set-row">
-        <div className="l"><b>커스텀 커서 사용</b><small>끄면 전부 기본 커서로 (등록 이미지는 보존)</small></div>
-        <KToggle checked={st.enabled} onChange={v => patch({ enabled: v })} />
-      </div>
-      {(Object.keys(CURSOR_STATE_LABEL) as CursorState[]).map(s => <CursorRow key={s} state={s} />)}
-    </div>
   );
 }
 
@@ -3179,7 +2873,7 @@ function FontPane() {
           <span className="cp-lb">한글 페어</span>
           <KSelect minWidth={160} value={upPair} onChange={setUpPair}
             options={[{ value: '', label: '페어 없음' }, ...fonts.map(f => ({ value: f.id, label: f.name }))]} />
-          <label className="btn btn-dark" style={{ whiteSpace: 'nowrap', cursor: 'var(--cur-pointer,pointer)' }}
+          <label className="btn btn-dark" style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
             {...fileDrop(fl => uploadFontFile(fl[0]))}>
             ↑ 파일 선택
             <input type="file" accept=".woff2,.woff,.ttf,.otf" style={{ display: 'none' }}
@@ -3314,8 +3008,6 @@ function SettingsInner() {
             <MenuPane />
           ) : tab === '게시판 관리' ? (
             <BoardPane />
-          ) : tab === '자관 질문' ? (
-            <RelQPane />
           ) : tab === '커미션' ? (
             <CommPane />
           ) : tab === 'TRPG' ? (
@@ -3324,14 +3016,10 @@ function SettingsInner() {
             <ThreadPane />
           ) : tab === '메모장' ? (
             <MemoPane />
-          ) : tab === '무드 리스트' ? (
-            <MoodPane />
           ) : tab === 'BGM' ? (
             <BgmPane />
           ) : tab === '폰트' ? (
             <FontPane />
-          ) : tab === '마우스 커서' ? (
-            <CursorPane />
           ) : tab === '회원/보안' ? (
             <MemberPane />
           ) : tab === '데이터 백업' ? (
