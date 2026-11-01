@@ -305,3 +305,25 @@ export const fmtListDate = (iso: string) => {
   const d = new Date(iso);
   return d.getFullYear() === new Date().getFullYear() ? fmtDate(iso) : `${d.getFullYear()}.${fmtDate(iso)}`;
 };
+
+/** 검색용 본문 글자 — HTML 태그·MD 이미지/링크 주소를 걷어 내고 화면에 보이는 글자만 남긴다.
+ *  원문 그대로 찾으면 `img`·`span`·`https` 같은 단어가 모든 글에 걸린다 */
+export function postBodyText(body: string): string {
+  return body
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/g, "'").replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ');
+}
+
+/** 게시글 검색 — 제목·작성자·태그·본문. `k`는 소문자로 바꾼 검색어.
+ *  비밀글 본문은 `secretBody`가 참일 때(=읽을 수 있는 사람)만 찾는다 — 본문으로 걸리면 내용을 짐작할 수 있다 */
+export function postMatches(p: Post, k: string, secretBody = false): boolean {
+  if (!k) return true;
+  return p.title.toLowerCase().includes(k) ||
+    p.author.toLowerCase().includes(k) ||
+    (p.tags ?? []).some(t => t.toLowerCase().includes(k)) ||
+    ((!p.secret || secretBody) && postBodyText(p.body).toLowerCase().includes(k));
+}
