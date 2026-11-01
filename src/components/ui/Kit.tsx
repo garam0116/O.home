@@ -334,11 +334,13 @@ export function KDate({ value, onChange, placeholder = 'YYYY-MM-DD', style }: {
 }
 
 /* ---------- 접힘형 검색 (6.4) ---------- */
-export function SearchBar({ placeholder = '검색', light, onSearch }: {
+export function SearchBar({ placeholder = '검색', light, onSearch, initial = '' }: {
   placeholder?: string; light?: boolean; onSearch?: (q: string) => void;
+  /** 처음 채워 둘 검색어 — 주소에 남은 검색어로 돌아왔을 때 입력칸을 펼쳐서 보여 준다 */
+  initial?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(!!initial);
+  const [q, setQ] = useState(initial);
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className={`searchbar ${light ? 'light' : ''} ${open ? 'open' : ''}`}>

@@ -62,21 +62,29 @@ function BoardInner() {
   const cmtCount = (p: Post) => commentsFor(cmtRows, 'post', p.id, p.comments).length;
   const { st: boardSet } = useBoardSettings();   // 시스템 뱃지 색 (환경설정 > 게시판 관리)
   const [cat, setCat] = useState('전체');
-  const [q, setQ] = useState('');
-  /* 페이지 번호는 주소(`?page=3`)에 둔다 (v2.5 사용자 요청) — 컴포넌트 상태로만 두면 글을 읽고
-     뒤로가기(iOS 스와이프 포함)했을 때 목록이 새로 그려지며 1페이지로 돌아갔다.
+  /* 페이지 번호·검색어는 주소(`?page=3&q=단어`)에 둔다 (v2.5 사용자 요청) — 컴포넌트 상태로만 두면 글을 읽고
+     뒤로가기(iOS 스와이프 포함)했을 때 목록이 새로 그려지며 1페이지·검색 전으로 돌아갔다.
+     1페이지이거나 검색어가 없으면 그 값은 주소에서 뺀다.
      push가 아니라 replace로 바꿔서, 페이지를 넘길 때마다 방문 기록이 쌓이지는 않게 한다 */
   const page = Math.max(1, parseInt(params.get('page') ?? '', 10) || 1);
-  const setPage = (n: number) => {
+  const q = (params.get('q') ?? '').trim();
+  const setUrl = (next: { page?: number; q?: string }) => {
     const sp = new URLSearchParams(params.toString());
-    if (n <= 1) sp.delete('page'); else sp.set('page', String(n));
+    if (next.page !== undefined) {
+      if (next.page <= 1) sp.delete('page'); else sp.set('page', String(next.page));
+    }
+    if (next.q !== undefined) {
+      const v = next.q.trim();
+      if (v) sp.set('q', v); else sp.delete('q');
+    }
     const qs = sp.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
+  const setPage = (n: number) => setUrl({ page: n });
 
-  // 게시판 전환 시 필터 초기화 — 페이지는 새 게시판 주소에 `?page`가 없으니 저절로 1이 된다
+  // 게시판 전환 시 분류 초기화 — 페이지·검색어는 새 게시판 주소에 없으니 저절로 비워진다
   const [prevBid, setPrevBid] = useState(bid);
-  if (prevBid !== bid) { setPrevBid(bid); setCat('전체'); setQ(''); }
+  if (prevBid !== bid) { setPrevBid(bid); setCat('전체'); }
 
   // 권한 3단계 — mock 단계에선 로그인 전제 (로드뷰 4.10과 동일 규칙)
   const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
@@ -128,7 +136,7 @@ function BoardInner() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <SearchBar onSearch={v => { setQ(v); setPage(1); }} />
+          <SearchBar key={bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />
           {allow(board.permWrite) && !!user && (
             <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>✎ WRITE</button>
           )}
