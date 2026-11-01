@@ -8,7 +8,7 @@ import {
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
-import { SearchBar, KInput } from '@/components/ui/Kit';
+import { SearchBar, KInput, KTextarea } from '@/components/ui/Kit';
 import { useBlobUrl } from '@/lib/blobStore';
 import { useImageSource, resolveImageRef, type ImageSource } from '@/components/ui/ImageSource';
 import { Modal, ConfirmModal, useConfirmDelete } from '@/components/ui/Modal';
@@ -134,8 +134,12 @@ function RoadBlock({ item, comments, onComment, onEditComment, onDeleteComment, 
               )}
               {editCid === c.id ? (
                 <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
-                  <KInput value={editText} autoFocus onChange={e => setEditText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditCid(null); }}
+                  {/* Enter 저장 · Shift+Enter 줄바꿈 (v2.2 사용자 요청) — 한글 조합 중 Enter는 무시 */}
+                  <KTextarea rows={1} className="cmt-ta" value={editText} autoFocus onChange={e => setEditText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') { setEditCid(null); return; }
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); saveEdit(); }
+                    }}
                     style={{ flex: 1 }} />
                   <button className="btn btn-dark" style={{ padding: '4px 11px', fontSize: 10.5 }} onClick={saveEdit}>SAVE</button>
                   <button className="btn btn-ghost" style={{ padding: '4px 9px', fontSize: 10.5 }} onClick={() => setEditCid(null)}>✕</button>
@@ -153,10 +157,12 @@ function RoadBlock({ item, comments, onComment, onEditComment, onDeleteComment, 
             <GuestIdBar name={gName} onName={setGName} />
           )}
           <div className="ci-row" style={guestMode && canComment ? undefined : { display: 'contents' }}>
-            <KInput placeholder={canComment ? (replyTo ? '답글 작성...' : '댓글 남기기...') : '댓글은 로그인 후'} value={text}
+            {/* Enter 등록 · Shift+Enter 줄바꿈 (v2.2 사용자 요청) — 한글 조합 중 Enter는 무시 */}
+            <KTextarea rows={1} className="cmt-ta"
+              placeholder={canComment ? (replyTo ? '답글 작성...' : '댓글 남기기...') : '댓글은 로그인 후'} value={text}
               disabled={!canComment}
               onChange={e => setText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') post(); }} />
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); post(); } }} />
             <button className="btn btn-dark" disabled={!canComment} onClick={post}>POST</button>
           </div>
         </div>

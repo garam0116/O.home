@@ -83,8 +83,14 @@ a{color:inherit;text-decoration:none}
   background:var(--top-bg);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--line-dark);
 }
-.brand{font-family:var(--serif);font-size:calc(21px*var(--fs,1));letter-spacing:.32em;font-weight:600;color:var(--top-brand);cursor:pointer;white-space:nowrap}
-.brand small{display:block;font-family:var(--font-logosub,var(--sans));font-weight:var(--fw-logosub,400);font-size:calc(8.5px*var(--fs,1)*var(--fs-logosub,1));letter-spacing:.42em;color:#8d939d;margin-top:-2px}
+.brand{font-family:var(--serif);font-size:calc(21px*var(--fs,1)*var(--brand-fit,1));letter-spacing:.32em;font-weight:600;color:var(--top-brand);cursor:pointer;white-space:nowrap}
+.brand small{display:block;font-family:var(--font-logosub,var(--sans));font-weight:var(--fw-logosub,400);font-size:calc(8.5px*var(--fs,1)*var(--fs-logosub,1)*var(--brand-fit,1));letter-spacing:.42em;color:#8d939d;margin-top:-2px}
+/* 로고 이미지 (v2.2) — 상단바 높이 안에서 비율 유지 · 서브타이틀이 있으면 그만큼 낮게 */
+.brand.has-img{display:flex;flex-direction:column;justify-content:center;line-height:0}
+.brand-img{display:block;height:auto;width:auto;max-height:38px;max-width:min(320px,60vw);object-fit:contain;-webkit-user-drag:none}
+.brand.has-img small{line-height:1.4;margin-top:3px}
+.brand.has-img:has(small) .brand-img{max-height:30px}
+.brand-img.m{display:none}
 .brand small.al-left{text-align:left}.brand small.al-center{text-align:center}.brand small.al-right{text-align:right}
 .gnb{display:flex;gap:2px;flex:1;min-width:0;position:relative;--fs:var(--fs-menu,1)} /* min-width:0 — 가용 폭 그대로 측정 (⋯ 수납 계산, v1.9) */
 .gnb button,.gnb a.gnb-link{
@@ -1601,6 +1607,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .cmt.reply-depth{margin-left:22px;padding-left:12px;border-left:2px solid var(--line)}
 .cmt-input{border-top:1px solid var(--line);padding:12px;display:flex;gap:8px}
 .cmt-input .btn{white-space:nowrap}
+/* 댓글 입력 (v2.2) — 한 줄 높이로 시작해 Shift+Enter 줄바꿈만큼 늘어남 · 너무 길면 안에서 스크롤 */
+.k-textarea.cmt-ta{min-height:0;line-height:1.45;max-height:140px;display:block}
+.cmt-input .btn{align-self:flex-end}
 /* 특수문자 프리셋 팝업 (v1.9) — SymbolInput */
 .sym-pop{position:fixed;z-index:120;padding:8px;background:var(--panel-solid,#fff);border:1px solid var(--line);border-radius:11px;box-shadow:var(--sh-dd)} /* body 포털 — 패널 overflow에 잘리지 않음 (v1.9) */
 .sym-pop .sym-tabs{display:flex;gap:2px;margin-bottom:6px}
@@ -1790,6 +1799,12 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 @media (max-width:620px){
   .gnb{display:none}
   .topbar{padding:0 16px;gap:12px}
+  /* 로고는 남는 폭만 차지하고 넘치면 글자를 줄여 맞춤 (v2.2 — TopBar useBrandFit) */
+  .brand{flex:1 1 auto;min-width:0;overflow:hidden}
+  .brand-img{max-width:100%}
+  .brand-img.pc{display:none}
+  .brand-img.m{display:block}
+  .topbar > :not(.brand){flex-shrink:0}
   /* gnb(flex:1)가 숨어 우측 밀림이 사라짐 — 알림·프로필/로그인 우측 정렬 복원 (8장) */
   .user-wrap,.login-link{margin-left:auto}
   .page{padding:16px 16px 90px}
@@ -1882,3 +1897,26 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .up-busy{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:121;display:flex;align-items:center;gap:9px;padding:10px 18px;border-radius:999px;background:var(--dd-bg);color:var(--dd-fg);font-size:calc(12.5px*var(--fs,1));box-shadow:0 10px 30px rgba(0,0,0,.3);border:1px solid var(--line-dark);backdrop-filter:blur(8px)}
 .up-spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--line-dark);border-top-color:var(--accent);animation:upSpin .7s linear infinite;flex-shrink:0}
 @keyframes upSpin{to{transform:rotate(360deg)}}
+
+/* ---------- 모바일 앱 셸 해제 (v2.2 사용자 제보 — 아이폰에서 아래로 끝까지 안 내려가고, 위로도 잘 안 올라감) ----------
+   PC는 「body 고정 + #appMain 안에서만 스크롤」 구조를 유지한다.
+   아이폰 Safari는 100vh를 주소창이 접힌 상태의 높이로 잡아 화면 아래쪽이 툴바 뒤에 가려지고,
+   문서 자체가 스크롤되지 않으니 주소창 접힘·관성 스크롤도 제대로 동작하지 않았다.
+   모바일에서는 문서 전체가 스크롤되게 풀고, 상단바는 sticky로 붙여 둔다.
+   overflow-x는 hidden 대신 clip — hidden은 세로까지 스크롤 영역을 만들어 같은 문제가 되살아난다 */
+body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC는 100vh와 같음) */
+@media (max-width:620px){
+  html{overflow-x:clip;background:var(--bg-g2)}
+  body{height:auto;min-height:100dvh;overflow:visible;overflow-x:clip;background:transparent}
+  #appMain,body.main-fixed #appMain,body.edit-on #appMain,#appMain:has(.settings-layout){
+    flex:1 0 auto;overflow:visible;overflow-x:clip;scrollbar-gutter:auto}
+  /* 배경 그라데이션은 문서 길이만큼 늘어나지 않게 고정 레이어에서 칠한다 (배경 이미지가 있으면 그 위에) */
+  body::before{
+    inset:auto;top:0;left:0;right:0;height:100lvh;
+    background-image:var(--bg-image,none),
+      radial-gradient(1100px 500px at 50% -10%,rgba(255,255,255,.10),transparent 60%),
+      linear-gradient(var(--bg-angle,180deg),var(--bg-g1) 0%,var(--bg-g2) 100%);
+    background-size:cover,100% 100%,100% 100%;
+  }
+  .setup-wrap{overflow:visible}
+}

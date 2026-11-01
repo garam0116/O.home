@@ -32,6 +32,13 @@ export function TopBar() {
     : [];
   const [site, , siteLoaded] = useSiteSettings();    // 로고 텍스트/서브/정렬 (5.2)
   const avatarSrc = useBlobUrl(user?.avatarUrl);     // 프로필 이미지 (마이페이지, v1.9)
+  // 로고 이미지 (v2.2 사용자 요청) — 모바일용만 있으면 PC는 텍스트, 모바일은 이미지
+  const logoPcRaw = useBlobUrl(site.logoImage);
+  const logoMRaw = useBlobUrl(site.logoImageM);
+  const logoPc = logoPcRaw || logoMRaw;
+  const logoM = logoPcRaw && logoMRaw && logoMRaw !== logoPcRaw ? logoMRaw : undefined;
+  const brandRef = useRef<HTMLDivElement>(null);
+  const brandFit = useBrandFit(brandRef, `${site.title}|${site.subtitle}|${logoPc ?? ''}|${siteLoaded}`);
   const userRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,8 +108,18 @@ export function TopBar() {
   return (
     <header className="topbar">
       {/* 로고 — 텍스트·서브타이틀·정렬은 환경설정 > 디자인 (5.2) */}
-      <div className="brand" onClick={() => nav('/')}>
-        {siteLoaded && site.title}
+      {/* 로고 이미지 (v2.2) — 지정하면 텍스트 대신 이미지 · 모바일용이 따로 있으면 620px 이하에서 교체.
+          텍스트 로고는 폭이 모자라면 글자 크기·간격을 함께 줄여 맞춘다 (useBrandFit) */}
+      <div className={`brand ${logoPc ? 'has-img' : ''}`} ref={brandRef} onClick={() => nav('/')}
+        style={{ '--brand-fit': brandFit } as React.CSSProperties}>
+        {siteLoaded && (logoPc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={`brand-img ${logoM ? 'pc' : ''}`} src={logoPc} alt={site.title} draggable={false} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {logoM && <img className="brand-img m" src={logoM} alt={site.title} draggable={false} />}
+          </>
+        ) : site.title)}
         {siteLoaded && site.subtitle && <small className={`al-${site.align}`}>{site.subtitle}</small>}
       </div>
 
@@ -214,4 +231,36 @@ export function TopBar() {
       )}
     </header>
   );
+}
+
+/**
+ * 텍스트 로고 자동 맞춤 (v2.2 사용자 제보 — 모바일에서 「INTOXICATION」처럼 긴 로고가 오른쪽으로 넘쳐
+ * 화면이 옆으로 밀리고 잘렸다). 로고 칸이 받은 폭보다 글자가 넓으면 그 비율만큼 --brand-fit을 낮춰
+ * 글자 크기·자간(em 단위라 함께 줄어듦)을 줄인다. 넉넉하면 1 그대로라 PC 모습은 바뀌지 않는다.
+ */
+function useBrandFit(ref: React.RefObject<HTMLDivElement | null>, key: string) {
+  const [fit, setFit] = useState(1);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        el.style.setProperty('--brand-fit', '1');   // 원래 크기에서 잰다
+        const need = el.scrollWidth, have = el.clientWidth;
+        const next = need > have + 1 && have > 0 ? Math.max(0.45, Math.floor((have / need) * 1000) / 1000) : 1;
+        el.style.setProperty('--brand-fit', String(next));
+        setFit(f => (f === next ? f : next));
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
+    document.fonts?.ready.then(measure).catch(() => {});
+    window.addEventListener('resize', measure);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [ref, key]);
+  return fit;
 }

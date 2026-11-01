@@ -17,6 +17,10 @@ export interface SiteSettings {
   // 브라우저 탭 아이콘 (v2.0 사용자 요청) — 비우면 기본 아이콘.
   // 서버 모드면 저장소 주소라 서버 메타데이터에도 그대로 실리고, 로컬 모드면 파일 id라 화면에서만 붙는다
   favicon?: string;
+  // 로고 이미지 (v2.2 사용자 요청) — 지정하면 상단바에 로고 텍스트 대신 이미지를 띄운다.
+  // 모바일용을 따로 비우면 PC용을 모바일에도 쓴다. 둘 다 비우면 지금처럼 텍스트 로고
+  logoImage?: string;
+  logoImageM?: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
