@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useBoards, MAIN_BOARD_ID, postNumbers, postHref } from '@/lib/boardStore';
-import { BOARD_SEED, Post, useLocalList } from '@/lib/postStore';
+import { BOARD_SEED, Post, useLocalList, postMatches } from '@/lib/postStore';
 
 /** 작성일 — 저장값은 UTC(ISO)라 앞 10글자를 자르면 한국 시간 오전 9시 전 글이 하루 전 날짜로 나온다.
  *  보는 사람의 현지 날짜로 바꿔 표시한다 */
@@ -36,7 +36,8 @@ function PostList() {
     const key = query.trim().toLowerCase();
     return posts.filter(p =>
       (!boardId || (p.boardId ?? MAIN_BOARD_ID) === boardId) &&
-      (!key || p.title.toLowerCase().includes(key) || p.author.toLowerCase().includes(key)))
+      // 본문까지 찾는다 (사용자 요청) — 관리자 화면이라 비밀글 본문도 포함
+      postMatches(p, key, true))
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [posts, boardId, query]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -74,7 +75,7 @@ function PostList() {
             ...boardOptions,
             ...missingBoards.map(id => ({ value: id, label: boardName(id) })),
           ]} />
-        <KInput aria-label="제목 또는 작성자 검색" placeholder="제목·작성자 검색" value={query}
+        <KInput aria-label="제목·작성자·본문 검색" placeholder="제목·작성자·본문 검색" value={query}
           style={{ flex: '1 1 0', minWidth: 0, maxWidth: 260 }}
           onChange={e => { setQuery(e.target.value); setPage(1); }} />
       </div>

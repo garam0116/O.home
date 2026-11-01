@@ -9,7 +9,7 @@ import { sectionHref, MAIN_SEC, useSections, sectionMenuEntries } from '@/lib/se
 import { useCustomLinks, linkEntries } from '@/lib/linkStore';
 import { useBoards } from '@/lib/boardStore';
 import { Modal } from '@/components/ui/Modal';
-import { KTextarea, KSelect, KStep, KCheck } from '@/components/ui/Kit';
+import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
 import { ColorField } from '@/components/ui/ColorField';
 import { useFonts } from '@/lib/fontStore';
 import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem } from '@/components/main/widgetEditors';
@@ -717,6 +717,55 @@ export function ApplyWidget({ conf }: { conf: WidgetConf }) {
   );
 }
 
+/* ---------- 게시판 검색 (사용자 요청) ----------
+   모든 게시판의 글을 찾는 검색창 — 엔터·돋보기를 누르면 `/search?q=` 결과로 간다.
+   결과 화면은 게시판 목록(갤러리형 1)과 같은 모양이다. 제목·안내 문구는 편집모드 우클릭 「설정」에서 */
+export function SearchWidget({ conf }: { conf: WidgetConf }) {
+  const router = useRouter();
+  const { editOn, updateWidget } = useMainStore();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const s = conf.settings as { title?: string; placeholder?: string };
+  const [draft, setDraft] = useState(s);
+  useEditEvent(conf.id, () => { setDraft({ ...s }); setOpen(true); });
+  const go = () => {
+    const v = q.trim();
+    if (editOn || !v) return;   // 편집 중에는 배치만 — 이동하지 않는다
+    router.push(`/search?q=${encodeURIComponent(v)}`);
+  };
+  return (
+    <div className="panel widget search-wg">
+      <h4>{s.title?.trim() || 'SEARCH'}</h4>
+      <form className="search-wg-box" role="search" onSubmit={e => { e.preventDefault(); go(); }}>
+        <input value={q} onChange={e => setQ(e.target.value)} aria-label="전체 글 검색"
+          placeholder={s.placeholder?.trim() || '전체 글 검색'} />
+        <button type="submit" aria-label="검색">
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <circle cx="10.5" cy="10.5" r="6.3" />
+            <path d="m15.3 15.3 5.2 5.2" />
+          </svg>
+        </button>
+      </form>
+
+      <Modal open={open} onClose={() => setOpen(false)} small title="검색 위젯"
+        desc="모든 게시판의 제목·작성자·태그·본문에서 찾습니다 — 메뉴에서 감춘 게시판은 빼고"
+        actions={<>
+          <button className="btn btn-ghost" onClick={() => setOpen(false)}>CANCEL</button>
+          <button className="btn btn-dark" onClick={() => {
+            updateWidget(conf.id, { settings: { ...conf.settings, ...draft } }, { persist: true }); setOpen(false);
+          }}>SAVE</button>
+        </>}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <label className="cp-lb">위젯 제목</label>
+          <KInput value={draft.title ?? ''} placeholder="SEARCH" onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} />
+          <label className="cp-lb">입력칸 안내 문구</label>
+          <KInput value={draft.placeholder ?? ''} placeholder="전체 글 검색" onChange={e => setDraft(d => ({ ...d, placeholder: e.target.value }))} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 /* ---------- 타입 → 렌더러 ---------- */
 export function renderWidget(conf: WidgetConf) {
   switch (conf.type) {
@@ -733,6 +782,7 @@ export function renderWidget(conf: WidgetConf) {
     case 'deco': return <DecoWidget conf={conf} />;
     case 'memoboard': return <MemoBoardWidget />;
     case 'apply': return <ApplyWidget conf={conf} />;
+    case 'search': return <SearchWidget conf={conf} />;
     default: return <div className="panel widget"><h4>{WIDGET_META[conf.type]?.title ?? conf.type}</h4></div>;
   }
 }
