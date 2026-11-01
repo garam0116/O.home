@@ -35,9 +35,12 @@ export default function MainPage() {
     if (!MULTI_TYPES.includes(addType) && state.widgets.some(w => w.type === addType)) setAddType('freetext');
   }, [addOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const enabled = state.widgets.filter(w => w.enabled);
+  // 메뉴리스트 위젯은 그리지 않음 — 모바일 메뉴는 상단바 ≡ 버튼이 대신함 (저장 데이터는 보존)
+  const enabled = state.widgets.filter(w => w.enabled && w.type !== 'menu');
   const byCol = (c: 1 | 2 | 3) => enabled.filter(w => w.col === c);
   const mOrder = (id: string) => {
+    // 고정 슬라이드 배너는 모바일에서 항상 맨 위 (회원정보창 -1보다 앞)
+    if (state.widgets.find(w => w.id === id)?.fixed) return -2;
     const i = state.mobileOrder.indexOf(id);
     return i === -1 ? 99 : i;
   };

@@ -3,6 +3,7 @@
 // 로고 클릭 = 메인 이동 (v1.5) · 상위 메뉴 클릭 = 첫 하위 페이지 이동 (v1.8)
 // 편집모드 중 페이지 이동 시도 → 종료 확인 모달 (v1.8)
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { boardEntries, useMenuSettings, buildMenu } from '@/lib/menuStore';
 import { useBoards } from '@/lib/boardStore';
@@ -21,6 +22,7 @@ export function TopBar() {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);       // 모바일 메뉴 패널 (≡) — 메뉴리스트 위젯 대체
   const [menuSet, , menuLoaded] = useMenuSettings(); // 메뉴 관리 (5.2) — 노출·순서·이름
   const { boards, loaded: boardsLoaded } = useBoards(); // 다중 게시판 (5.2) — 게시판 그룹에 동적 반영
   const { map: secMap } = useSections();
@@ -102,6 +104,18 @@ export function TopBar() {
     return () => { ro.disconnect(); window.removeEventListener('resize', compute); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuKey]);
+  // 모바일 메뉴 패널 — 페이지가 바뀌면 닫고, 열려 있는 동안 뒤 화면 스크롤 잠금
+  useEffect(() => { setNavOpen(false); setMenuOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setNavOpen(false); };
+    window.addEventListener('keydown', esc);
+    return () => { html.style.overflow = prev; window.removeEventListener('keydown', esc); };
+  }, [navOpen]);
+
   const visMenu = menu.slice(0, visCount);
   const moreMenu = menu.slice(visCount);
 
@@ -201,13 +215,14 @@ export function TopBar() {
       {/* 사용자 영역 — 비로그인: 로그인 버튼 / 로그인: 프로필 드롭다운 (3장 주석, 4.0) */}
       {user ? (
         <div className="user-wrap" ref={userRef}>
-          <div className="user-chip" onClick={() => setMenuOpen(o => !o)}>
+          <div className="user-chip" onClick={() => { setNavOpen(false); setMenuOpen(o => !o); }}>
             {/* 기본 아바타는 이니셜 없이 단색/그라데이션 (v1.9) */}
             <div className="avatar" style={!avatarSrc && user.avatarColor ? { background: user.avatarColor } : undefined}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {avatarSrc && <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
             </div>
-            {user.nickname} <span style={{ fontSize: 9, color: '#8d939d' }}>▾</span>
+            {/* 모바일에서는 사진만 — 닉네임·▾는 숨겨 로고 자리를 남김 */}
+            <span className="user-name">{user.nickname} <span style={{ fontSize: 9, color: '#8d939d' }}>▾</span></span>
           </div>
           <div className={`user-menu ${menuOpen ? 'open' : ''}`}>
             <button onClick={() => { setMenuOpen(false); nav('/mypage'); }}>정보수정</button>
@@ -215,7 +230,7 @@ export function TopBar() {
               <>
                 {/* 편집모드 항목은 지원 페이지에서만 노출 (편집 중이면 끄기 위해 항상 표시) */}
                 {(editAvailable || editOn) && (
-                  <button onClick={() => { setMenuOpen(false); toggleEdit(); }}>
+                  <button className="um-edit" onClick={() => { setMenuOpen(false); toggleEdit(); }}>
                     편집모드 {editOn ? '끄기' : '켜기'}
                   </button>
                 )}
@@ -229,7 +244,60 @@ export function TopBar() {
       ) : (
         <button className="login-link" onClick={() => nav('/login')}>로그인</button>
       )}
+
+      {/* 모바일 메뉴 버튼 — 아이콘: Lucide 「menu」 (ISC 라이선스) */}
+      <button className="m-nav-btn" aria-label="메뉴 열기" aria-expanded={navOpen}
+        onClick={() => { setMenuOpen(false); setNavOpen(o => !o); }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" />
+        </svg>
+      </button>
+      {/* 상단바에 backdrop-filter가 있어 fixed 패널이 바 안에 갇히므로 body로 내보낸다 */}
+      {navOpen && createPortal(
+        <MobileNav menu={menu} pathname={pathname} onNav={href => { setNavOpen(false); nav(href); }} onClose={() => setNavOpen(false)} />,
+        document.body,
+      )}
     </header>
+  );
+}
+
+type MenuItem = ReturnType<typeof buildMenu>[number];
+
+/** 모바일 메뉴 패널 — 오른쪽에서 열림. 하위 메뉴는 펼침/접힘, 현재 페이지가 속한 그룹은 처음부터 펼침 */
+function MobileNav({ menu, pathname, onNav, onClose }: {
+  menu: MenuItem[]; pathname: string; onNav: (href: string) => void; onClose: () => void;
+}) {
+  const cur = pathname + (typeof window !== 'undefined' ? window.location.search : '');
+  const isCur = (href?: string) => !!href && (href === cur || href === pathname);
+  const [open, setOpen] = useState<string | null>(() => menu.find(m => m.children?.some(c => isCur(c.href)))?.label ?? null);
+  return (
+    <div className="m-nav" role="dialog" aria-modal="true" aria-label="메뉴">
+      <div className="m-nav-dim" onClick={onClose} />
+      <nav className="m-nav-panel">
+        <div className="m-nav-head">
+          <button className="m-nav-x" aria-label="메뉴 닫기" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          </button>
+        </div>
+        <div className="m-nav-list">
+          {menu.map(m => m.children ? (
+            <div key={m.label} className={`m-nav-grp ${open === m.label ? 'open' : ''} ${m.children.some(c => isCur(c.href)) ? 'on' : ''}`}>
+              <button className="m-nav-top" aria-expanded={open === m.label}
+                onClick={() => setOpen(o => (o === m.label ? null : m.label))}>{m.label}</button>
+              <div className="m-nav-sub">
+                {m.children.map(c => (
+                  <button key={c.href} className={isCur(c.href) ? 'on' : ''} onClick={() => onNav(c.href)}>{c.label}</button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <button key={m.label} className={`m-nav-top ${isCur(m.href) ? 'on' : ''}`} onClick={() => onNav(m.href!)}>{m.label}</button>
+          ))}
+        </div>
+      </nav>
+    </div>
   );
 }
 

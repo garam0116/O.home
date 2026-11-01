@@ -148,6 +148,32 @@ a{color:inherit;text-decoration:none}
 .edit-flag.show{display:inline-block}
 .login-link{font-size:calc(12px*var(--fs,1));color:var(--top-fg);padding:7px 15px;border:1px solid var(--line-dark);border-radius:999px;transition:.15s;white-space:nowrap}
 .login-link:hover{color:var(--top-hv,#fff);border-color:var(--top-hv,#fff)}
+/* 모바일 메뉴 (≡) — 620px 이하에서만. 패널은 body 포털 (TopBar MobileNav) */
+.m-nav-btn{display:none;place-items:center;width:34px;height:34px;margin-right:-6px;border-radius:8px;color:var(--top-fg);transition:.15s}
+.m-nav-btn:hover,.m-nav-btn[aria-expanded="true"]{color:var(--top-hv,#fff);background:rgba(127,127,127,.14)}
+.m-nav{position:fixed;inset:0;z-index:200}
+.m-nav-dim{position:absolute;inset:0;background:rgba(0,0,0,.45);animation:fade .18s}
+.m-nav-panel{position:absolute;top:0;right:0;bottom:0;width:min(300px,82vw);display:flex;flex-direction:column;
+  /* 테마 드롭다운색이 반투명이어도 뒤가 비치지 않게 사이트 배경색을 밑에 깐다 */
+  background:linear-gradient(var(--dd-bg),var(--dd-bg)),var(--bg-g2,#121418);color:var(--dd-fg);border-left:1px solid var(--line-dark);box-shadow:var(--sh-dd);
+  padding-bottom:env(safe-area-inset-bottom);animation:mNavIn .22s ease-out;--fs:var(--fs-menu,1)}
+@keyframes mNavIn{from{transform:translateX(100%)}}
+.m-nav-head{display:flex;justify-content:flex-end;align-items:center;height:58px;padding:0 10px;flex-shrink:0;border-bottom:1px solid var(--line-dark)}
+.m-nav-x{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;color:var(--dd-fg)}
+.m-nav-x:hover{background:var(--dd-hv)}
+.m-nav-list{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:8px}
+.m-nav-list button{display:block;width:100%;text-align:left;border-radius:8px;color:var(--dd-fg);transition:.13s;
+  font-family:var(--font-menu,var(--sans));font-weight:var(--fw-menu,400)}
+.m-nav-list button:hover{background:var(--dd-hv)}
+.m-nav-top{padding:12px 14px;font-size:calc(14px*var(--fs,1));letter-spacing:.02em}
+.m-nav-top.on,.m-nav-sub button.on{background:var(--dd-hv);font-weight:700}
+.m-nav-grp > .m-nav-top{display:flex !important;justify-content:space-between;align-items:center}
+.m-nav-grp > .m-nav-top::after{content:"▾";font-size:calc(10px*var(--fs,1));opacity:.55;transition:transform .2s}
+.m-nav-grp.open > .m-nav-top::after{transform:rotate(180deg)}
+.m-nav-grp.on > .m-nav-top{font-weight:700}
+.m-nav-sub{display:none;padding:0 0 6px 12px}
+.m-nav-grp.open .m-nav-sub{display:block}
+.m-nav-sub button{padding:10px 14px;font-size:calc(13px*var(--fs,1));opacity:.88}
 
 /* 이미지 저장 방지 (v1.9) — 보호 영역에서 이미지 드래그 반출 차단 (ImgProtect가 html에 토글) */
 .img-protect-on img{-webkit-user-drag:none;user-select:none}
@@ -1885,6 +1911,44 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .topbar > :not(.brand){flex-shrink:0}
   /* gnb(flex:1)가 숨어 우측 밀림이 사라짐 — 알림·프로필/로그인 우측 정렬 복원 (8장) */
   .user-wrap,.login-link{margin-left:auto}
+  /* 모바일 상단바: 로고 · 프로필 사진 · ≡ (닉네임은 숨김, 편집모드 항목은 모바일 미지원이라 숨김) */
+  .topbar{gap:8px}
+  .user-chip{padding:3px;gap:0}
+  .user-chip .user-name{display:none}
+  .user-menu .um-edit{display:none}
+  .m-nav-btn{display:grid}
+  .menu-list{display:none !important}
+  /* 슬라이드 배너 — 모바일에선 위젯 높이가 auto로 풀려 absolute 슬라이드만 있는 배너가 0px이 되던 문제.
+     PC에서 저장한 가로:세로 비율로 높이를 정해 같은 구도를 유지 (WidgetFrame --wgt-ar) */
+  .wgt.sized > .banner,.wgt > .banner{height:auto !important;aspect-ratio:var(--wgt-ar,610/210)}
+  /* 좁은 폭에서 긴 캡션이 넘김 점과 겹치지 않게 — 점은 아래 가운데, 캡션은 그 위 */
+  .banner .cap{left:16px;right:16px;bottom:24px}
+  .banner .cap b{font-size:calc(17px*var(--fs,1));letter-spacing:.14em;line-height:1.3}
+  .banner .dots{right:0;left:0;bottom:10px;justify-content:center}
+  /* 환경설정 — 모바일 지원: 최소 폭 해제 · 왼쪽 탭 목록은 위쪽 가로 스크롤 탭 줄로 */
+  .settings-layout{min-width:0}
+  .settings-layout > *{min-width:0}
+  .set-nav{display:flex;gap:4px;overflow-x:auto;padding:6px;scrollbar-width:none;position:sticky;top:58px;z-index:5}
+  .set-nav::-webkit-scrollbar{display:none}
+  .set-nav > *{flex-shrink:0}
+  .set-nav-item{display:flex}
+  .set-nav button{width:auto;white-space:nowrap;padding:8px 12px}
+  .set-nav-item>button:first-child{padding-right:12px}
+  .set-nav .set-nav-arch-btn{display:none}
+  .set-nav-arch{display:flex;gap:4px;margin:0 0 0 4px;padding:0 0 0 8px;border-top:none;border-left:1px solid var(--line)}
+  .settings-layout > .panel:not(.set-nav){min-height:0}
+  .set-row{flex-wrap:wrap;gap:8px 14px}
+  .set-row .l{flex:1 1 200px;min-width:0}   /* 컨트롤이 넓으면 라벨 아래 줄로 내려감 */
+  /* 오른쪽 컨트롤 묶음은 넘치면 아랫줄로 · 버튼/라벨 글자가 한 글자씩 세로로 쪼개지지 않게 */
+  .set-nav{background:var(--panel-solid,#fbfbfc)}
+  .settings-layout .set-row > :not(.l){flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+  .settings-layout .set-row > :not(.l) > *{max-width:100%}
+  .settings-layout .seg,.settings-layout .seg button,.settings-layout .mini-seg,.settings-layout .mini-seg button,
+  .settings-layout .btn,.settings-layout .cp-lb,.settings-layout .pill,.settings-layout small[style*="width"]{white-space:nowrap;flex-shrink:0}
+  .settings-layout .color-field{max-width:100%;min-width:0}
+  .settings-layout .seg{flex-wrap:wrap;max-width:100%}
+  .settings-layout .set-row small{overflow-wrap:anywhere}
+  .settings-layout input:not([type=checkbox]):not([type=radio]){min-width:0;max-width:100%}
   .page{padding:16px 16px 90px}
   .page-head h1{font-size:calc(24px*var(--fs,1))}
   /* 페이지 타이틀 모바일 옵션 (v1.9 사용자 요청) — 「생략」이면 모바일에서만 제목·설명 숨김

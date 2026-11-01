@@ -47,15 +47,38 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
   const slides = ((conf.settings.slides as BannerSlide[]) ?? []).length > 0
     ? (conf.settings.slides as BannerSlide[]) : DEMO_SLIDES;
   const interval = (conf.settings.interval as number) ?? 4;
+  // 손으로 넘기거나 점을 누르면 자동 넘김 타이머를 처음부터 다시 셈 (자동 넘김은 계속)
+  const [tick, setTick] = useState(0);
+  const jump = (i: number) => { setCur(((i % slides.length) + slides.length) % slides.length); setTick(t => t + 1); };
 
   useEffect(() => {
     if (slides.length < 2) return;
     const t = setInterval(() => setCur(c => (c + 1) % slides.length), Math.max(2, interval) * 1000);
     return () => clearInterval(t);
-  }, [slides.length, interval]);
+  }, [slides.length, interval, tick]);
+
+  // 스와이프 넘기기 (모바일) — 가로로 40px 이상 밀면 이전/다음. 밀었을 때는 링크 이동(click)을 막음
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const p = e.touches[0];
+    touch.current = { x: p.clientX, y: p.clientY };
+    swiped.current = false;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const st = touch.current;
+    touch.current = null;
+    if (!st || editOn || slides.length < 2) return;
+    const p = e.changedTouches[0];
+    const dx = p.clientX - st.x, dy = p.clientY - st.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    swiped.current = true;
+    jump(Math.min(cur, slides.length - 1) + (dx < 0 ? 1 : -1));
+  };
 
   const s = slides[Math.min(cur, slides.length - 1)];
   const go = () => {
+    if (swiped.current) { swiped.current = false; return; }
     if (editOn || !s.link) return;
     // 기존 저장분에 풀주소가 있어도 같은 사이트면 내부 이동으로 (v1.9)
     const l = normalizeInternalLink(s.link);
@@ -64,7 +87,8 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
   };
 
   return (
-    <div className="banner" style={{ cursor: s.link && !editOn ? 'pointer' : undefined }} onClick={go}>
+    <div className="banner" style={{ cursor: s.link && !editOn ? 'pointer' : undefined, touchAction: 'pan-y' }} onClick={go}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touch.current = null; }}>
       {slides.map((sl, i) => (
         <div key={sl.id} className={`slide ${i === Math.min(cur, slides.length - 1) ? 'on' : ''}`}>
           {sl.imgId
@@ -79,7 +103,7 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
       <div className="cap"><b>{s.cap}</b><span>{s.sub}</span></div>
       <div className="dots" onClick={e => e.stopPropagation()}>
         {slides.map((sl, i) => (
-          <i key={sl.id} className={i === Math.min(cur, slides.length - 1) ? 'on' : ''} onClick={() => setCur(i)} />
+          <i key={sl.id} className={i === Math.min(cur, slides.length - 1) ? 'on' : ''} onClick={() => jump(i)} />
         ))}
       </div>
       {/* 배너 관리 (관리자) — 배너에 마우스를 올렸을 때만 표시 */}
