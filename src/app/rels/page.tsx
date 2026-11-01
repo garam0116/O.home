@@ -15,14 +15,8 @@ import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
 import { OrderMenu, orderNoOf, moveToOrder } from '@/components/ui/OrderMenu';
 import { useLatestUpdates, fmtUpdate } from '@/lib/relUpdates';
+import { safeLink } from '@/lib/link';
 
-/** 카드 링크로 쓸 수 있는 주소만 — http(s)·사이트 안 경로·#·? */
-const safeLink = (value?: string) => {
-  const url = value?.trim();
-  if (!url) return undefined;
-  if (/^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url) || url.startsWith('#') || url.startsWith('?')) return url;
-  return undefined;
-};
 
 function RelsInner() {
   const router = useRouter();

@@ -3,7 +3,7 @@
 // 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭) · 등록 시 내 캐릭터 연동
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, Relation, Visibility, RelCpTag, RelMember, RelSideSlot, auMember, auStyle, fullShadow, CP_LABEL } from '@/lib/charStore';
+import { Character, Relation, Visibility, RelMember, RelSideSlot, auMember, auStyle, fullShadow } from '@/lib/charStore';
 import { ColorField } from '@/components/ui/ColorField';
 import { isValidSlug, slugify } from '@/lib/link';
 import { newId } from '@/lib/postStore';
@@ -43,8 +43,8 @@ export interface RelFormValue {
   nameColor?: string;        // 자관명(히어로 타이틀) 글씨색 (v1.9 사용자 요청 — 미지정: 테마)
   cpColor?: string;          // 캐치프레이즈 글씨색 (미지정: 테마)
   ddayColor?: string;        // 디데이 글씨색 (v2.0 사용자 요청 — 미지정: var(--faint))
-  cpTagBg?: string;          // CP/NCP 뱃지 배경색 (v2.0 사용자 요청)
-  cpTagFg?: string;          // CP/NCP 뱃지 글씨색
+  cpTagBg?: string;          // LOG/LOREBOOK 버튼 배경색 (예전 CP/NCP 뱃지 색을 그대로 이어 씀)
+  cpTagFg?: string;          // LOG/LOREBOOK 버튼 글씨색
   nameShadowColor?: string;  // 자관명 그림자 색 (v2.0 사용자 요청)
   nameShadow?: number;       // 자관명 그림자 강도 %
   headerBgG1?: string;       // 헤더 이미지 없을 때 배경 그라데이션 (v2.0 사용자 요청)
@@ -56,7 +56,6 @@ export interface RelFormValue {
   themeMode: 'site' | 'custom'; // 페이지 테마 — 홈페이지 그대로 / 별도 테마컬러 (4.18 방식)
   themeColor?: string;          // 별도 테마컬러 (custom일 때)
   themeTone?: 'dark' | 'light'; // 테마컬러의 다크/라이트 느낌
-  cp: RelCpTag;              // CP/NCP (v1.9) — AU별로는 AU 관리에서 따로 지정
   fulls?: Record<string, string | undefined>;  // 멤버별 전신 이미지 (v1.9 — charId → blob id)
   fullScales?: Record<string, number>;         // 전신 크기 % (휠 조절)
   fullOffsets?: Record<string, { x: number; y: number }>; // 전신 위치 오프셋 % (드래그, v1.9)
@@ -209,7 +208,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [catchphrase, setCatchphrase] = useState(auObj ? auObj.catchphrase : (initial?.catchphrase ?? ''));
   const [visibility, setVisibility] = useState<Visibility>(initial?.visibility ?? 'public');
-  const [cp, setCp] = useState<RelCpTag>(initial?.cp ?? 'cp');   // CP/NCP (v1.9)
   // AU 편집이면 그 AU에 정한 폰트부터 (v2.0 사용자 제보 — AU 폰트가 분리되지 않던 것)
   const [fontId, setFontId] = useState((auObj?.fontId ?? initial?.fontId) ?? 'serif');
   const [bodyFontId, setBodyFontId] = useState((auObj?.bodyFontId ?? initial?.bodyFontId) ?? 'default');
@@ -271,7 +269,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // 디데이 글씨색은 별도로 지정 (v2.0 사용자 요청) — 미지정이면 기존 기본색
   const [ddayCustom, setDdayCustom] = useState(!!st?.ddayColor);
   const [ddayColor, setDdayColor] = useState(st?.ddayColor ?? '#8a8f98');
-  // CP/NCP 뱃지 색 (v2.0 사용자 요청) — 미지정이면 기본 pill 색
+  // LOG/LOREBOOK 버튼 색 — 미지정이면 기본 pill 색 (예전 CP/NCP 뱃지 색 설정을 이어 씀)
   const [tagCustom, setTagCustom] = useState(!!(st?.cpTagBg || st?.cpTagFg));
   const [cpTagBg, setCpTagBg] = useState(st?.cpTagBg ?? '#eef0f2');
   const [cpTagFg, setCpTagFg] = useState(st?.cpTagFg ?? '#5d636d');
@@ -457,7 +455,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       themeMode,
       themeColor: themeMode === 'custom' ? themeColor : undefined,
       themeTone: themeMode === 'custom' ? themeTone : undefined,
-      cp,
       auName: auObj ? auName.trim() : undefined,
       hideTimeline: hideTimeline || undefined,
       hideRp: hideRp || undefined,
@@ -976,19 +973,10 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 )}
               </div>
             )}
-            {/* CP/NCP (v1.9) — CP=커플 · NCP=커플 아님. AU마다 따로 지정은 상세의 AU 관리에서 */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <label className="k-label" style={{ margin: 0 }}>구분</label>
-              <div className="mini-seg">
-                {(['cp', 'ncp'] as RelCpTag[]).map(t => (
-                  <button key={t} className={cp === t ? 'on' : ''} onClick={() => setCp(t)}>{CP_LABEL[t]}</button>
-                ))}
-              </div>
-            </div>
-            {/* 뱃지 색 (v2.0 사용자 요청) — 자관명 위에 뜨는 CP/NCP 표시. AU마다 따로 */}
+            {/* LOG / LOREBOOK 버튼 색 — 자관명 위에 뜨는 바로가기 버튼. AU마다 따로 */}
             {(
               <div>
-                <KCheck label="CP 뱃지 색 직접 지정" checked={tagCustom} onChange={setTagCustom} />
+                <KCheck label="LOG / LOREBOOK 버튼 색 직접 지정" checked={tagCustom} onChange={setTagCustom} />
                 {tagCustom && (
                   <div className="cf-stack" style={{ marginTop: 8 }}>
                     <div className="cf-row">
@@ -999,9 +987,8 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                     </div>
                     <div className="cf-row">
                       <span className="cp-lb">미리보기</span>
-                      <span className="pill" style={{ background: cpTagBg, color: cpTagFg, borderColor: cpTagBg }}>
-                        {CP_LABEL[cp]}
-                      </span>
+                      <span className="pill" style={{ background: cpTagBg, color: cpTagFg, borderColor: cpTagBg }}>LOG</span>
+                      <span className="pill" style={{ background: cpTagBg, color: cpTagFg, borderColor: cpTagBg }}>LOREBOOK</span>
                     </div>
                   </div>
                 )}
