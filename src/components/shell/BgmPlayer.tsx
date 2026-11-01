@@ -4,6 +4,7 @@
 // 브라우저 정책상 소리 재생은 사용자의 첫 클릭부터 시작
 import React, { useEffect, useRef, useState } from 'react';
 import { useBgm } from '@/lib/bgmStore';
+import { TopButton } from './TopButton';
 
 /** 흐르는 글씨 — 재생 중이고 글자가 넘칠 때만 무한 스크롤, 평소엔 말줄임.
  *  넘침 판정은 숨김 측정용 스팬으로 — 마운트 직후(레이아웃·폰트 확정 전) 1회 측정만 하면
@@ -50,6 +51,14 @@ declare global {
   }
 }
 
+// 모바일 제목 최대 글자수 — 넘치면 잘라서 한 줄 바에 꽉 차게 (사용자 요청)
+// (한글처럼 폭이 넓은 글자라 30자도 넘치는 화면에선 CSS 말줄임이 한 번 더 막아 줌)
+const MOBILE_TITLE_MAX = 30;
+const cutTitle = (t: string) => {
+  const chars = Array.from(t); // 이모지·한글 조합이 반으로 잘리지 않게 코드포인트 단위
+  return chars.length > MOBILE_TITLE_MAX ? chars.slice(0, MOBILE_TITLE_MAX).join('').trimEnd() + '…' : t;
+};
+
 // 곡 목록 픽토그램 (리스트 줄 + 음표) — 색은 CSS에서 currentColor(--bgm-ic) 연동
 const ListIcon = () => (
   <svg viewBox="0 0 24 24">
@@ -69,6 +78,15 @@ export function BgmPlayer() {
   // 접기 상태 — 방문자별 기억 (4.1)
   const [foldState, setFolded] = useState<boolean | null>(null);
   const folded = foldState ?? false;
+  // 모바일(좁은 화면) 여부 — 제목 글자수 자르기용
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 620px)');
+    const on = () => setMobile(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const playerRef = useRef<YTPlayer | null>(null);
   const readyRef = useRef(false);       // onReady 이후에만 playVideo가 실제 동작 (그 전엔 무시됨)
   const startedRef = useRef(false);     // 한 번이라도 실제 재생 시작됨 — 첫 재생은 loadVideoById 경로 필수
@@ -250,9 +268,11 @@ export function BgmPlayer() {
     window.addEventListener('pointerup', up);
   };
 
-  if (!settings.enabled || tracks.length === 0) return null;
+  if (!settings.enabled || tracks.length === 0) return <TopButton anchor={null} left={settings.position === 'bl'} />;
 
   return (
+    <>
+    <TopButton anchor={rootRef} left={settings.position === 'bl'} />
     <div
       ref={rootRef}
       className={`bgm ${folded ? 'folded' : ''} ${settings.position === 'bl' ? 'bgm-left' : ''}`}
@@ -273,7 +293,10 @@ export function BgmPlayer() {
         : <div className="disc" style={{ animationPlayState: playing ? 'running' : 'paused' }} />}
       <div className="title">
         {/* 흐르는 글씨는 제목만 — 설명은 항상 말줄임 (정신없지 않게) */}
-        <Marquee className="tt" text={track?.title ?? ''} active={playing} />
+        {/* 모바일은 일정 글자수에서 잘라 한 줄에 꽉 차게 — 흐르는 글씨 없이 고정 */}
+        {mobile
+          ? <div className="mq tt">{cutTitle(track?.title ?? '')}</div>
+          : <Marquee className="tt" text={track?.title ?? ''} active={playing} />}
         {track?.desc && <div className="mq">{track.desc}</div>}
       </div>
       <div className="ctrl">
@@ -307,5 +330,6 @@ export function BgmPlayer() {
         </>
       )}
     </div>
+    </>
   );
 }
