@@ -169,6 +169,7 @@ a{color:inherit;text-decoration:none}
 @keyframes mqScroll{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 14px))}}
 
 /* 팝업 플레이어 */
+.bgm-dim{display:none}
 .bgm-pop{position:absolute;bottom:calc(100% + 12px);right:0;width:288px;max-height:calc(100dvh - 110px);
   display:flex;flex-direction:column;overflow:hidden;
   background:var(--bgm-bg);backdrop-filter:blur(14px);color:var(--bgm-fg);
@@ -1789,27 +1790,41 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .wgt{transform:none !important;width:auto !important;height:auto !important;position:static !important;left:auto !important;top:auto !important;margin-bottom:10px !important}
   .main-grid.abs{display:grid !important;height:auto !important}
   .settings-layout{grid-template-columns:1fr}
-  /* BGM (v2.1) — 모바일도 레코드판 하나 (오른쪽/왼쪽 아래 구석) · 누르면 레코드판 바로 위에 작은 카드로 뜸.
-     화면을 덮지 않게 폭·높이를 제한(최대 340px · 화면 높이 70%)하고, 터치하기 쉬운 크기만 유지.
-     노치/홈 바 영역(safe-area)만큼 띄움 */
+  /* BGM (v2.1) — 모바일도 레코드판 하나 (오른쪽/왼쪽 아래 구석) · 누르면 하단 시트로 플레이어가 올라옴.
+     손가락으로 누르기 쉽게 버튼·바·목록 줄을 키우고, 노치/홈 바 영역(safe-area)만큼 띄움 */
   .bgm{right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}
   .bgm.bgm-left{right:auto;left:14px}
   .bgm .disc{width:46px;height:46px;padding:3px}
   .bgm .disc:hover{transform:none}
-  .bgm-pop{width:min(340px,calc(100vw - 28px));max-height:min(70dvh,560px);bottom:calc(100% + 10px);border-radius:16px;
+  .bgm-dim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);animation:bgmFade .2s}
+  @keyframes bgmFade{from{opacity:0}}
+  .bgm-pop,.bgm.bgm-left .bgm-pop{position:fixed;left:0;right:0;bottom:0;width:auto;max-height:88dvh;
+    border-radius:20px 20px 0 0;border-bottom:none;padding-bottom:env(safe-area-inset-bottom);
+    animation:bgmSheet .26s cubic-bezier(.2,.8,.3,1);
     /* 모바일은 블러가 꺼져 있어 뒤 위젯이 비침 — 같은 배경색을 겹쳐 칠해 거의 불투명하게 (색 자체는 그대로) */
     background:linear-gradient(var(--bgm-bg),var(--bgm-bg)),linear-gradient(var(--bgm-bg),var(--bgm-bg)),var(--bgm-bg)}
-  .bgm-pop .art{aspect-ratio:12/5}
-  .bgm-pop .art .x{width:32px;height:32px}
-  .bgm-pop .np{margin-top:-24px}
-  .bgm-pop .np .tt{font-size:calc(15px*var(--fs,1))}
-  .bgm-pop .bar::before,.bgm-pop .vol::before{inset:-12px 0}
-  .bgm-pop .bar i::after,.bgm-pop .vol i::after{width:14px;height:14px;top:-5px;right:-7px}
-  .bgm-pop .ctl button,.bgm-pop .vrow button{width:40px;height:40px}
-  .bgm-pop .ctl .pp{width:48px;height:48px}
-  .bgm-pop .pp svg{width:26px;height:26px}
-  .bgm-list{max-height:min(168px,24dvh)} /* 약 3~4곡, 나머지는 스크롤 */
-  .bgm-list .it{padding:10px}
+  @keyframes bgmSheet{from{transform:translateY(100%)}to{transform:none}}
+  .bgm-pop .art{max-height:34dvh;width:100%}
+  .bgm-pop .art .x{width:34px;height:34px;top:10px;right:10px}
+  .bgm-pop .np{padding:0 22px}
+  .bgm-pop .np .tt{font-size:calc(17px*var(--fs,1))}
+  .bgm-pop .np .ds{font-size:calc(11.5px*var(--fs,1))}
+  .bgm-pop .prog{padding:12px 20px 4px}
+  .bgm-pop .tm{font-size:calc(11px*var(--fs,1))}
+  .bgm-pop .bar,.bgm-pop .vol{height:5px}
+  .bgm-pop .bar::before,.bgm-pop .vol::before{inset:-14px 0}
+  .bgm-pop .bar i::after,.bgm-pop .vol i::after{width:15px;height:15px;top:-5px;right:-7.5px}
+  .bgm-pop .ctl{padding:6px 14px 12px}
+  .bgm-pop .ctl button,.bgm-pop .vrow button{width:44px;height:44px}
+  .bgm-pop .ctl .mid{gap:10px}
+  .bgm-pop .ctl .pp{width:56px;height:56px}
+  .bgm-pop svg{width:21px;height:21px}
+  .bgm-pop .pp svg{width:30px;height:30px}
+  .bgm-pop .vrow{padding:0 22px 12px 14px}
+  .bgm-list{max-height:none;padding:6px 10px 10px}
+  .bgm-list .it{padding:12px}
+  .bgm-list .it b{font-size:calc(13.5px*var(--fs,1))}
+  .bgm-list .it small{font-size:calc(10.5px*var(--fs,1))}
   .top-btn{width:28px;height:28px}
   .top-btn svg{width:14px;height:14px}
 

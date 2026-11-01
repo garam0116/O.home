@@ -386,6 +386,7 @@ export function BgmPlayer() {
       {/* 플레이어 팝업 */}
       {open && (
         <>
+          <div className="bgm-dim" onClick={() => setOpen(false)} />
           <div className="bgm-pop" role="dialog" aria-label="BGM 플레이어">
             <div className="art">
               <Cover track={track} big />
