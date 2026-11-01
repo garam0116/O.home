@@ -6,7 +6,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
-  useLocalList, BOARD_SEED, Post, fmtDate,
+  useLocalList, BOARD_SEED, Post, fmtListDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
 import {
@@ -23,6 +23,15 @@ function firstImage(body: string): string | null {
   if (html) return html[1];
   const md = /!\[[^\]]*\]\(([^)\s]+)/.exec(body);
   return md ? md[1] : null;
+}
+
+/** 호버(PC)·터치(모바일) 때만 나타나는 오른쪽 화살표 (v2.5 사용자 요청) */
+function Chevron() {
+  return (
+    <span className="go" aria-hidden>
+      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    </span>
+  );
 }
 
 function BoardInner() {
@@ -136,8 +145,9 @@ function BoardInner() {
                     {readable ? <>{p.secret && '🔒 '}{p.title}</> : '비밀글입니다'}
                     {readable && cmtCount(p) > 0 && <span className="cmt">{cmtCount(p)}</span>}
                   </b>
-                  <small>{fmtDate(p.date)}</small>
+                  <small>{fmtListDate(p.date)}</small>
                 </div>
+                <Chevron />
               </div>
             );
           })}
@@ -173,7 +183,8 @@ function BoardInner() {
                 )}
               </div>
               <span className="who">{p.author}</span>
-              <span className="dt">{fmtDate(p.date)}</span>
+              <span className="dt">{fmtListDate(p.date)}</span>
+              <Chevron />
             </div>
           ))}
           {pageList.length === 0 && (
