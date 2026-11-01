@@ -578,7 +578,7 @@ function MainPagePane() {
   // 모바일 순서 목록: 고정 요소(배너·회원정보창)는 포함되지 않음
   const orderable = state.mobileOrder
     .map(id => state.widgets.find(w => w.id === id))
-    .filter((w): w is NonNullable<typeof w> => !!w && !w.fixed);
+    .filter((w): w is NonNullable<typeof w> => !!w && !w.fixed && w.type !== 'menu');   // 메뉴리스트는 상단바 ≡로 대체
 
   return (
     <div className="set-sec">
@@ -3077,16 +3077,6 @@ function SettingsInner() {
     </div>
   );
 
-  // 모바일에서는 환경설정 미제공 (v1.9 사용자 확정 — 수정할 정보량이 모바일에 맞지 않음)
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width:620px)');
-    const f = () => setIsMobile(mq.matches);
-    f();
-    mq.addEventListener('change', f);
-    return () => mq.removeEventListener('change', f);
-  }, []);
-
   /* 미리보기는 이 페이지 안에서만 — SAVE 없이 벗어나면 저장본으로 원복 (v1.9).
      **색만 지키고 있었다** (v2.0 사용자 발견 — 「폰트 바꾸고 SAVE 안 했는데 화면 전환이 되고
      적용돼 있어」). 디자인 탭의 SAVE는 색·역할 폰트·로고/탭 제목 **셋**을 함께 저장하는데,
@@ -3109,7 +3099,7 @@ function SettingsInner() {
     const onCapture = (e: MouseEvent) => {
       if (!themeRef.current.dirty) return;
       const t = e.target as HTMLElement | null;
-      const hit = t?.closest?.('.topbar a, .topbar button, .topbar .brand') as HTMLElement | null;
+      const hit = t?.closest?.('.topbar a, .topbar button, .topbar .brand, .m-nav-list button') as HTMLElement | null;
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
@@ -3138,17 +3128,6 @@ function SettingsInner() {
       </section>
     );
   }
-  if (isMobile) {
-    return (
-      <section className="page">
-        <div className="page-head"><PageTitle>SETTINGS</PageTitle><p>PC 전용 페이지</p></div>
-        <div className="panel" style={{ textAlign: 'center', padding: 56 }}>
-          <p style={{ fontSize: 13, color: 'var(--faint)' }}>환경설정은 PC 화면에서 이용할 수 있습니다.</p>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="page">
       <div className="page-head">

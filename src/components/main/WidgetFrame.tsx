@@ -165,6 +165,8 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
       style={{
         ...style,
         order: mobileOrder,
+        // PC 저장 비율 — 모바일에서 슬라이드 배너 높이를 이 비율로 정함 (globals.css)
+        ...(conf.w && conf.h ? { '--wgt-ar': `${conf.w} / ${conf.h}` } as React.CSSProperties : {}),
         // 절대배치 (v1.9) — PC 캔버스에는 흐름 없음. 모바일 CSS가 static으로 되돌려 스택 렌더
         // 기울기(rot)는 transform에 합성 — 모바일 스택에서는 CSS가 해제 (v1.9)
         ...(abs
