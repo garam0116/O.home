@@ -15,6 +15,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useMenuSettings, hrefAccess, canAccessHref } from '@/lib/menuStore';
 import { PageTitle } from '@/components/ui/PageText';
+import { canonPath } from '@/lib/urlCanon';
 
 function GuardInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,11 +23,10 @@ function GuardInner({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, ready } = useAuth();
   const [menuSet, , loaded] = useMenuSettings();
 
-  /* 메뉴에 적힌 주소 형태로 맞춘다 — 섹션은 `?s=`, 추가 게시판은 `?b=`.
+  /* 메뉴에 적힌 주소 형태로 맞춘다 — 섹션은 `?s=`, 추가 게시판은 `/board/b/별명`, 자관 목록은
+     `/rels/r/별명` (v2.4). 옛 주소(`/board?b=id`)나 id 주소로 들어와도 같은 곳으로 알아본다.
      `sp.toString()`을 그대로 쓰면 다른 파라미터가 섞이거나 순서가 달라져 못 알아본다. */
-  const s = sp.get('s');
-  const b = sp.get('b');
-  const path = pathname + (s ? `?s=${s}` : b ? `?b=${b}` : '');
+  const path = canonPath(pathname, sp);
 
   // 설정과 로그인 확인이 끝나기 전에는 아무것도 그리지 않는다 —
   // 먼저 그려 두면 한 프레임이라도 내용이 비치고, 반대로 관리자에게 「비공개」가 번쩍인다
@@ -73,7 +73,7 @@ function blockedView(vis: 'member' | 'admin', loggedIn: boolean) {
 /**
  * 상세 페이지용 (v2.0) — **글 주소에는 섹션이 안 들어간다.**
  * `/gallery/b1`만 보고는 그 글이 비공개 갤러리 것인지 알 수 없어 MenuGuard가 못 막는다.
- * 글을 읽어 소속을 알아낸 페이지가 그 주소(`/gallery?s=fan`)를 넘겨 주면 여기서 판정한다.
+ * 글을 읽어 소속을 알아낸 페이지가 그 주소(`/gallery?s=fan`, `/board/b/lore`)를 넘겨 주면 여기서 판정한다.
  *
  * 반환값이 있으면 그것을 그대로 return 하면 된다 —
  * **훅이므로 페이지의 다른 early return보다 먼저 불러야 한다**(렌더마다 훅 수가 달라지면 안 된다).

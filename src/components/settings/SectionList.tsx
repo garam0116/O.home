@@ -63,7 +63,8 @@ export function SectionList({ kind }: { kind: SectionKind }) {
     if (slug && taken) return;                    // 다른 것과 겹치면 그대로 둔다
     const before = sectionHref(kind, id);
     setList(kind, items.map(s => (s.id === id ? { ...s, slug: slug || undefined } : s)));
-    const after = kind && (id === MAIN_SEC ? before : `${meta.href}?s=${slug || id}`);
+    // 바뀐 별명으로 다시 만든다 — 자관처럼 경로로 갈리는 종류(`/rels/r/별명`)도 같은 함수로 (v2.4)
+    const after = sectionHref(kind, id);
     if (before === after) return;
     const swap = (h: string) => (h === before ? after : h);
     patchMenu({

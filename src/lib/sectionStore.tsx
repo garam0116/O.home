@@ -15,7 +15,7 @@
  * 섹션을 지워도 **항목 데이터는 남긴다**(3장 원칙) — 메뉴에서만 사라진다.
  */
 import { useCallback, useEffect, useReducer } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { getRawSetting, setSetting } from './settingStore';
 import { newId } from './postStore';
 
@@ -75,9 +75,29 @@ export function secKeyOf(kind: SectionKind, id: string): string {
   return s?.slug?.trim() || id;
 }
 
-/** 이 섹션의 주소 — 기본은 원래 주소 그대로, 나머지는 ?s=별명(없으면 id) */
-export const sectionHref = (kind: SectionKind, id: string) =>
-  (id === MAIN_SEC ? SECTION_META[kind].href : `${SECTION_META[kind].href}?s=${secKeyOf(kind, id)}`);
+/** 쿼리 대신 **경로**로 갈리는 종류 (v2.4 사용자 요청) — `/rels?s=2nd` 대신 `/rels/r/2nd`.
+ *  `/rels/{별명}`은 자관 상세가 이미 쓰고 있어 겹치지 않게 사이에 한 칸(`r`)을 둔다. */
+export const PATH_SEC: Partial<Record<SectionKind, string>> = { rels: 'r' };
+
+/** 자관 상세 주소(`/rels/{별명}`)로 쓸 수 없는 값 — 목록 주소 `/rels/r/…`·새로 만들기 `/rels/new`와 겹친다 */
+export const REL_RESERVED = ['r', 'new'];
+
+/** 이 섹션의 주소 — 기본은 원래 주소 그대로, 나머지는 ?s=별명(없으면 id).
+ *  경로로 갈리는 종류(PATH_SEC)는 `/rels/r/별명` */
+export const sectionHref = (kind: SectionKind, id: string) => {
+  if (id === MAIN_SEC) return SECTION_META[kind].href;
+  const seg = PATH_SEC[kind];
+  return seg
+    ? `${SECTION_META[kind].href}/${seg}/${secKeyOf(kind, id)}`
+    : `${SECTION_META[kind].href}?s=${secKeyOf(kind, id)}`;
+};
+
+/** 주소 값(id 또는 별명) → 그 섹션의 id. 못 찾으면 undefined */
+export function findSecId(kind: SectionKind, key: string): string | undefined {
+  load();
+  if (key === MAIN_SEC) return MAIN_SEC;
+  return (cache[kind] ?? []).find(s => s.id === key || (s.slug ?? '') === key)?.id;
+}
 
 /** 항목이 이 섹션 것인가 — 예전 데이터(secId 없음)는 전부 기본 섹션 소속 */
 export const inSection = (secId: string | undefined, cur: string) =>
@@ -146,9 +166,12 @@ export function useSections(): {
  */
 export function useSectionParam(kind: SectionKind): { id: string; name: string; items: SectionItem[] } {
   const sp = useSearchParams();
+  const params = useParams<{ key?: string }>();
   const { list } = useSections();
   const items = list(kind);
-  const want = sp.get('s') ?? MAIN_SEC;
+  // 경로로 갈리는 종류는 `/rels/r/{key}`의 key를, 아니면(또는 옛 주소면) `?s=`를 읽는다 (v2.4)
+  const pathKey = PATH_SEC[kind] && params?.key ? decodeURIComponent(params.key) : null;
+  const want = pathKey ?? sp.get('s') ?? MAIN_SEC;
   // 별명으로도 찾는다 (v2.0) — 예전에 공유한 id 주소도 그대로 열려야 한다
   const found = items.find(s => s.id === want || (s.slug ?? '') === want) ?? items[0];
   return { id: found.id, name: found.name, items };

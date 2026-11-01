@@ -2,7 +2,8 @@
 // 게시판 설정 (5.2 게시판 관리) — 시스템 뱃지 + 갤러리 분류·뱃지 색
 import { useCallback, useEffect, useState } from 'react';
 import { newId } from './postStore';
-import { MAIN_SEC } from './sectionStore';
+import { MAIN_SEC, cleanSlug } from './sectionStore';
+import type { Post } from './postStore';
 
 export interface BoardBadge { id: string; label: string; bg: string; border: string; fg: string }
 
@@ -126,6 +127,10 @@ export interface Board {
   permWrite: BoardPerm;    // 글쓰기 권한 (mock 단계에선 로그인 전제 — 로드뷰와 동일)
   permComment: BoardPerm;  // 댓글 권한
   fg?: string;             // 목록 글씨색 (v1.9 — 미지정이면 테마 기본색)
+  /** 주소 별명 (v2.4 사용자 요청) — `/board/b/{별명}`. 비우면 게시판 이름을 영소문자로 바꿔 쓰고
+   *  (Palimpsest → palimpsest), 이름에 영문·숫자가 없으면 내부 id가 주소에 나온다.
+   *  **글의 소속(boardId)은 언제나 id로 저장한다** — 별명·이름을 바꿔도 글이 떨어져 나가지 않는다. */
+  slug?: string;
 }
 
 const BOARDS_KEY = 'ohome.boards.v1';
@@ -175,8 +180,118 @@ export function useBoards(): {
   return { boards, setBoards, loaded, patchBoard };
 }
 
-/** 게시판 목록 페이지 경로 — 기본 게시판은 쿼리 없이 */
-export const boardHref = (id: string) => (id === MAIN_BOARD_ID ? '/board' : `/board?b=${id}`);
+/* ---------- 게시판 주소 (v2.4 사용자 요청) ----------
+   `/board?b=mt9ipt` 대신 `/board/b/palimpsest`. 기본 게시판은 지금처럼 `/board`.
+   메뉴 트리·공개범위 판정·페이지 타이틀이 모두 **주소 문자열**로 맞춰 보므로,
+   주소는 반드시 이 함수들로만 만든다. */
+export const BOARD_PATH = '/board/b';
+
+/** 지금 저장된 게시판 목록 (훅 없이) — 주소를 만들 때 렌더 밖에서도 필요하다 */
+export function currentBoards(): Board[] {
+  try {
+    const raw = getRawSetting(BOARDS_KEY);
+    if (raw) return normBoards(JSON.parse(raw));
+  } catch { /* 기본값 */ }
+  return DEFAULT_BOARDS;
+}
+
+/** 게시판마다 주소에 쓸 값 — 직접 정한 별명 → 이름(영소문자) → id 순.
+ *  겹치면 직접 정한 별명이 이기고, 이름에서 만든 것끼리는 목록에서 앞선 게시판이 갖는다
+ *  (뒤의 것은 id로 물러난다 — 두 게시판이 같은 주소를 가리키는 일이 없게). */
+export function boardKeys(boards: Board[] = currentBoards()): Map<string, string> {
+  const out = new Map<string, string>();
+  const used = new Set(boards.map(b => b.id));
+  const extra = boards.filter(b => b.id !== MAIN_BOARD_ID);
+  for (const b of extra) {
+    const k = cleanSlug(b.slug ?? '');
+    if (k && !used.has(k)) { out.set(b.id, k); used.add(k); }
+  }
+  for (const b of extra) {
+    if (out.has(b.id)) continue;
+    const k = cleanSlug(b.name);
+    if (k && !used.has(k)) { out.set(b.id, k); used.add(k); } else out.set(b.id, b.id);
+  }
+  return out;
+}
+
+/** 이 게시판의 주소 값 (별명·이름·id 중 실제로 쓰이는 것) */
+export const boardKeyOf = (id: string, boards?: Board[]) => boardKeys(boards).get(id) ?? id;
+
+/** 주소 값(별명·이름에서 만든 값·id 어느 것이든) → 게시판. 옛 `?b=id` 주소도 이것으로 찾는다 */
+export function findBoardByKey(key: string, boards: Board[] = currentBoards()): Board | undefined {
+  const keys = boardKeys(boards);
+  return boards.find(b => b.id === key) ?? boards.find(b => keys.get(b.id) === key);
+}
+
+/** 게시판 목록 페이지 경로 — 기본 게시판은 `/board`, 나머지는 `/board/b/{주소 값}` */
+export const boardHref = (id: string, boards?: Board[]) =>
+  (id === MAIN_BOARD_ID ? '/board' : `${BOARD_PATH}/${boardKeyOf(id, boards)}`);
+
+/* ---------- 글 번호 (v2.4 사용자 요청) ----------
+   글 주소를 `/board/mvwvev4lnr1m` 대신 `/board/1`처럼 **올린 순서대로 매긴 번호**로.
+   번호는 모든 게시판을 통틀어 하나로 이어진다(주소에 게시판이 들어가지 않으므로).
+
+   · 새 글은 쓸 때 `no`를 받아 저장한다(지금까지 나온 번호 + 1).
+   · 번호가 없는 예전 글은 만든 순서대로 번호를 붙여 보여 주고, 관리자가 게시판을 열면
+     그 번호를 글에 저장해 둔다 — 그 뒤로는 글을 지워도 다른 글 번호가 밀리지 않는다.
+   · 같은 번호가 둘 생기면(관리자만 보는 게시판이 있어 회원이 마지막 번호를 못 본 경우)
+     나중에 만든 쪽이 다음 번호로 밀린다. */
+
+/** newId()로 만든 id는 앞 8자리가 만든 시각(base36)이다 */
+function idTime(id: string): number | undefined {
+  if (id.length < 9) return undefined;
+  const t = parseInt(id.slice(0, 8), 36);
+  return t > 1577836800000 && t < 4102444800000 ? t : undefined;
+}
+const createdAt = (p: Post) => idTime(p.id) ?? (Date.parse(p.date) || 0);
+
+/** 글 id → 번호 */
+export function postNumbers(posts: Post[]): Map<string, number> {
+  const sorted = [...posts].sort((a, b) =>
+    createdAt(a) - createdAt(b) || (a.no ?? 0) - (b.no ?? 0) || a.id.localeCompare(b.id));
+  const out = new Map<string, number>();
+  let last = 0;
+  for (const p of sorted) {
+    const n = p.no && p.no > last ? p.no : last + 1;
+    out.set(p.id, n);
+    last = n;
+  }
+  return out;
+}
+
+/** 새 글에 줄 번호 */
+export function nextPostNo(posts: Post[]): number {
+  let max = 0;
+  postNumbers(posts).forEach(n => { if (n > max) max = n; });
+  return max + 1;
+}
+
+/** 글 주소 — 번호를 모르면(목록에 없는 글) id 주소로. id 주소도 계속 열린다 */
+export const postHref = (p: { id: string }, nums: Map<string, number>) =>
+  `/board/${nums.get(p.id) ?? p.id}`;
+
+/** 주소 값(번호 또는 id) → 글 */
+export function findPostByKey(posts: Post[], key: string, nums = postNumbers(posts)): Post | undefined {
+  if (/^\d+$/.test(key)) {
+    const n = Number(key);
+    const hit = posts.find(p => nums.get(p.id) === n);
+    if (hit) return hit;
+  }
+  return posts.find(p => p.id === key);
+}
+
+/** 저장해 둘 번호가 있는 글만 바꾼 목록 — 바꿀 게 없으면 null (관리자가 게시판을 열 때 한 번) */
+export function withPostNumbers(posts: Post[]): Post[] | null {
+  const nums = postNumbers(posts);
+  let changed = false;
+  const next = posts.map(p => {
+    const n = nums.get(p.id);
+    if (n === undefined || p.no === n) return p;
+    changed = true;
+    return { ...p, no: n };
+  });
+  return changed ? next : null;
+}
 
 /** 게시판 뱃지 스타일 — 알약형, 텍스트 정중앙 (배경까지 함께 칠해 글씨만 튀지 않게)
  *  한글 잉크는 폰트박스 위쪽에 몰려 line-height:1이면 위로 쏠려 보임 (v1.9 실측 보정) —

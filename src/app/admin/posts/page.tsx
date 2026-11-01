@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { useBoards, MAIN_BOARD_ID } from '@/lib/boardStore';
+import { useBoards, MAIN_BOARD_ID, postNumbers, postHref } from '@/lib/boardStore';
 import { BOARD_SEED, Post, useLocalList } from '@/lib/postStore';
 
 /** 작성일 — 저장값은 UTC(ISO)라 앞 10글자를 자르면 한국 시간 오전 9시 전 글이 하루 전 날짜로 나온다.
@@ -21,6 +21,7 @@ function PostList() {
   const { isAdmin } = useAuth();
   const { boards, loaded: boardsLoaded } = useBoards();
   const [posts, setPosts, postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  const nums = postNumbers(posts);   // 글 주소는 번호로 (v2.4)
   const [query, setQuery] = useState('');
   const [boardId, setBoardId] = useState('');
   const [page, setPage] = useState(1);
@@ -72,7 +73,7 @@ function PostList() {
                   return (
                     <tr key={post.id} style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: 12 }}>
-                        <Link href={`/board/${post.id}`}>{post.secret && '🔒 '}{post.notice && '[공지] '}{post.title}</Link>
+                        <Link href={postHref(post, nums)}>{post.secret && '🔒 '}{post.notice && '[공지] '}{post.title}</Link>
                       </td>
                       <td style={{ padding: 12 }}>{boardName(currentBoard)}</td>
                       <td style={{ padding: 12 }}>{post.author}</td>

@@ -13,7 +13,7 @@
  */
 import { currentMenuSettings, hrefAccess } from './menuStore';
 import { MAIN_SEC, sectionHref, type SectionKind } from './sectionStore';
-import { MAIN_BOARD_ID } from './boardStore';
+import { MAIN_BOARD_ID, boardHref } from './boardStore';
 import type { Visibility } from './charStore';
 import type { ListItem } from './backend/types';
 
@@ -45,7 +45,7 @@ export function areaHrefOf(coll: string, item: ListItem): string | null {
   if (a.href) return a.href;
   if (a.board) {
     const b = typeof item.boardId === 'string' ? item.boardId : MAIN_BOARD_ID;
-    return b === MAIN_BOARD_ID ? '/board' : `/board?b=${b}`;
+    return boardHref(b);   // 메뉴에 적히는 주소와 같아야 한다 — /board/b/별명 (v2.4)
   }
   const s = typeof item.secId === 'string' ? item.secId : MAIN_SEC;
   return sectionHref(a.kind!, s);

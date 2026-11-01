@@ -74,6 +74,8 @@ export interface Post {
   tags?: string[];
   thumbSrc?: string;     // 대표 이미지 — 저장소 참조 또는 본문 이미지 URL
   thumbCrop?: { x: number; y: number; scale: number };  // 대표 썸네일 크롭 (16:9)
+  /** 글 번호 (v2.4 사용자 요청) — 주소 `/board/{번호}`. 올린 순서대로, 모든 게시판 통틀어 하나로 이어진다 */
+  no?: number;
 }
 
 export interface GuestEntry {

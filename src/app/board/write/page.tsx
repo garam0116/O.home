@@ -5,7 +5,7 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, BOARD_SEED, Post, newId, FoldType } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, postNumbers, nextPostNo } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput, KTextarea, KCheck } from '@/components/ui/Kit';
 import { CropEditor, CropImg, CropValue } from '@/components/ui/CropEditor';
@@ -139,7 +139,7 @@ function WriteInner() {
         thumbSrc, thumbCrop,
       } : p)));
       toast('수정되었습니다');
-      router.push(`/board/${editing.id}`);
+      router.push(`/board/${postNumbers(posts).get(editing.id) ?? editing.id}`);
       return;
     }
     const p: Post = {
@@ -152,17 +152,18 @@ function WriteInner() {
       comments: [],
       boardId: board.id,   // 소속 게시판 (5.2 다중 게시판)
       thumbSrc, thumbCrop,
+      no: nextPostNo(posts),   // 글 번호 (v2.4) — 주소 /board/{번호}
     };
     setPosts([p, ...posts]);
     toast('등록되었습니다');
-    router.push(`/board/${p.id}`);
+    router.push(`/board/${p.no}`);
   };
 
   return (
     <section className="page">
       {/* 큰 글씨 — 추가 게시판이면 그 이름(메뉴 관리 타이틀·이름이 우선), 누르면 그 게시판으로 복귀
           (v2.0 사용자 제보 — 「글쓰기에서 큰제목을 눌러도 안 돌아가고, 제목도 원래 것이 뜬다」) */}
-      <div className="page-head"><PageTitle href={boardHref(board.id)}>{board.id === MAIN_BOARD_ID ? (editing ? 'EDIT' : 'WRITE') : board.name}</PageTitle><EditableDesc k="board-write-desc" def="에디터 / Markdown / HTML — 스크립트는 저장 시 자동 제거" /></div>
+      <div className="page-head"><PageTitle href={boardHref(board.id, boards)}>{board.id === MAIN_BOARD_ID ? (editing ? 'EDIT' : 'WRITE') : board.name}</PageTitle><EditableDesc k="board-write-desc" def="에디터 / Markdown / HTML — 스크립트는 저장 시 자동 제거" /></div>
       <div className="write-grid">
         {/* 좌: 본문 */}
         <div className="panel" style={{ padding: 24 }}>
@@ -298,7 +299,7 @@ function WriteInner() {
           </div>
           <div className="form-actions">
             <button className="btn btn-onbk"
-              onClick={() => router.push(editing ? `/board/${editing.id}` : boardHref(board.id))}>CANCEL</button>
+              onClick={() => router.push(editing ? `/board/${postNumbers(posts).get(editing.id) ?? editing.id}` : boardHref(board.id, boards))}>CANCEL</button>
             <button className="btn btn-accent" disabled={thumbBusy} onClick={post}>{editing ? 'SAVE' : 'POST'}</button>
           </div>
         </div>
