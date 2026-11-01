@@ -24,8 +24,6 @@ const AREA: Record<string, { kind?: SectionKind; href?: string; board?: boolean 
   roadview: { kind: 'roadview' },
   trpg_logs: { kind: 'trpg' },
   trpg_log_bodies: { kind: 'trpg' },   // 본문은 별도 문서 — 목록만 막으면 본문이 그대로 남는다
-  dotori: { kind: 'dotori' },
-  playlog: { kind: 'playlog' },
   commissions: { kind: 'comm' },
   diary: { kind: 'diary' },
   threads: { kind: 'threads' },

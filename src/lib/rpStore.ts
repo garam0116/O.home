@@ -22,7 +22,6 @@ export interface RpRoom {
   auId?: string;
   memberIds: string[];              // 참여 회원 — 이 목록에 없으면 방의 존재 자체가 보이지 않음 (확정)
   status: 'ongoing' | 'done';       // 진행중 / 완결
-  isPublic: boolean;                // 완결 후 공개 전환 (자관 역극 리스트로 열람)
   createdBy: string;
   created: string;
   lastRead: Record<string, string>; // 회원별 마지막 확인 시각 — N 뱃지

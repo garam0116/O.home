@@ -84,8 +84,6 @@ declare content_tables text[] := array[
   'trpg_logs',        -- TRPG 로그(목록 문서 — 본문 제외)
   'trpg_log_bodies',  -- TRPG 로그 본문 (v2.0, 목록과 분리 저장 — 나만보기 로그의 본문 보호용)
   'trpg_chars',   -- TRPG 캐릭터
-  'dotori',       -- 도토리
-  'playlog',      -- 플레이기록
   'rp_rooms',     -- 역극 방
   'threads',      -- 감상타래
   'diary',        -- 다이어리

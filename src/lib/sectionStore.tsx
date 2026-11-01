@@ -20,15 +20,13 @@ import { getRawSetting, setSetting } from './settingStore';
 import { newId } from './postStore';
 
 export type SectionKind =
-  | 'gallery' | 'roadview' | 'trpg' | 'dotori' | 'playlog' | 'comm' | 'diary' | 'threads' | 'sched' | 'chars' | 'rels';
+  | 'gallery' | 'roadview' | 'trpg' | 'comm' | 'diary' | 'threads' | 'sched' | 'chars' | 'rels';
 
 /** 섹션 종류별 기본 정보 — 설정 탭 이름과 페이지 주소 */
 export const SECTION_META: Record<SectionKind, { label: string; href: string; defName: string }> = {
   gallery:  { label: '갤러리',    href: '/gallery',   defName: '갤러리' },
   roadview: { label: '로드비',    href: '/loadb', defName: '로드비' },
   trpg:     { label: '로그 백업', href: '/trpg',     defName: '로그 백업' },
-  dotori:   { label: '도토리',    href: '/dotori',   defName: '도토리' },
-  playlog:  { label: '플레이기록', href: '/playlog', defName: '플레이기록' },
   comm:     { label: '커미션',    href: '/comm',     defName: '커미션' },
   diary:    { label: '다이어리',  href: '/diary',    defName: '다이어리' },
   threads:  { label: '감상타래',  href: '/threads',  defName: '감상타래' },
@@ -78,7 +76,7 @@ export function secKeyOf(kind: SectionKind, id: string): string {
 /** 쿼리 대신 **경로**로 갈리는 목록 (v2.4 사용자 요청) — `/gallery?s=fan` 대신 `/gallery/g/fan`.
  *  가운데 한 칸은 주소 첫 글자(사용자 확정) — 상세 주소(`/gallery/3`, `/chars/eden`)와 겹치지 않게 둔다. */
 export const PATH_SEC: Record<SectionKind, string> = {
-  gallery: 'g', roadview: 'l', trpg: 't', dotori: 'd', playlog: 'p', comm: 'c',
+  gallery: 'g', roadview: 'l', trpg: 't', comm: 'c',
   diary: 'd', threads: 't', sched: 'c', chars: 'c', rels: 'r',
 };
 

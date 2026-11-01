@@ -1187,44 +1187,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .multi-row b{font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:.12em;min-width:90px}
 .multi-row .en{font-size:calc(10px*var(--fs,1));color:var(--faint);letter-spacing:.1em}
 .multi-row .meta{margin-left:auto;font-size:calc(11px*var(--fs,1));color:var(--sub);text-align:right}
-/* 타임라인 (4.5) */
-.timeline{margin-top:30px;padding:26px;max-width:1010px;margin-left:auto;margin-right:auto} /* 본문보다 약 200px 좁게 (v1.8) */
-.tl-item{position:relative;padding:0 0 22px 26px;border-left:1.5px solid var(--line)}
-.tl-item:last-child{padding-bottom:0}
-.tl-item::before{content:"";position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:#fff;border:2.5px solid var(--steel-3)}
-.tl-item .era{font-size:calc(10px*var(--fs,1));letter-spacing:.15em;color:var(--faint);margin-bottom:4px}
-.tl-item .desc{font-size:calc(12.5px*var(--fs,1));line-height:1.75;color:#3a3f47;margin-bottom:9px;white-space:pre-line}
-/* 말풍선: 캐릭터 테마색(--cc, 저알파) — 좌우 여백 19%로 가운데 몰기 (v1.8) */
-.tl-say{max-width:48%;margin-bottom:7px;--cc:93,99,109}
-.tl-say.l{margin-left:19%}
-.tl-say.r{margin-right:19%}
-.timeline.multi .tl-say.l{margin-left:0;max-width:62%} /* 다인: 왼쪽 정렬 */
-.tl-say .who{font-size:calc(10px*var(--fs,1));letter-spacing:.1em;color:rgb(var(--cc));font-weight:700;margin-bottom:3px}
-.tl-say .bub{display:inline-block;padding:8px 13px;border-radius:12px;font-size:calc(12px*var(--fs,1));line-height:1.6;white-space:pre-line;
-  background:rgba(var(--cc),.10);border:1px solid rgba(var(--cc),.22);color:var(--ink)}
-.tl-say.l .bub{border-bottom-left-radius:3px}
-.tl-say.r{margin-left:auto;text-align:right}
-.tl-say.r .bub{border-bottom-right-radius:3px}
 .drag-hint{font-size:calc(10px*var(--fs,1));color:var(--faint);border:1px dashed var(--line);padding:6px 10px;border-radius:8px;display:inline-block;margin-top:12px}
-/* 타임라인/문답 탭 (v1.8) */
-.rel-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--line)}
-/* 직계 버튼(탭)만 — 우측 액션 버튼(.btn)이 margin-bottom:-1px로 하단 보더를 덮던 문제 수정 (v1.9) */
-.rel-tabs > button{font-family:var(--serif);letter-spacing:.2em;font-size:calc(15px*var(--fs,1));color:var(--faint);padding:6px 14px 12px;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
-.rel-tabs > button:hover{color:var(--ink)}
-.rel-tabs > button.on{color:var(--ink);border-bottom-color:var(--ink)}
-/* 모바일 — 글자 대신 픽토그램만 (v2.0 사용자 요청). 좁은 폭에서 버튼 글씨가 줄줄이 늘어져
-   탭 줄이 두 줄로 넘어가던 것. 탭은 T로 줄이고 갭만 넉넉히 줘 구분되게 한다.
-   버튼들은 인라인 style로 padding을 갖고 있어 여기서는 !important로 눌러야 한다 */
-.lb-m{display:none}
-@media (max-width:620px){
-  .lb-pc{display:none}
-  .lb-m{display:inline}
-  .rel-tabs{gap:16px}
-  .rel-tabs > button{padding:6px 2px 10px;letter-spacing:0}
-  .rel-tabs .btn{padding:0 11px !important;min-width:40px;font-size:calc(14px*var(--fs,1)) !important}
-}
-/* 자관 연동 리스트(역극·TRPG)도 중앙 좁힘 */
-.page-rel-detail .g2{max-width:1010px;margin-left:auto;margin-right:auto}
 
 /* ---------- 스케줄러 (4.12) — 월간 캘린더 + 우측 위젯 ---------- */
 .cal-layout{display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start}
@@ -1369,7 +1332,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .ap-row .lock{display:grid;place-items:center;width:28px;flex-shrink:0}
 .drag-h.idle{opacity:.25;cursor:default;pointer-events:none} /* 드래그는 편집모드에서만 (4.18) */
 
-/* ---------- 가로 필터 칩 탭 (도토리 등 — 페이지 배경 위) ---------- */
+/* ---------- 가로 필터 칩 탭 (다이어리 등 — 페이지 배경 위) ---------- */
 .tag-row{display:flex;gap:7px;flex-wrap:wrap}
 .tag-row .tag{
   display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
@@ -1381,78 +1344,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 선택 필터 = 진한 버튼 색 연동 (v1.9 사용자 확정) */
 .tag-row .tag.on{background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff)}
 .tag-row .tag.on small{color:var(--btn-dark-fg,#aab0ba);opacity:.65}
-
-/* ---------- TRPG 도토리 (4.15) — 4열 카드 그리드 ---------- */
-.dt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-@media (max-width:960px){.dt-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:620px){.dt-grid{grid-template-columns:1fr}}
-.dt-card{padding:0;overflow:hidden;transition:.2s}
-.dt-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md)}
-.dt-card .th{position:relative;aspect-ratio:16/9;overflow:hidden}
-.dt-card .bd{padding:13px 15px 15px}
-/* 제목이 길면 두 줄로 늘어나지 않고 말줄임 (v1.9 사용자 확정 — 카드 높이 유지) */
-.dt-card .nm{display:block;font-size:calc(13.5px*var(--fs,1));line-height:1.5;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dt-card .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 링크 있는 시나리오 이름 — 클릭 시 새 탭 (카드 클릭=편집과 분리) */
-.dt-card .nm.has-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
-.dt-card .nm.has-link:hover{color:var(--accent);text-decoration-color:var(--accent)}
-.dt-card .meta{display:block;margin-top:3px;font-size:calc(10.5px*var(--fs,1));line-height:1.5;color:var(--faint)}
-/* 태그 줄은 있든 없든 같은 자리를 차지한다 — 태그 유무로 카드 키가 달라지지 않게 (v2.0 사용자 요청).
-   태그가 많아도 한 줄까지만 (넘치면 잘림) */
-.dt-card .kw-row{margin-top:7px;height:22px;overflow:hidden;flex-wrap:nowrap}
-/* 상태 뱃지 — 공수표·일정 확정만, 이미지 우상단 (4.15) */
-/* 색은 환경설정 > TRPG 탭에서 상태별 지정 (인라인 스타일) */
-/* 한글 잉크 위쏠림 보정 (v1.9 실측) — line-height 11px + 상하 대칭 패딩 (잉크 중심 = 뱃지 중심) */
-.dt-badge{position:absolute;top:8px;right:8px;z-index:3;font-size:calc(10px*var(--fs,1));line-height:calc(11px*var(--fs,1));font-weight:700;letter-spacing:.08em;padding:4px 10px;border-radius:999px;color:#fff;white-space:nowrap}
-/* 카드 관리 버튼 — 이미지 호버 시에만 */
-.dt-actions{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:5px}
-.dt-actions button{font-size:calc(10px*var(--fs,1));padding:4px 9px;border-radius:999px;background:rgba(15,17,20,.55);color:#dfe2e7}
-.dt-actions button.del{background:color-mix(in srgb,var(--accent) 75%,transparent);color:#fff}
-.dt-card:hover .hv-actions{opacity:1;pointer-events:auto}
-/* 카드 안 태그 — 부모 kw-row의 프로필용 패딩 제거 (좌측 정렬) */
-.dt-card .kw-row{padding:0}
-/* 상태 전환 팝업 (관리자 — 호버 액션의 [상태] 클릭 시) */
-.dt-status-pop{
-  position:absolute;top:36px;left:8px;z-index:6;display:grid;gap:2px;padding:5px;
-  background:var(--dd-bg);border:1px solid var(--line-dark);border-radius:10px;box-shadow:var(--sh-dd);
-  animation:fade .15s;
-}
-.dt-status-pop button{font-size:calc(11px*var(--fs,1));padding:6px 14px;border-radius:7px;color:var(--dd-fg);text-align:left;transition:.13s;white-space:nowrap}
-.dt-status-pop button:hover{background:var(--dd-hv)}
-.dt-status-pop button.on{background:var(--accent);color:#fff}
-
-/* ---------- TRPG 플레이기록 (4.16) — 표 ---------- */
-.pl-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:calc(12.5px*var(--fs,1))}
-.pl-table col.c-date{width:92px}
-.pl-table col.c-wr{width:90px}
-.pl-table col.c-role{width:76px}   /* CoC 7th 같은 룰 표기가 들어간다 — 시나리오·With에서 10px씩 가져옴 (v2.0 사용자 요청) */
-.pl-table col.c-pt{width:82px}
-.pl-table col.c-url{width:36px}    /* 맨 끝 클립 칸 */
-.pl-table col.c-mng{width:58px}
-.pl-table col.c-with{width:21%}   /* 22%에서 10px가량 룰 칸으로 — col에는 calc가 안 먹혀 %로 환산 (v2.0) */
-.pl-table th{font-size:calc(10px*var(--fs,1));letter-spacing:.14em;color:var(--faint);font-weight:600;text-align:center;padding:10px 6px;border-bottom:1.5px solid var(--line)}
-.pl-table th.sortable{cursor:pointer;user-select:none}
-.pl-table th.sortable:hover{color:var(--ink)}
-/* 줄 높이를 px로 못박는다 — 배수(1.55)로 두면 글꼴마다 소수점이 달라 줄마다 미세하게 어긋난다 */
-.pl-table td{padding:10px 6px;line-height:calc(20px*var(--fs,1));border-bottom:1px dashed var(--line);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pl-table tr:last-child td{border-bottom:none}
-.pl-table .td-sc{font-weight:600}  /* Scenario — 가장 넓고 가운데 정렬 (4.16) */
-.pl-table .td-sc a{border-bottom:1px solid var(--line);transition:.15s}
-.pl-table .td-sc a:hover{color:var(--accent);border-color:var(--accent)}
-.pl-table .td-role{font-size:calc(11px*var(--fs,1));letter-spacing:.06em;color:var(--sub)}
-.pl-table .td-date{font-size:calc(11.5px*var(--fs,1));color:var(--sub);letter-spacing:.03em}
-/* Playtime 밑줄·탭 이동은 모바일 전용 — PC는 맨 끝 클립 칸이 담당 (4.16) */
-@media (max-width:620px){
-  .pl-table .td-pt.linked{text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-  .pl-table .td-pt.linked:active{color:var(--accent)}
-}
-.pl-table .td-url{position:relative}
-.pl-table .td-url a{position:absolute;inset:0;margin:auto;display:grid;place-items:center;width:24px;height:24px;border-radius:7px;color:var(--sub);transition:.14s}
-.pl-table .td-url a:hover{background:rgba(127,127,127,.14);color:var(--ink)}
-.pl-table .td-mng button{width:22px;height:22px;border-radius:6px;font-size:calc(10.5px*var(--fs,1));color:var(--faint);transition:.13s;vertical-align:middle;margin:-2px 0}
-.pl-table .td-mng button:hover{background:rgba(127,127,127,.14);color:var(--ink)}
-/* 모바일 기본 4열: Date/Scenario/Role/Playtime (4.16 — 열 선택 설정은 메뉴 관리 구현 시) */
-@media (max-width:620px){.pl-table .hide-m,.pl-table col.c-wr,.pl-table col.c-with,.pl-table col.c-url,.pl-table col.c-mng{display:none}}
 
 /* ---------- 그림게시판 로드뷰 (4.10) ---------- */
 .roadview-item{display:grid;grid-template-columns:1fr 390px;margin-bottom:22px;overflow:hidden;padding:0} /* 우측 댓글 폭 확대 (320→390) */

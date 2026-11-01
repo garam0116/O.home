@@ -1,29 +1,25 @@
 ﻿'use client';
 // 자관 상세 (4.5) — 2인: 헤더 블러 + 대형 타이틀 + 좌우 카드 + 중앙 일러(전신/일러 토글) + AU
-// 하단: TIMELINE (v1.8) + 역극·로그 연동 리스트 · 다인(3인+): 멤버 리스트형
-// 관리자: 멤버 추가(내/상대 캐릭터) · 타임라인 항목 추가
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+// 다인(3인+): 멤버 리스트형 · 관리자: 멤버 추가(내/상대 캐릭터)
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/ThemeProvider';
 import { useLocalList, newId } from '@/lib/postStore';
 import {
-  Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, TlItem, findChar, Visibility, CharGrant,
+  Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, findChar, Visibility, CharGrant,
   auMember, auStyle, fullShadow,
   RelAu, charWithAu,
   findByKey, charPath, relDday, relDdayDate, auPathOf, auKeyOf, relPath,
 } from '@/lib/charStore';
 import { putBlob } from '@/lib/blobStore';
 import { GrantsEditor } from '@/components/chars/GrantsEditor';
-import { TrpgLog, TRPG_SEED } from '@/lib/galleryStore';
-import { RpRoom, RP_SEED } from '@/lib/rpStore';
 import { useFonts } from '@/lib/fontStore';
-import { Tip, KInput, KTextarea, KSelect, KRadio, KCheck } from '@/components/ui/Kit';
+import { Tip, KInput, KSelect, KRadio, KCheck } from '@/components/ui/Kit';
 import { Modal, ConfirmModal, useConfirmDelete } from '@/components/ui/Modal';
 import { ColorField } from '@/components/ui/ColorField';
 import { withAlpha } from '@/lib/color';
-import { DragList } from '@/components/ui/DragList';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
 import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/CropEditor';
 import { Lightbox } from '@/components/ui/Lightbox';
@@ -31,7 +27,7 @@ import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { useNoKey, maxNo, itemPath } from '@/lib/itemNo';
+import { useNoKey, maxNo } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
@@ -254,30 +250,12 @@ export default function RelDetailPage() {
   // 주소는 별명 또는 번호 (v2.4) — 예전 id 주소로 들어오면 바꿔 둔다
   const id = useNoKey(rels, rawKey, k => `/rels/${k}`, { slug: true });
   const [chars, setChars, charsLoaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
-  const [logs] = useLocalList<TrpgLog>('ohome.trpg.v1', TRPG_SEED);
-  const [rooms] = useLocalList<RpRoom>('ohome.rp.v1', RP_SEED);
   // 소속 자관 목록 — 큰 글씨·삭제 후 돌아갈 곳
   const tt = useSectionTitle('rels', findByKey(rels, id)?.secId, 'RELATIONS');
   const [auId, setAuId] = useState('base');
   const [oneMode, setOneMode] = useState<boolean | null>(null);
   // 멤버 얼굴칸(1:1) 크롭 편집 (v2.0)
   const [faceEdit, setFaceEdit] = useState<{ charId: string; ref: string; crop?: CropValue } | null>(null);
-  // 타임라인 항목 우클릭 메뉴 (v2.0 사용자 요청) — 수정·삭제. 늘 떠 있는 [삭제] 글자는 없앴다
-  const [tlCtx, setTlCtx] = useState<{ x: number; y: number; idx: number } | null>(null);
-  const [tlEditIdx, setTlEditIdx] = useState<number | null>(null);   // null이면 새로 추가
-  useEffect(() => {
-    if (!tlCtx) return;
-    const close = () => setTlCtx(null);
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setTlCtx(null); };
-    window.addEventListener('click', close);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', key);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', key);
-    };
-  }, [tlCtx]);
   // 관리자 추가 모달
   const [memberOpen, setMemberOpen] = useState(false);
   const [mMode, setMMode] = useState<'exist' | 'new'>('exist');
@@ -288,12 +266,6 @@ export default function RelDetailPage() {
   const [mSub, setMSub] = useState('');
   const [mColor, setMColor] = useState('#8a7f70');
   const [mGrants, setMGrants] = useState<CharGrant[]>([]); // 새 상대 캐릭터 회원 권한 (v1.9)
-  const [tlOpen, setTlOpen] = useState(false);
-  const [tEra, setTEra] = useState('');
-  const [tDesc, setTDesc] = useState('');
-  // 한마디는 핑퐁식으로 여러 개 (사용자 요청)
-  const [tSays, setTSays] = useState<{ id: string; charId: string; text: string }[]>([]);
-  const [tlSort, setTlSort] = useState(false); // 타임라인 정렬 모드 (드래그앤드롭)
   const [artIdx, setArtIdx] = useState(0);
   /* 중앙 일러 우클릭 → 상세에 보일 위치 조정 (v2.0 사용자 요청).
      리스트 썸네일 좌표만 잡을 수 있고 상세는 못 잡던 것 — 여러 장이면 보고 있는 장을 잡는다.
@@ -318,7 +290,7 @@ export default function RelDetailPage() {
   const [auCatch, setAuCatch] = useState('');
   const [delAsk, setDelAsk] = useState(false);   // 자관 삭제 확인
   const [auDelAsk, setAuDelAsk] = useState<string | null>(null);  // AU 삭제 확인 (v2.0 — 자관 삭제와 별개)
-  const del = useConfirmDelete();                // 멤버·타임라인 등 개별 삭제 확인
+  const del = useConfirmDelete();                // 멤버·AU 등 개별 삭제 확인
 
   // 별명 주소로도 열린다 (v2.0 사용자 요청 — 주소를 나중에 바꿔도 옛 주소가 살아 있게)
   const rel = findByKey(rels, id);
@@ -369,7 +341,6 @@ export default function RelDetailPage() {
   const auFont = (isBaseAu ? undefined : au?.fontId) ?? rel?.fontId;
   const auBodyFont = (isBaseAu ? undefined : au?.bodyFontId) ?? rel?.bodyFontId;
   const auFullFront = (isBaseAu ? undefined : au?.fullFront) ?? rel?.fullFront;
-  const auTimeline = (isBaseAu ? rel?.timeline : au?.timeline) ?? [];
   const curArt = auArts[Math.min(artIdx, Math.max(0, auArts.length - 1))];
   /** 이 장의 위치만 저장 — 참조를 키로 두어 다른 장·AU 것은 그대로 (v2.0) */
   const saveArtCrop = (ref: string, c: CropValue | undefined) => updateRel({
@@ -382,7 +353,6 @@ export default function RelDetailPage() {
   // LOG / LOREBOOK 바로가기 — 예전 CP/NCP 뱃지 자리 (사용자 요청으로 CP/NCP 대체)
   const logHref = safeLink(rel?.logUrl);
   const lorebookHref = safeLink(rel?.lorebookUrl);
-  const showTimeline = !au?.hideTimeline;
   const ddayDate = au?.ddayDate ?? rel?.ddayDate;
   const dday = relDday(ddayDate);
   const ddayDateLabel = relDdayDate(ddayDate);
@@ -407,15 +377,8 @@ export default function RelDetailPage() {
     const base = charPath(charOf(cid) ?? { id: cid });
     return `${base}${auPathOf(rels, auCharKey)}`;   // AU는 /chars/{…}/au/{자관}/{번호} (v2.4)
   };
-  const sideOf = (cid: string) => (isDuo && rel?.members[1]?.charId === cid ? 'r' : 'l');
   const sideSlotOf = (side: 'l' | 'r') =>
     (!isBaseAu && au?.sideSlots?.[side]) || rel?.sideSlots?.[side];
-
-  const relLogs = useMemo(() => logs.filter(l => l.relId === rel?.id), [logs, rel]);
-  // 역극 연동 (4.9) — 내가 참여한 방 + 공개 전환된 완결 방만 (비참여 방은 존재 자체 비노출)
-  const relRooms = useMemo(() => rooms.filter(rm => rm.relId === rel?.id
-    && ((user && rm.memberIds.includes(user.id)) || (rm.status === 'done' && rm.isPublic))),
-    [rooms, rel, user]);
 
   if (!loaded) return <section className="page" />;
   if (!rel || (rel.visibility === 'private' && !isAdmin) || (rel.visibility === 'member' && !user)) {
@@ -429,7 +392,7 @@ export default function RelDetailPage() {
   const updateRel = (patch: Partial<Relation>) =>
     setRels(rels.map(r => (r.id === rel.id ? { ...r, ...patch } : r)));
   // AU별 프로필 데이터 갱신 (v1.9) — base는 최상위 필드, 그 외 AU는 aus 항목에
-  const patchAuData = (p: { arts?: string[]; timeline?: TlItem[] }) => {
+  const patchAuData = (p: { arts?: string[] }) => {
     if (isBaseAu) updateRel(p);
     else updateRel({ aus: rel.aus.map(a => (a.id === au!.id ? { ...a, ...p } : a)) });
   };
@@ -468,37 +431,6 @@ export default function RelDetailPage() {
     setMemberOpen(false);
     setMCharId(''); setMQuery(''); setMQuote(''); setMName(''); setMSub('');
     toast('멤버가 추가되었습니다');
-  };
-
-  /* ---------- 타임라인 항목 추가·수정 (설명/한마디 중 하나 필수 — 4.5) ---------- */
-  const closeTl = () => { setTlOpen(false); setTlEditIdx(null); setTEra(''); setTDesc(''); setTSays([]); };
-  const addTlItem = () => {
-    const says = tSays.filter(x => x.charId && x.text.trim()).map(({ charId, text }) => ({ charId, text: text.trim() }));
-    if (!tDesc.trim() && says.length === 0) { toast('설명 또는 한마디 중 하나는 입력해 주세요'); return; }
-    const item: TlItem = {
-      era: tEra.trim() || undefined,
-      desc: tDesc.trim() || undefined,
-      says,
-    };
-    const editing = tlEditIdx;
-    patchAuData({
-      timeline: editing == null
-        ? [...auTimeline, item]
-        : auTimeline.map((x, i) => (i === editing ? item : x)),
-    });
-    closeTl();
-    toast(editing == null ? '타임라인 항목이 추가되었습니다' : '타임라인 항목이 수정되었습니다');
-  };
-
-  /* 우클릭 > 수정 — 그 항목을 추가 모달에 그대로 올려 놓는다 */
-  const openTlEdit = (i: number) => {
-    const it = auTimeline[i];
-    if (!it) return;
-    setTEra(it.era ?? '');
-    setTDesc(it.desc ?? '');
-    setTSays(it.says.map(sy => ({ id: newId(), charId: sy.charId, text: sy.text })));
-    setTlEditIdx(i);
-    setTlOpen(true);
   };
 
   const removeMember = (cid: string) => {
@@ -642,7 +574,7 @@ export default function RelDetailPage() {
       {/* AU 하나만 삭제 (v2.0 사용자 발견) — 자관 삭제와 확실히 구분되게 무엇이 남는지까지 적는다 */}
       <ConfirmModal open={auDelAsk !== null}
         title={`AU 「${rel.aus.find(a => a.id === auDelAsk)?.label ?? ''}」를 삭제하시겠습니까?`}
-        body="이 AU의 일러·타임라인이 함께 삭제되며 복구할 수 없습니다. 자관과 다른 AU는 그대로 남습니다."
+        body="이 AU의 일러·카드 정보가 함께 삭제되며 복구할 수 없습니다. 자관과 다른 AU는 그대로 남습니다."
         onClose={() => setAuDelAsk(null)}
         buttons={[
           { label: 'DELETE', kind: 'accent', onClick: () => {
@@ -655,7 +587,7 @@ export default function RelDetailPage() {
         ]} />
 
       <ConfirmModal open={delAsk} title="자관을 삭제하시겠습니까?"
-        body={`「${rel.name}」 자관 전체가 삭제됩니다 — 타임라인·AU ${rel.aus.length}개가 모두 함께 사라지며 복구할 수 없습니다. 연동된 캐릭터 자체는 삭제되지 않습니다.`}
+        body={`「${rel.name}」 자관 전체가 삭제됩니다 — AU ${rel.aus.length}개가 모두 함께 사라지며 복구할 수 없습니다. 연동된 캐릭터 자체는 삭제되지 않습니다.`}
         onClose={() => setDelAsk(false)}
         buttons={[
           { label: 'DELETE', kind: 'accent', onClick: () => {
@@ -849,112 +781,12 @@ export default function RelDetailPage() {
         </div>
       )}
 
-      {/* 타임라인 (v1.8) */}
-      {showTimeline && <div className={`panel timeline ${!isDuo ? 'multi' : ''}`} style={{ fontFamily: familyOf(auBodyFont) }}>
-        <div className="rel-tabs">
-          <button className="on"><span className="lb-pc">TIMELINE</span><span className="lb-m">T</span></button>
-          {isAdmin && (
-            <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-              {/* 이 줄의 버튼은 홈 공통 버튼과 같은 세로 크기(35px)로 — 탭 줄에서만 작아 보이던 것 */}
-              {auTimeline.length > 1 && (
-                <button className={`btn ${tlSort ? 'btn-accent' : 'btn-ghost'}`}
-                  style={{ height: 35, padding: '0 14px', fontSize: 11.5 }}
-                  onClick={() => setTlSort(v => !v)}>
-                  <span className="lb-pc">{tlSort ? '정렬 완료' : '⠿ 정렬'}</span>
-                  <span className="lb-m">⠿</span>
-                </button>
-              )}
-              <button className="btn btn-dark" style={{ height: 35, padding: '0 14px', fontSize: 11.5 }} data-tip="기록 추가" onClick={() => setTlOpen(true)}><span className="lb-pc">＋ ADD RECORD</span><span className="lb-m">＋</span></button>
-            </span>
-          )}
-        </div>
-
-        {tlSort ? (
-            /* 정렬 모드 — 드래그앤드롭으로 순서 변경 (4.5) */
-            <DragList
-              items={auTimeline.map((item, i) => ({ item, key: `tl-${i}` }))}
-              keyOf={x => x.key}
-              onReorder={list => patchAuData({ timeline: list.map(x => x.item) })}
-              render={({ item }) => (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%', padding: '8px 6px', border: '1.5px dashed var(--line)', borderRadius: 9, marginBottom: 6, background: '#fff' }}>
-                  <span className="drag-h">⠿</span>
-                  <div style={{ minWidth: 0 }}>
-                    {item.era && <div className="era">{item.era}</div>}
-                    <div style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.desc || item.says.map(s => s.text).join(' / ')}
-                    </div>
-                  </div>
-                </div>
-              )} />
-          ) : (
-          <div>
-            {auTimeline.map((item, i) => (
-              /* 수정·삭제는 우클릭 메뉴로 (v2.0 사용자 요청) — 늘 떠 있는 [삭제] 글자는 없앴다 */
-              <div className="tl-item" key={i}
-                onContextMenu={e => {
-                  if (!isAdmin) return;
-                  e.preventDefault();
-                  setTlCtx({ x: e.clientX, y: e.clientY, idx: i });
-                }}>
-                {item.era && <div className="era">{item.era}</div>}
-                {item.desc && <div className="desc">{item.desc}</div>}
-                {item.says.map((s, j) => {
-                  const c = charOf(s.charId);
-                  return (
-                    <div key={j} className={`tl-say ${sideOf(s.charId)}`}
-                      style={{ ['--cc' as string]: rgbTriple(c?.color ?? '#5d636d') }}>
-                      <div className="who" style={{ fontFamily: NAME_FONT }}>{c?.name}</div>
-                      <div className="bub">{s.text}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-            {auTimeline.length === 0 && <p className="hint">타임라인이 비어 있습니다 — 우상단 [＋ ADD RECORD]로 추가</p>}
-          </div>
-          )}
-      </div>}
-
       {freeBlocks.map(block => (
         <section key={block.id} className="panel rel-free-block">
           {block.title && <h3>{block.title}</h3>}
           <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
         </section>
       ))}
-
-      {/* 역극 · 로그 연동 리스트 (4.5) — 역극: 내 참여 방 + 공개 전환된 완결 방.
-          AU마다 숨길 수 있다 (v2.0 사용자 요청 — AU 관리의 체크박스). 둘 다 숨기면 칸 자체가 없다 */}
-      {!(au?.hideRp && au?.hideLog) && (
-      <div className="g2" style={{ marginTop: 16 }}>
-        {!au?.hideRp && (
-        <div className="panel widget" style={{ margin: 0, ...(au?.hideLog ? { gridColumn: '1/-1' } : null) }}>
-          <h4>역극 <span className="more" onClick={() => router.push('/rp')}>더보기 ›</span></h4>
-          {relRooms.length > 0 ? relRooms.map(rm => (
-            <div key={rm.id} className="dday-row" style={{ cursor: 'pointer' }} onClick={() => router.push('/rp')}>
-              <span>{rm.title}</span>
-              <b style={{ fontSize: 11, color: 'var(--faint)' }}>
-                {rm.status === 'done' ? (rm.isPublic ? '완결 · 공개' : '완결') : '진행중'}
-              </b>
-            </div>
-          )) : (
-            <p className="hint" style={{ margin: 0 }}>이 자관 기반으로 진행된 역극이 여기에 표시됩니다</p>
-          )}
-        </div>
-        )}
-        {!au?.hideLog && (
-        <div className="panel widget" style={{ margin: 0, ...(au?.hideRp ? { gridColumn: '1/-1' } : null) }}>
-          <h4>로그 <span className="more" onClick={() => router.push('/trpg')}>더보기 ›</span></h4>
-          {relLogs.length > 0 ? relLogs.map(l => (
-            <div key={l.id} className="dday-row" style={{ cursor: 'pointer' }} onClick={() => router.push(itemPath('/trpg', l))}>
-              {/* 번호 없이 제목만 — 연동 리스트에서는 순번이 의미가 없다 (사용자 확정) */}
-              <span>{l.title}</span>
-              <b style={{ fontSize: 11, color: 'var(--faint)' }}>{l.date?.replace(/-/g, '.') ?? ''}</b>
-            </div>
-          )) : <p className="hint" style={{ margin: 0 }}>연동된 로그가 없습니다 — 로그 등록 시 자관을 선택하면 여기에 표시</p>}
-        </div>
-        )}
-      </div>
-      )}
 
       {/* ---------- 멤버 추가 모달 ---------- */}
       <Modal open={memberOpen} onClose={() => setMemberOpen(false)} small title="멤버 추가"
@@ -1016,46 +848,10 @@ export default function RelDetailPage() {
         </div>
       </Modal>
 
-      {/* ---------- 타임라인 항목 추가 모달 (가운데 · 한마디 핑퐁 다중) ---------- */}
-      <Modal open={tlOpen} onClose={closeTl} title={tlEditIdx == null ? '타임라인 항목 추가' : '타임라인 항목 수정'}
-        desc="설명 / 한마디 중 하나는 필수 · 시기 라벨은 선택 · 한마디는 여러 개 추가 가능"
-        dirty={!!(tEra || tDesc || tSays.some(x => x.text))}
-        actions={<>
-          <button className="btn btn-ghost" onClick={closeTl}>CANCEL</button>
-          <button className="btn btn-dark" onClick={addTlItem}>{tlEditIdx == null ? 'ADD' : 'SAVE'}</button>
-        </>}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <KInput placeholder="시기 라벨 (선택)" value={tEra} onChange={e => setTEra(e.target.value)} />
-          <KTextarea placeholder="설명" value={tDesc} onChange={e => setTDesc(e.target.value)} style={{ minHeight: 80 }} />
-          <label className="k-label" style={{ margin: 0 }}>한마디 — 캐릭터를 바꿔가며 주고받는 대화로 쌓을 수 있습니다</label>
-          {tSays.map(s => (
-            <div key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <KSelect minWidth={130} value={s.charId} placeholder="발화 캐릭터"
-                onChange={v => setTSays(l => l.map(x => x.id === s.id ? { ...x, charId: v } : x))}
-                options={rel.members.map(m => {
-                  const c = charOf(m.charId);
-                  return { value: m.charId, label: c?.name ?? m.charId };
-                })} />
-              <KInput placeholder="대사" value={s.text}
-                onChange={e => setTSays(l => l.map(x => x.id === s.id ? { ...x, text: e.target.value } : x))} />
-              <span className="fx" onClick={() => setTSays(l => l.filter(x => x.id !== s.id))}>✕</span>
-            </div>
-          ))}
-          <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11, justifySelf: 'center' }}
-            onClick={() => {
-              // 새 줄의 기본 화자는 직전 화자와 번갈아 (핑퐁)
-              const last = tSays[tSays.length - 1]?.charId;
-              const ids = rel.members.map(m => m.charId);
-              const next = last ? ids[(ids.indexOf(last) + 1) % ids.length] : ids[0] ?? '';
-              setTSays(l => [...l, { id: newId(), charId: next, text: '' }]);
-            }}>＋ ADD LINE</button>
-        </div>
-      </Modal>
-
       {/* ---------- AU 추가/관리 모달 (v1.8 — AU별 이미지·카드 분리는 후속) ---------- */}
       <Modal open={auOpen} onClose={() => setAuOpen(false)} small title="AU 관리"
         dirty={!!(auLabel || auCatch)}
-        desc="AU를 클릭하면 프로필 전체(일러·타임라인)가 그 AU의 것으로 전환됩니다 — 일러·캐치프레이즈는 그 AU를 선택한 상태에서 EDIT"
+        desc="AU를 클릭하면 프로필 전체(일러·카드)가 그 AU의 것으로 전환됩니다 — 일러·캐치프레이즈는 그 AU를 선택한 상태에서 EDIT"
         actions={<button className="btn btn-dark" onClick={() => setAuOpen(false)}>닫기</button>}>
         <div style={{ display: 'grid', gap: 8 }}>
           {rel.aus.map(a => (
@@ -1101,18 +897,9 @@ export default function RelDetailPage() {
                       onClick={() => del.ask(`AU 「${a.label}」를 삭제하시겠습니까?`, () => {
                         updateRel({ aus: rel.aus.filter(x => x.id !== a.id) });
                         if (auId === a.id) setAuId('base');
-                      }, '이 AU의 일러·타임라인이 함께 삭제되며 복구할 수 없습니다.')}>✕</span>
+                      }, '이 AU의 일러·카드 정보가 함께 삭제되며 복구할 수 없습니다.')}>✕</span>
                   </>
                 )}
-              </div>
-              {/* 상세 하단의 연동 리스트 숨김 (v2.0 사용자 요청) — 이 AU를 보는 동안만 적용 */}
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <KCheck label={<span style={{ fontSize: 11.5 }}>역극 리스트 숨김</span>} checked={!!a.hideRp}
-                  onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideRp: v || undefined } : x)) })} />
-                <KCheck label={<span style={{ fontSize: 11.5 }}>로그 리스트 숨김</span>} checked={!!a.hideLog}
-                  onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideLog: v || undefined } : x)) })} />
-                <KCheck label={<span style={{ fontSize: 11.5 }}>타임라인 숨김</span>} checked={!!a.hideTimeline}
-                  onChange={v => updateRel({ aus: rel.aus.map(x => (x.id === a.id ? { ...x, hideTimeline: v || undefined } : x)) })} />
               </div>
             </div>
           ))}
@@ -1127,7 +914,7 @@ export default function RelDetailPage() {
                 // AU 번호 — 자관 안에서 만든 순서대로 (주소 /rels/{…}/au/{번호}, v2.4)
                 const na: RelAu = {
                   id: newId(), no: maxNo(rel.aus.filter(a => a.id !== 'base')) + 1,
-                  label: auLabel.trim(), catchphrase: auCatch.trim(), timeline: [],
+                  label: auLabel.trim(), catchphrase: auCatch.trim(),
                 };
                 updateRel({ aus: [...rel.aus, na] });
                 setAuLabel(''); setAuCatch('');
@@ -1154,21 +941,6 @@ export default function RelDetailPage() {
         <RelArtCropModal fileRef={artCropOpen.ref} ratio={artCropOpen.ratio} crop={rel.artCrops?.[artCropOpen.ref]}
           onClose={() => setArtCropOpen(null)}
           onApply={c => { saveArtCrop(artCropOpen.ref, c); setArtCropOpen(null); }} />
-      )}
-
-      {/* 타임라인 우클릭 메뉴 (v2.0) */}
-      {tlCtx && auTimeline[tlCtx.idx] && createPortal(
-        <div className="ctx-menu on" style={{ left: tlCtx.x, top: tlCtx.y }} onClick={e => e.stopPropagation()}>
-          <div className="ctx-ttl">{auTimeline[tlCtx.idx].era || '타임라인 항목'}</div>
-          <button onClick={() => { const i = tlCtx.idx; setTlCtx(null); openTlEdit(i); }}>수정</button>
-          <button className="danger" onClick={() => {
-            const i = tlCtx.idx;
-            setTlCtx(null);
-            del.ask('타임라인 항목을 삭제하시겠습니까?',
-              () => patchAuData({ timeline: auTimeline.filter((_, j) => j !== i) }));
-          }}>삭제</button>
-        </div>,
-        document.body,
       )}
 
       {/* 멤버 얼굴칸(1:1) 크롭 — 캐릭터의 3:4 썸네일과 별개로 이 자관에만 저장 (v2.0) */}

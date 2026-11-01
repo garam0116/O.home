@@ -110,7 +110,7 @@ export default function UiKitPage() {
               options={[
                 { value: '3:4', label: '3:4 (캐릭터)' },
                 { value: '4:3', label: '4:3 (자관)' },
-                { value: '16:9', label: '16:9 (티켓·도토리)' },
+                { value: '16:9', label: '16:9 (티켓)' },
                 { value: '1:1', label: '1:1' },
               ]} />
             <div style={{ maxWidth: 320, flex: 1 }}>

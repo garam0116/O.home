@@ -47,7 +47,7 @@ function RelEditInner() {
     <section className="page">
       <div className="page-head">
         <PageTitle>EDIT — {rel.name}{auObj ? ` · ${auObj.label}` : ''}</PageTitle>
-        <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·타임라인·AU는 상세 페이지에서 관리합니다" />
+        <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·AU는 상세 페이지에서 관리합니다" />
       </div>
       <RelForm
         initial={rel}
@@ -96,7 +96,6 @@ function RelEditInner() {
                 aus: r.aus.map(a => (a.id === auObj.id ? {
                   ...a, arts: v.arts, catchphrase: v.catchphrase,
                   ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
-                  hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
                   // AU별 자관명 (v2.0 사용자 요청) — 비우면 자관 이름 그대로 쓰게 아예 지운다
                   name: v.auName?.trim() ? v.auName.trim() : undefined,
                   // AU별 폰트·전신 앞뒤 (v2.0 사용자 제보) — 원본이 아니라 이 AU에 담는다
@@ -138,10 +137,6 @@ function RelEditInner() {
                 catchphrase: v.catchphrase, arts: v.arts, thumbId: v.thumbId, thumbCrop: v.thumbCrop,
                 ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
                 logUrl: v.logUrl, lorebookUrl: v.lorebookUrl,
-                // 원본 섹션 숨김도 base AU에 저장 (v2.0 사용자 요청)
-                aus: r.aus.map(a => (a.id === 'base' ? {
-                  ...a, hideTimeline: v.hideTimeline, hideRp: v.hideRp, hideLog: v.hideLog,
-                } : a)),
                 ...(v.fulls
                   ? {
                     members: r.members.map(m => ({

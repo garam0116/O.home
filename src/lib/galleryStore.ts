@@ -1,9 +1,7 @@
 ﻿// 그림 로드뷰(4.10)·그림백업(4.11)·TRPG 백업(4.3) 데이터 — localStorage (→ Supabase/R2 이전 예정)
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import type { Comment, FoldType } from './postStore';
 import type { CropValue } from '@/components/ui/CropEditor';
 import type { Visibility } from './charStore';
-import { getRawSetting, setSetting } from './settingStore';
 
 /* ---------- 로드뷰 (4.10) ---------- */
 export interface RoadItem {
@@ -153,100 +151,5 @@ export async function saveLogBody(text: string): Promise<{ body: string; bodyId?
   if (isServerMode() && bytes < 700_000) return { body: text };
   return { body: '', bodyId: await putBlob(new Blob([text], { type: 'text/plain' })) };
 }
-
-/* ---------- TRPG 도토리 (4.15) — 시나리오 위시리스트 ---------- */
-export type DotoriStatus = 'pledge' | 'undecided' | 'confirmed' | 'done';
-export const DOTORI_STATUS_LABEL: Record<DotoriStatus, string> = {
-  pledge: '공수표', undecided: '일정 미정', confirmed: '일정 확정', done: '완',
-};
-
-/* ---------- TRPG 설정 (환경설정 > TRPG 탭, v1.9) — 상태 카테고리 라벨 + 뱃지 색 ---------- */
-export interface DotoriStatusStyle { label: string; bg: string; border: string; fg: string }
-export interface TrpgSettings {
-  statuses: Record<DotoriStatus, DotoriStatusStyle>;
-}
-export const DEFAULT_TRPG_SETTINGS: TrpgSettings = {
-  statuses: {
-    // 기존 하드코딩 뱃지 색 계승 (pledge: 반투명 잉크 → hex 근사 / confirmed: 포인트 레드)
-    pledge: { label: '공수표', bg: '#23262b', border: '#b9bdc4', fg: '#ffffff' },
-    undecided: { label: '일정 미정', bg: '#7a8089', border: '#7a8089', fg: '#ffffff' },
-    confirmed: { label: '일정 확정', bg: '#a63a45', border: '#a63a45', fg: '#ffffff' },
-    done: { label: '완', bg: '#3c434d', border: '#3c434d', fg: '#ffffff' },
-  },
-};
-
-// 일정미정이 공수표보다 먼저 오게 (v2.0 사용자 요청)
-export const DOTORI_STATUS_KEYS: DotoriStatus[] = ['undecided', 'pledge', 'confirmed', 'done'];
-
-/** 도토리 상태 뱃지 스타일 (카드 우상단 — 공수표/일정 확정만 표시) */
-export function dotoriBadgeStyle(st: DotoriStatusStyle): CSSProperties {
-  return { background: st.bg, border: `1px solid ${st.border}`, color: st.fg };
-}
-
-const TRPG_SET_KEY = 'ohome.trpgset.v1';
-
-export function useTrpgSettings(): [TrpgSettings, (patch: Partial<TrpgSettings>) => void, boolean] {
-  const [st, setSt] = useState<TrpgSettings>(DEFAULT_TRPG_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    try {
-      const raw = getRawSetting(TRPG_SET_KEY);
-      if (raw) {
-        const p = JSON.parse(raw) as Partial<TrpgSettings>;
-        setSt({ statuses: { ...DEFAULT_TRPG_SETTINGS.statuses, ...(p.statuses ?? {}) } });
-      }
-    } catch { /* 기본값 */ }
-    setLoaded(true);
-  }, []);
-  const patch = useCallback((p: Partial<TrpgSettings>) => {
-    setSt(s => {
-      const n = { ...s, ...p };
-      try { setSetting(TRPG_SET_KEY, n); } catch { /* 무시 */ }
-      return n;
-    });
-  }, []);
-  return [st, patch, loaded];
-}
-
-export interface DotoriItem {
-  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
-  no?: number;
-  /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
-  secId?: string;
-  id: string;
-  name: string;              // 시나리오 이름 (필수)
-  writer: string;            // 라이터
-  rule: string;              // 룰(시스템)
-  people: string;            // 인원 표기
-  tags: string[];            // 태그 (복수)
-  link?: string;             // 판매처/소개 페이지
-  status: DotoriStatus;      // 카드에서 바로 전환
-  imgId?: string;            // 16:9 이미지 (IndexedDB)
-  thumbCrop?: CropValue;
-  ph: string;                // 이미지 없을 때 플레이스홀더
-  date: string;              // 등록일 ISO (정렬용)
-}
-
-export const DOTORI_SEED: DotoriItem[] = [];
-
-/* ---------- TRPG 플레이기록 (4.16) — 표 형식 ---------- */
-export interface PlayRecord {
-  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
-  no?: number;
-  /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
-  secId?: string;
-  id: string;
-  date?: string;             // Date (optional — 비우면 표 맨 아래)
-  scenario: string;          // Scenario (필수)
-  scenarioLink?: string;     // 시나리오 링크 — 표에서 이름 클릭 시 새 탭
-  writer: string;
-  withText: string;          // With
-  role: string;              // PL·GM·HO1 등 짧은 표기
-  playtime: string;          // 4h 30m 등 자유 표기
-  url?: string;              // Url (optional) — 클립 아이콘, 새 탭
-  logId?: string;            // 내 홈 로그 백업 연결 (모바일: Playtime 밑줄)
-}
-
-export const PLAYLOG_SEED: PlayRecord[] = [];
 
 export const TRPG_SEED: TrpgLog[] = [];

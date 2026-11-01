@@ -31,8 +31,6 @@ export interface MenuSettings {
   hidden: string[];
   labels: Record<string, string>;
   // 메뉴별 부속 설정 (스펙상 "메뉴 관리에서" 지정하는 것들)
-  playlogPc: string[];               // 플레이기록 표시 열 — PC (4.16 v1.8)
-  playlogMobile: string[];           //   〃 모바일 (기본 Date/Scenario/Role/Playtime)
   roadUpload: MenuPerm;              // 로드뷰 업로드 권한 (4.10 v1.7)
   roadComment: MenuPerm;             // 로드뷰 댓글 권한
   backupView: 'gal' | 'list';        // 갤러리(그림백업) 기본 보기 (5.2)
@@ -92,23 +90,11 @@ function migrateTree(p: Partial<MenuSettings>): MenuGroupNode[] {
 
 export const newGroupId = () => `g-${newId()}`;
 
-export const PLAYLOG_COLS: { key: string; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'scenario', label: 'Scenario' },
-  { key: 'writer', label: 'Writer' },
-  { key: 'with', label: 'With' },
-  { key: 'role', label: 'Role' },
-  { key: 'playtime', label: 'Playtime' },
-  { key: 'url', label: 'Url' },
-];
-
 export const DEFAULT_MENU_SETTINGS: MenuSettings = {
   removedBoards: [],
   groupOrder: DEFAULT_MENU.map(m => m.label),
   hidden: [],
   labels: {},
-  playlogPc: PLAYLOG_COLS.map(c => c.key),                       // PC 기본 전체 7열
-  playlogMobile: ['date', 'scenario', 'role', 'playtime'],       // 모바일 기본 4열 (v1.8)
   roadUpload: 'member', roadComment: 'guest',
   backupView: 'gal',
   calTitle: 'en',
