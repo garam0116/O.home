@@ -13,6 +13,7 @@ import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 
 // 상세 메인 (사용자 확정): 단일 인장 = 1:1 크롭 · 스탠딩 인장 = 원본 전신(비율 그대로)
 import { useBlobUrl } from '@/lib/blobStore';
+import { useNoKey, itemPath } from '@/lib/itemNo';
 
 function StandingImg({ imgId, ph }: { imgId?: string; ph: string }) {
   const url = useBlobUrl(imgId);
@@ -22,10 +23,12 @@ function StandingImg({ imgId, ph }: { imgId?: string; ph: string }) {
 }
 
 export default function TCharDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [tchars, setTchars, loaded] = useLocalList<TrpgChar>('ohome.tchars.v1', TCHAR_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(tchars, rawKey, k => `/tchars/${k}`);
   const [faceIdx, setFaceIdx] = useState(0);
   const [delAsk, setDelAsk] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
@@ -48,7 +51,7 @@ export default function TCharDetailPage() {
         <PageTitle>TRPG CHARACTERS</PageTitle>
         <EditableDesc k="tchars-detail-desc" def="표정 썸네일을 누르면 이미지가 전환됩니다" />
         <div className="head-actions">
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`/tchars/${c.id}/edit`)}>EDIT</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`${itemPath('/tchars', c)}/edit`)}>EDIT</button>}
           {isAdmin && <button className="btn btn-dark" onClick={() => setDelAsk(true)}>DELETE</button>}
         </div>
       </div>

@@ -1,0 +1,10 @@
+'use client';
+// `/cal/c`만 치고 들어온 경우 — 목록을 고르지 않았으니 기본 목록으로 (v2.4)
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function CalKeyIndex() {
+  const router = useRouter();
+  useEffect(() => { router.replace('/cal'); }, [router]);
+  return <section className="page" />;
+}

@@ -4,15 +4,16 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secSubHref } from '@/lib/sectionStore';
 import { useLocalList } from '@/lib/postStore';
-import { PlayRecord, PLAYLOG_SEED } from '@/lib/galleryStore';
+import { PlayRecord, PLAYLOG_SEED, TrpgLog, TRPG_SEED } from '@/lib/galleryStore';
 import { useMenuSettings } from '@/lib/menuStore';
 import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
 import { SearchBar, Pager } from '@/components/ui/Kit';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
+import { itemPath } from '@/lib/itemNo';
 
 const PAGE_SIZE = 15;
 
@@ -29,6 +30,9 @@ function PlaylogPageInner() {
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [recordsAll, setRecordsAll, loaded] = useLocalList<PlayRecord>('ohome.playlog.v1', PLAYLOG_SEED);
+  // 연동 로그 주소는 로그 번호로 (v2.4) — /trpg/{번호}
+  const [trpgLogs] = useLocalList<TrpgLog>('ohome.trpg.v1', TRPG_SEED);
+  const logHref = (logId = '') => itemPath('/trpg', trpgLogs.find(l => l.id === logId) ?? { id: logId });
   // 여러 개로 만든 섹션 (v2.0) — 주소의 ?s= 가 가리키는 것만 보여 준다
   const sec = useSectionParam('playlog');
   const records = filterSection(recordsAll, sec.id);
@@ -77,7 +81,7 @@ function PlaylogPageInner() {
 
   // 모바일 전용 — URL 열이 없으므로 Playtime 밑줄 탭으로 로그 이동 (4.16)
   const openLogMobile = (r: PlayRecord) => {
-    if (r.logId && window.matchMedia('(max-width:620px)').matches) router.push(`/trpg/${r.logId}`);
+    if (r.logId && window.matchMedia('(max-width:620px)').matches) router.push(logHref(r.logId));
   };
 
   return (
@@ -87,7 +91,7 @@ function PlaylogPageInner() {
         <EditableDesc k="playlog-desc" def="다녀온 세션 기록 — 표 형식" />
         <div className="head-actions">
           <SearchBar placeholder="시나리오·라이터·동행 검색" onSearch={v => { setQ(v); setPage(1); }} />
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/playlog/new' + secQuery('playlog', sec.id))}>＋ ADD RECORD</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(secSubHref('playlog', sec.id, 'new'))}>＋ ADD RECORD</button>}
         </div>
       </div>
 
@@ -147,13 +151,13 @@ function PlaylogPageInner() {
                       <a href={r.url} target="_blank" rel="noreferrer" data-tip="링크 열기 (새 탭)"><ClipIcon /></a>
                     ) : r.logId ? (
                       <a data-tip="백업 로그 보기" style={{ cursor: 'pointer' }}
-                        onClick={() => router.push(`/trpg/${r.logId}`)}><ClipIcon /></a>
+                        onClick={() => router.push(logHref(r.logId))}><ClipIcon /></a>
                     ) : null}
                   </td>
                 )}
                 {isAdmin && !isMobile && (
                   <td className="td-mng">
-                    <button onClick={() => router.push(`/playlog/${r.id}/edit`)} data-tip="편집">✎</button>
+                    <button onClick={() => router.push(`${itemPath('/playlog', r)}/edit`)} data-tip="편집">✎</button>
                     <button onClick={() => setDelFor(r)} data-tip="삭제">✕</button>
                   </td>
                 )}

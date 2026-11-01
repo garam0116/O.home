@@ -17,7 +17,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocalList } from './postStore';
 import { MAIN_BOARD_ID, findBoardByKey, findPostByKey } from './boardStore';
 import type { Post } from './postStore';
-import { useSections, inSection, MAIN_SEC, type SectionKind } from './sectionStore';
+import { useSections, inSection, MAIN_SEC, PATH_SEC, type SectionKind } from './sectionStore';
+import { findByNo, type NoRow } from './itemNo';
 import { lastDate, type ThreadWork } from './threadStore';
 
 /** 날짜를 읽을 수 있는 목록 종류 — 주소 첫 칸 → 저장 키 · 섹션 종류 */
@@ -54,6 +55,11 @@ export function parseTarget(url?: string): Target | null {
   // 게시판 목록 주소 `/board/b/{주소}` (v2.4) — 글 하나가 아니라 그 게시판 전체
   if (kind === 'board' && second === 'b') {
     return third ? { kind, board: decodeURIComponent(third) } : { kind };
+  }
+  // 여러 개로 만든 목록 `/gallery/g/{별명}` (v2.4) — 첫 글자 한 칸 뒤가 목록 별명
+  const secKind = SOURCES[kind].sec;
+  if (secKind && second === PATH_SEC[secKind]) {
+    return third ? { kind, sec: decodeURIComponent(third) } : { kind };
   }
   const itemId = second && !['write', 'new'].includes(second) ? decodeURIComponent(second) : undefined;
   return {
@@ -121,7 +127,9 @@ export function useLatestUpdates(linkSets: (string | undefined)[][], isAdmin: bo
       const p = findPostByKey(rows as unknown as Post[], t.itemId);
       hit = p ? [p as unknown as Row] : [];
     } else if (t.itemId) {
-      hit = rows.filter(r => r.id === t.itemId);
+      // 글 주소는 번호(`/gallery/3`) 또는 예전 id (v2.4)
+      const one = findByNo(rows as unknown as (NoRow & { id: string })[], t.itemId);
+      hit = one ? [one as unknown as Row] : [];
     } else if (t.kind === 'board') {
       // 주소 값은 별명·이름에서 만든 값·id 어느 것이든 (v2.4)
       const b = t.board ? (findBoardByKey(t.board)?.id ?? t.board) : MAIN_BOARD_ID;

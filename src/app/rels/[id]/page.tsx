@@ -12,7 +12,7 @@ import {
   Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, TlItem, findChar, Visibility, CharGrant,
   auMember, auStyle, fullShadow,
   RelAu, RelCpTag, charWithAu, CP_LABEL,
-  findByKey, charPath, relDday, relDdayDate,
+  findByKey, charPath, relDday, relDdayDate, auPathOf, auKeyOf, relPath,
 } from '@/lib/charStore';
 import { putBlob } from '@/lib/blobStore';
 import { GrantsEditor } from '@/components/chars/GrantsEditor';
@@ -31,6 +31,7 @@ import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { useNoKey, maxNo, itemPath } from '@/lib/itemNo';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -247,12 +248,14 @@ function SideSlotCard({ slot }: { slot: RelSideSlot }) {
 }
 
 export default function RelDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const { familyOf } = useFonts();
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  // 주소는 별명 또는 번호 (v2.4) — 예전 id 주소로 들어오면 바꿔 둔다
+  const id = useNoKey(rels, rawKey, k => `/rels/${k}`, { slug: true });
   const [chars, setChars, charsLoaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [logs] = useLocalList<TrpgLog>('ohome.trpg.v1', TRPG_SEED);
   const [rooms] = useLocalList<RpRoom>('ohome.rp.v1', RP_SEED);
@@ -404,7 +407,7 @@ export default function RelDetailPage() {
   // 캐릭터 별명 주소 우선 (v2.0) — 없으면 id 그대로
   const charHref = (cid: string) => {
     const base = charPath(charOf(cid) ?? { id: cid });
-    return auCharKey ? `${base}?au=${encodeURIComponent(auCharKey)}` : base;
+    return `${base}${auPathOf(rels, auCharKey)}`;   // AU는 /chars/{…}/au/{자관}/{번호} (v2.4)
   };
   const sideOf = (cid: string) => (isDuo && rel?.members[1]?.charId === cid ? 'r' : 'l');
   const sideSlotOf = (side: 'l' | 'r') =>
@@ -612,7 +615,7 @@ export default function RelDetailPage() {
         <div className="rel-admin-actions">
           {/* AU 선택 중이면 그 AU의 일러·캐치프레이즈를 편집 (v1.9) */}
           <button className="btn btn-dark" style={{ height: 30, padding: '0 13px', fontSize: 11 }}
-            onClick={() => router.push(`/rels/${rel.id}/edit${isBaseAu ? '' : `?au=${au!.id}`}`)}>
+            onClick={() => router.push(`${relPath(rel)}${isBaseAu ? '' : `/au/${auKeyOf(rel, au!.id)}`}/edit`)}>
             {isBaseAu ? 'EDIT' : `EDIT ${au!.label}`}
           </button>
           {/* AU를 보는 중이면 지워지는 것도 그 AU다 (v2.0 사용자 발견 — 자관이 통째로 지워졌다).
@@ -932,7 +935,7 @@ export default function RelDetailPage() {
         <div className="panel widget" style={{ margin: 0, ...(au?.hideRp ? { gridColumn: '1/-1' } : null) }}>
           <h4>로그 <span className="more" onClick={() => router.push('/trpg')}>더보기 ›</span></h4>
           {relLogs.length > 0 ? relLogs.map(l => (
-            <div key={l.id} className="dday-row" style={{ cursor: 'pointer' }} onClick={() => router.push(`/trpg/${l.id}`)}>
+            <div key={l.id} className="dday-row" style={{ cursor: 'pointer' }} onClick={() => router.push(itemPath('/trpg', l))}>
               {/* 번호 없이 제목만 — 연동 리스트에서는 순번이 의미가 없다 (사용자 확정) */}
               <span>{l.title}</span>
               <b style={{ fontSize: 11, color: 'var(--faint)' }}>{l.date?.replace(/-/g, '.') ?? ''}</b>
@@ -1123,7 +1126,11 @@ export default function RelDetailPage() {
               </div>
               <button className="btn btn-dark" style={{ whiteSpace: 'nowrap', marginLeft: 'auto' }} onClick={() => {
                 if (!auLabel.trim()) { toast('AU 이름을 입력해 주세요'); return; }
-                const na: RelAu = { id: newId(), label: auLabel.trim(), catchphrase: auCatch.trim(), cp: auCp, timeline: [] };
+                // AU 번호 — 자관 안에서 만든 순서대로 (주소 /rels/{…}/au/{번호}, v2.4)
+                const na: RelAu = {
+                  id: newId(), no: maxNo(rel.aus.filter(a => a.id !== 'base')) + 1,
+                  label: auLabel.trim(), catchphrase: auCatch.trim(), cp: auCp, timeline: [],
+                };
                 updateRel({ aus: [...rel.aus, na] });
                 setAuLabel(''); setAuCatch('');
               }}>＋ ADD AU</button>

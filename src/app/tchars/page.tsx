@@ -11,6 +11,7 @@ import { useConfirmDelete } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
+import { itemPath } from '@/lib/itemNo';
 
 export default function TCharsPage() {
   const router = useRouter();
@@ -49,12 +50,12 @@ export default function TCharsPage() {
           return (
             <div key={c.id} className="panel tc-card" {...sort(i)}
               style={{ cursor: 'pointer', ...(sort(i) as { style?: React.CSSProperties }).style }}
-              onClick={() => { if (!editOn) router.push(`/tchars/${c.id}`); }}>
+              onClick={() => { if (!editOn) router.push(itemPath('/tchars', c)); }}>
               <div className="main" style={{ cursor: 'pointer' }}>
                 <CroppedBlobImg fileRef={face?.imgId} crop={faceCrop(c, face)} ph={face?.ph ?? c.ph} />
                 {isAdmin && (
                   <div className="th-actions hv-actions">
-                    <button onClick={e => { e.stopPropagation(); router.push(`/tchars/${c.id}/edit`); }}>EDIT</button>
+                    <button onClick={e => { e.stopPropagation(); router.push(`${itemPath('/tchars', c)}/edit`); }}>EDIT</button>
                     <button className="del" onClick={e => {
                       e.stopPropagation();
                       del.ask(`「${c.name}」를 삭제하시겠습니까?`, () => setTchars(tchars.filter(x => x.id !== c.id)));

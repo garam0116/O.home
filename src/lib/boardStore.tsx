@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { newId } from './postStore';
 import { MAIN_SEC, cleanSlug } from './sectionStore';
 import type { Post } from './postStore';
+import { numbersOf, findByNo, noKeyOf } from './itemNo';
 
 export interface BoardBadge { id: string; label: string; bg: string; border: string; fg: string }
 
@@ -228,70 +229,13 @@ export const boardHref = (id: string, boards?: Board[]) =>
   (id === MAIN_BOARD_ID ? '/board' : `${BOARD_PATH}/${boardKeyOf(id, boards)}`);
 
 /* ---------- 글 번호 (v2.4 사용자 요청) ----------
-   글 주소를 `/board/mvwvev4lnr1m` 대신 `/board/1`처럼 **올린 순서대로 매긴 번호**로.
-   번호는 모든 게시판을 통틀어 하나로 이어진다(주소에 게시판이 들어가지 않으므로).
+   글 주소는 `/board/{번호}` — 모든 게시판을 통틀어 올린 순서대로. 다른 게시판으로 옮겨도 그대로다.
+   번호를 매기고 받는 규칙은 모든 종류가 같으므로 lib/itemNo에 모아 두었다. */
+export const postNumbers = (posts: Post[]) => numbersOf(posts);
+export const findPostByKey = (posts: Post[], key: string, nums?: Map<string, number>) => findByNo(posts, key, nums);
 
-   · 새 글은 쓸 때 `no`를 받아 저장한다(지금까지 나온 번호 + 1).
-   · 번호가 없는 예전 글은 만든 순서대로 번호를 붙여 보여 주고, 관리자가 게시판을 열면
-     그 번호를 글에 저장해 둔다 — 그 뒤로는 글을 지워도 다른 글 번호가 밀리지 않는다.
-   · 같은 번호가 둘 생기면(관리자만 보는 게시판이 있어 회원이 마지막 번호를 못 본 경우)
-     나중에 만든 쪽이 다음 번호로 밀린다. */
-
-/** newId()로 만든 id는 앞 8자리가 만든 시각(base36)이다 */
-function idTime(id: string): number | undefined {
-  if (id.length < 9) return undefined;
-  const t = parseInt(id.slice(0, 8), 36);
-  return t > 1577836800000 && t < 4102444800000 ? t : undefined;
-}
-const createdAt = (p: Post) => idTime(p.id) ?? (Date.parse(p.date) || 0);
-
-/** 글 id → 번호 */
-export function postNumbers(posts: Post[]): Map<string, number> {
-  const sorted = [...posts].sort((a, b) =>
-    createdAt(a) - createdAt(b) || (a.no ?? 0) - (b.no ?? 0) || a.id.localeCompare(b.id));
-  const out = new Map<string, number>();
-  let last = 0;
-  for (const p of sorted) {
-    const n = p.no && p.no > last ? p.no : last + 1;
-    out.set(p.id, n);
-    last = n;
-  }
-  return out;
-}
-
-/** 새 글에 줄 번호 */
-export function nextPostNo(posts: Post[]): number {
-  let max = 0;
-  postNumbers(posts).forEach(n => { if (n > max) max = n; });
-  return max + 1;
-}
-
-/** 글 주소 — 번호를 모르면(목록에 없는 글) id 주소로. id 주소도 계속 열린다 */
-export const postHref = (p: { id: string }, nums: Map<string, number>) =>
-  `/board/${nums.get(p.id) ?? p.id}`;
-
-/** 주소 값(번호 또는 id) → 글 */
-export function findPostByKey(posts: Post[], key: string, nums = postNumbers(posts)): Post | undefined {
-  if (/^\d+$/.test(key)) {
-    const n = Number(key);
-    const hit = posts.find(p => nums.get(p.id) === n);
-    if (hit) return hit;
-  }
-  return posts.find(p => p.id === key);
-}
-
-/** 저장해 둘 번호가 있는 글만 바꾼 목록 — 바꿀 게 없으면 null (관리자가 게시판을 열 때 한 번) */
-export function withPostNumbers(posts: Post[]): Post[] | null {
-  const nums = postNumbers(posts);
-  let changed = false;
-  const next = posts.map(p => {
-    const n = nums.get(p.id);
-    if (n === undefined || p.no === n) return p;
-    changed = true;
-    return { ...p, no: n };
-  });
-  return changed ? next : null;
-}
+/** 글 주소 — 번호를 모르면 id 주소(그 주소로 들어와도 번호 주소로 바뀐다) */
+export const postHref = (p: { id: string }, nums: Map<string, number>) => `/board/${noKeyOf(p, nums)}`;
 
 /** 게시판 뱃지 스타일 — 알약형, 텍스트 정중앙 (배경까지 함께 칠해 글씨만 튀지 않게)
  *  한글 잉크는 폰트박스 위쪽에 몰려 line-height:1이면 위로 쏠려 보임 (v1.9 실측 보정) —

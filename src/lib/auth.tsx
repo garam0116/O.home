@@ -6,6 +6,7 @@ import { backend, isServerMode } from './backend';
 import { setCurrentUserId } from './currentUser';
 import { getSetting, setSetting } from './settingStore';
 import { invalidateListCache } from './postStore';
+import { MEMBER_COUNTER, reserveNos } from './itemNo';
 
 export type Role = 'admin' | 'member' | 'guest';
 
@@ -148,6 +149,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 그때는 닉네임(프로필)이 아직 저장되기 전이라 이메일이 이름 자리에 들어간다.
       // 저장이 끝난 지금 다시 읽어 이름을 바로잡는다.
       try { const u = await be.currentUser(); if (u) setUser(u); } catch { /* 무시 */ }
+      // 회원 번호 (v2.4) — 회원 주소 /members/{번호}. 실패해도 가입은 끝난 것이다(관리자 접속 때 채워진다)
+      try {
+        const me = await be.currentUser();
+        if (me) {
+          const list = await be.listMembers();
+          const floor = Math.max(0, ...list.map(m => m.no ?? 0), list.length - 1);
+          await be.setMemberNo(me.id, await reserveNos(MEMBER_COUNTER, 1, floor));
+        }
+      } catch { /* 무시 */ }
       return { ok: true };
     }
     if (code !== inviteCode()) return { ok: false, error: '가입코드가 올바르지 않습니다.' };

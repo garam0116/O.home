@@ -18,17 +18,26 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useSectionTitle } from '@/lib/sectionStore';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { useNoKey } from '@/lib/itemNo';
+import { auKeyFromPath, auPathOf, charPath } from '@/lib/charStore';
 
 function CharDetailInner() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey, rel: auRel, au: auNo } = useParams<{ id: string; rel?: string; au?: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const [chars, setChars, loaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [rels] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  const params = useSearchParams();
+  /* 주소 (v2.4) — /chars/{별명 또는 번호}, AU는 /chars/{…}/au/{자관}/{AU 번호}.
+     옛 주소(`/chars/id`, `?au=자관id:AUid`)로 들어오면 새 주소로 바꿔 둔다 */
+  const legacyAu = params.get('au');
+  const pathAu = auKeyFromPath(rels, auRel, auNo);
+  const startAu = pathAu ?? legacyAu;
+  const id = useNoKey(chars, rawKey, k => `/chars/${k}${auPathOf(rels, startAu)}`,
+    { slug: true, force: !!legacyAu });
   const { familyOf } = useFonts();
   // 큰 글씨 — 추가 섹션(창고캐 등)이면 그 이름, 눌렀을 때도 그 목록으로 (v2.0 사용자 제보)
   const tt = useSectionTitle('chars', findByKey(chars, id)?.secId, 'CHARACTERS');
-  const params = useSearchParams();
   const [tab, setTab] = useState('basic');
   const [artIdx, setArtIdx] = useState(0);
   const [delAsk, setDelAsk] = useState(false);   // 캐릭터 삭제 확인
@@ -43,8 +52,9 @@ function CharDetailInner() {
       ? r.aus.filter(a => a.id !== 'base').map(a => ({ key: `${r.id}:${a.id}`, label: a.label, relName: r.name }))
       : [])
     : []), [rels, ch]);
-  // AU 편집에서 ?au= 로 돌아오면 그 AU가 선택된 채 시작
-  const [auKey, setAuKey] = useState<string | null>(() => params.get('au'));
+  // AU 주소(/au/자관/번호)로 들어오면 그 AU가 선택된 채 시작 — 자관 목록을 받은 뒤에 알 수 있다
+  const [auKey, setAuKey] = useState<string | null>(() => startAu);
+  useEffect(() => { if (startAu) setAuKey(startAu); }, [startAu]);
   // 대표 아트 우클릭 → 상세 화면에 보일 위치 조정 (v2.0)
   const [artCtx, setArtCtx] = useState<{ x: number; y: number; ref: string } | null>(null);
   // 편집 중인 아트 참조 + 그때 실제 표시 영역의 가로/세로 비 (3:4가 아니라 화면 높이에 따라 달라진다)
@@ -128,7 +138,7 @@ function CharDetailInner() {
     }
   };
 
-  const editHref = auKey ? `/chars/${ch.id}/edit?au=${encodeURIComponent(auKey)}` : `/chars/${ch.id}/edit`;
+  const editHref = `${charPath(ch)}${auPathOf(rels, auKey)}/edit`;
 
   return (
     <section className="page page-char-detail">

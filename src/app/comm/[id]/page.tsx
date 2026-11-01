@@ -20,6 +20,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { PageTitle } from '@/components/ui/PageText';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { CommFormFill } from '@/components/comm/FormFill';
+import { useNoKey, itemPath } from '@/lib/itemNo';
 
 /** 편지봉투 픽토그램 (선 아이콘 — 4.18 문의 링크) */
 function MailIcon() {
@@ -60,10 +61,12 @@ function StripCropModal({ fileRef, crop, onClose, onApply }: {
 }
 
 export default function CommDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [items, setItems, loaded] = useLocalList<CommItem>('ohome.comm.v1', COMM_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(items, rawKey, k => `/comm/${k}`);
   const [settings, , setLoaded] = useCommSettings();
   const { familyOf } = useFonts();
   const [cur, setCur] = useState(0);
@@ -122,7 +125,7 @@ export default function CommDetailPage() {
       <div className="page-head" style={{ marginBottom: 2 }}>
         <PageTitle style={{ visibility: 'hidden', height: 0, margin: 0 }}>{c.name}</PageTitle>
         <div className="head-actions">
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`/comm/${c.id}/edit`)}>EDIT</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(`${itemPath('/comm', c)}/edit`)}>EDIT</button>}
           {isAdmin && <button className="btn btn-dark" onClick={() => setDelAsk(true)}>DELETE</button>}
         </div>
       </div>

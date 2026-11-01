@@ -23,6 +23,7 @@ import { useMainStore } from '@/lib/mainStore';
 import { mergeOrder } from '@/lib/cardSort';
 import { DragList } from '@/components/ui/DragList';
 import { OrderMenu, orderNoOf, moveToOrder } from '@/components/ui/OrderMenu';
+import { itemPath, allocNo } from '@/lib/itemNo';
 
 function TrpgPageInner() {
   const router = useRouter();
@@ -200,7 +201,8 @@ function TrpgPageInner() {
     const bodyText = nFile ? await decodeText(nFile) : nBody;
     const log: TrpgLog = {
       id,
-      no: Math.max(0, ...logs.map(l => l.no)) + 1, // 내부 순번 (정렬용)
+      // 순번(LOG 003)이자 주소 /trpg/{순번} — 서버 카운터에서 받아 못 보는 로그와도 겹치지 않는다 (v2.4)
+      no: await allocNo('ohome.trpg.v1', logs),
       noText: nNo.trim() || undefined,             // № 자리 표시 텍스트 — 비우면 자동 № 0XX
       title: nTitle.trim(), catchphrase: nCatch.trim() || undefined,
       writer: nWriter.trim(), withText: nWith.trim(),
@@ -247,7 +249,7 @@ function TrpgPageInner() {
   const Ticket = ({ l }: { l: TrpgLog }) => (
     <div className="ticket"
       onContextMenu={e => openOrder(e, l.id)}
-      onClick={() => { if (!editOn) router.push(`/trpg/${l.id}`); }}>
+      onClick={() => { if (!editOn) router.push(itemPath('/trpg', l)); }}>
       <div className="stub-line" />
       <div className={`wide ${!l.thumbId && !l.thumbColor ? `ph ${l.ph}` : ''}`} style={thumbStyle(l)}>
         {l.thumbId && <CroppedBlobImg fileRef={l.thumbId} crop={l.thumbCrop} />}
@@ -304,7 +306,7 @@ function TrpgPageInner() {
                   // 드래그 위치는 전체 기준으로 넘긴다 — 페이지 안 위치로 넘기면 2페이지에서 어긋난다
                   <div key={l.id} className="list-item" {...gridDragProps(logStart + i)}
                     onContextMenu={e => openOrder(e, l.id)}
-                    onClick={() => { if (!editOn) router.push(`/trpg/${l.id}`); }}>
+                    onClick={() => { if (!editOn) router.push(itemPath('/trpg', l)); }}>
                     {editOn && <span className="drag-h">⠿</span>}
                     <div className={`th ${!l.thumbId && !l.thumbColor ? `ph ${l.ph}` : ''}`} style={{ ...thumbStyle(l), position: 'relative' }}>
                       {l.thumbId && <CroppedBlobImg fileRef={l.thumbId} crop={l.thumbCrop} />}

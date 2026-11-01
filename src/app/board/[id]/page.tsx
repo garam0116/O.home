@@ -136,7 +136,7 @@ export default function BoardDetailPage() {
         <div className="head-actions">
           {/* 수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
           {isAuthor && (
-            <button className="btn btn-dark" onClick={() => router.push(`/board/write?edit=${post.id}`)}>EDIT</button>
+            <button className="btn btn-dark" onClick={() => router.push(`/board/${no ?? post.id}/edit`)}>EDIT</button>
           )}
           {canManage && (
             <button className="btn btn-dark" onClick={() => setDelAsk(true)}>DELETE</button>

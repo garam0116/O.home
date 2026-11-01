@@ -14,5 +14,6 @@ export function normalizeInternalLink(v: string): string {
 }
 
 /** 페이지 주소(slug) 유효성 — 영문 소문자·숫자·하이픈만, 1~40자 (v1.9) */
-export const isValidSlug = (s: string) => /^[a-z0-9-]{1,40}$/.test(s);
+/** 별명 주소로 쓸 수 있는가 — 영소문자·숫자·하이픈. **숫자만은 안 된다** (v2.4) — /chars/3 은 번호 주소다 */
+export const isValidSlug = (s: string) => /^[a-z0-9-]{1,40}$/.test(s) && !/^\d+$/.test(s);
 export const slugify = (s: string) => s.trim().toLowerCase().replace(/\s+/g, '-');

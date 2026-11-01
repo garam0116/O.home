@@ -28,6 +28,8 @@ export const ROAD_SEED: RoadItem[] = [];
 
 /* ---------- 그림백업 (4.11) ---------- */
 export interface BackupPost {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;
@@ -57,7 +59,7 @@ export interface TrpgLog {
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;
-  no: number;                // 내부 순번 (정렬용 — 자동 부여)
+  no: number;                // 순번 (LOG 003) · 주소 /trpg/{순번} (v2.4 — 서버 카운터에서 받아 겹치지 않는다)
   noText?: string;           // № 자리 표시 텍스트 (선택 — 비우면 자동 № 0XX)
   title: string;             // 시나리오 타이틀 (필수)
   catchphrase?: string;      // 캐치프레이즈 한 줄 (선택)
@@ -207,6 +209,8 @@ export function useTrpgSettings(): [TrpgSettings, (patch: Partial<TrpgSettings>)
 }
 
 export interface DotoriItem {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;
@@ -227,6 +231,8 @@ export const DOTORI_SEED: DotoriItem[] = [];
 
 /* ---------- TRPG 플레이기록 (4.16) — 표 형식 ---------- */
 export interface PlayRecord {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;

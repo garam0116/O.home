@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { Character, CHAR_SEED, charPath } from '@/lib/charStore';
 import { backend, isServerMode } from '@/lib/backend';
-import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secSubHref } from '@/lib/sectionStore';
 import { SearchBar, FitText } from '@/components/ui/Kit';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
 
@@ -60,7 +60,7 @@ function CharsInner() {
         <EditableDesc k="chars-desc" def="운영자의 자캐 목록 · 3:4 두상 썸네일 · 클릭 시 프로필로 이동" />
         <div className="head-actions">
           <SearchBar onSearch={setQ} />
-          {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/chars/new' + secQuery('chars', sec.id))}>＋ ADD CHARACTER</button>}
+          {isAdmin && <button className="btn btn-dark" onClick={() => router.push(secSubHref('chars', sec.id, 'new'))}>＋ ADD CHARACTER</button>}
         </div>
       </div>
       <div className="g5 chars-grid">

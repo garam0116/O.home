@@ -58,7 +58,17 @@ export interface Backend {
   /** 가입 회원 목록 — 역극 참여자 선택·회원 관리 화면용.
    *  avatarUrl도 내준다 (v2.0 사용자 제보) — 이미지 정리가 콘텐츠·설정만 훑던 시절, 프로필 사진은
    *  어디에도 참조가 안 잡혀 「아무도 안 쓰는 파일」로 지워졌다. */
-  listMembers(): Promise<{ id: string; nickname: string; role: 'admin' | 'member'; email?: string; avatarUrl?: string }[]>;
+  listMembers(): Promise<{ id: string; nickname: string; role: 'admin' | 'member'; email?: string; avatarUrl?: string; no?: number; createdAt?: number }[]>;
+  /** 회원 번호 저장 (v2.4) — 회원 주소 /members/{번호}. 본인 또는 관리자 */
+  setMemberNo(uid: string, no: number): Promise<void>;
+
+  /* ---- 번호 발급 (v2.4 사용자 요청) ----
+     홈의 모든 항목은 올린 순서대로 고정된 번호 주소(/board/1, /gallery/3 …)를 갖는다.
+     회원은 비공개 글을 못 보므로 「지금 보이는 마지막 번호 + 1」로는 번호가 겹칠 수 있다 —
+     그래서 종류마다 서버에 카운터를 하나 두고 거기서 번호를 받는다.
+     kind 카운터를 max(현재값, floor)에서 count만큼 올리고, 받은 묶음의 첫 번호를 돌려준다.
+     count가 0이면 카운터를 floor 이상으로 맞추기만 한다(돌려주는 값은 다음 번호). */
+  reserveNo(kind: string, count: number, floor: number): Promise<number>;
 
   /* ---- 목록(콘텐츠) ---- */
   fetchList<T extends ListItem>(coll: string): Promise<T[]>;

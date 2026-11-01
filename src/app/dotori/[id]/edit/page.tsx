@@ -9,13 +9,16 @@ import { DotoriItem, DOTORI_SEED } from '@/lib/galleryStore';
 import { DotoriForm } from '@/components/trpg/DotoriForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { useNoKey } from '@/lib/itemNo';
 
 export default function DotoriEditPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const toast = useToast();
   const [items, setItems, loaded] = useLocalList<DotoriItem>('ohome.dotori.v1', DOTORI_SEED);
+  // 주소는 번호 (v2.4) — 예전 id 주소로 들어오면 번호 주소로 바꿔 둔다
+  const id = useNoKey(items, rawKey, k => `/dotori/${k}/edit`);
   // 큰 글씨 — 추가 섹션 항목이면 그 이름, 눌렀을 때도 그 목록으로 (v2.0 사용자 제보)
   const tt = useSectionTitle('dotori', items.find(x => x.id === id)?.secId, 'EDIT DOTORI');
   const it = items.find(x => x.id === id);

@@ -4,11 +4,12 @@ import React, { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
-import { Character, CHAR_SEED } from '@/lib/charStore';
-import { useSectionParam, secStamp, secQuery , useSectionTitle } from '@/lib/sectionStore';
+import { Character, CHAR_SEED, charPath } from '@/lib/charStore';
+import { useSectionParam, secStamp, useSectionTitle, sectionHref, CHAR_RESERVED } from '@/lib/sectionStore';
 import { CharEditForm } from '@/components/chars/CharEditForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
+import { allocNo } from '@/lib/itemNo';
 
 function CharNewInner() {
   const router = useRouter();
@@ -36,12 +37,14 @@ function CharNewInner() {
       </div>
       <CharEditForm
         initial={null}
-        existingIds={chars.flatMap(c => [c.id, ...(c.slug ? [c.slug] : [])])}
-        onCancel={() => router.push('/chars' + secQuery('chars', sec.id))}
-        onSave={c => {
-          setChars([...chars, { ...c, ...secStamp(sec.id) }]);
+        existingIds={chars.flatMap(c => [c.id, ...(c.slug ? [c.slug] : [])]).concat(CHAR_RESERVED)}
+        onCancel={() => router.push(sectionHref('chars', sec.id))}
+        onSave={async c => {
+          // 번호는 서버 카운터에서 (v2.4) — 별명이 없으면 주소가 /chars/{번호}
+          const no = await allocNo('ohome.chars.v1', chars);
+          setChars([...chars, { ...c, no, ...secStamp(sec.id) }]);
           toast('캐릭터가 등록되었습니다');
-          router.push(`/chars/${c.id}`);
+          router.push(charPath({ ...c, no }));
         }}
       />
     </section>

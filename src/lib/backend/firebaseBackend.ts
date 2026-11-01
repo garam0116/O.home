@@ -53,6 +53,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
 
   const {
     collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
+    runTransaction,
   } = fsMod;
   type Cons = ReturnType<typeof where>;
 
@@ -356,13 +357,33 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       const snap = await getDocs(collection(db, 'profiles'));
       return snap.docs.map(d => {
         // avatarUrl도 함께 — 이미지 정리가 프로필 사진을 「안 쓰는 파일」로 지우지 않게 (v2.0 사용자 제보)
-        const v = d.data() as { nickname?: string; avatarUrl?: string };
+        const v = d.data() as { nickname?: string; avatarUrl?: string; no?: number; createdAt?: number };
         return {
           id: d.id,
           nickname: v.nickname ?? d.id,
           role: (admins.has(d.id) ? 'admin' : 'member') as 'admin' | 'member',
           avatarUrl: v.avatarUrl,
+          no: typeof v.no === 'number' ? v.no : undefined,
+          createdAt: typeof v.createdAt === 'number' ? v.createdAt : undefined,
         };
+      });
+    },
+
+    async setMemberNo(uid, no) {
+      await setDoc(doc(db, 'profiles', uid), { no }, { merge: true });
+    },
+
+    /* 번호 발급 (v2.4) — counters/{kind} 문서 하나를 트랜잭션으로 올린다.
+       동시에 두 사람이 받아도 트랜잭션이 하나를 다시 돌리므로 같은 번호가 나가지 않는다.
+       규칙은 「값이 커지는 쓰기」만 허용한다 (firebase/firestore.rules). */
+    async reserveNo(kind, count, floor) {
+      const ref = doc(db, 'counters', kind);
+      return runTransaction(db, async tx => {
+        const snap = await tx.get(ref);
+        const cur = snap.exists() ? Number((snap.data() as { n?: number }).n) || 0 : 0;
+        const base = Math.max(cur, floor);
+        if (base + count > cur || !snap.exists()) tx.set(ref, { n: base + count });
+        return base + 1;
       });
     },
 

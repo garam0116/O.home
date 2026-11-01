@@ -397,7 +397,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
     if (!name.trim()) { toast('자관 이름을 입력해 주세요'); return; }
     // 페이지 주소 (v1.9 / 수정도 가능 v2.0) — 유효성·중복 검사
     if (slug && slug !== (initial?.slug ?? '')) {
-      if (!isValidSlug(slug)) { toast('주소는 영문 소문자·숫자·하이픈만 쓸 수 있습니다'); return; }
+      if (!isValidSlug(slug)) { toast('주소는 영문 소문자·숫자·하이픈만 쓸 수 있습니다 (숫자만으로는 안 됩니다 — 번호 주소와 겹칩니다)'); return; }
       if (existingIds?.includes(slug)) { toast('이미 사용 중인 주소입니다 — 다른 주소를 입력해 주세요'); return; }
     }
     const artIds = await Promise.all(arts.map(a => (a.file ? resolveImageRef({ kind: 'file', file: a.file }) : Promise.resolve(a.ref!))));

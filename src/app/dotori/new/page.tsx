@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, secStamp, secQuery , useSectionTitle } from '@/lib/sectionStore';
+import { useSectionParam, secStamp, useSectionTitle, sectionHref } from '@/lib/sectionStore';
 import { useLocalList, newId } from '@/lib/postStore';
 import { DotoriItem, DOTORI_SEED } from '@/lib/galleryStore';
 import { DotoriForm } from '@/components/trpg/DotoriForm';
@@ -32,14 +32,14 @@ function DotoriNewPageInner() {
     <section className="page">
       <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><EditableDesc k="dotori-new-desc" def="가고 싶은 시나리오 등록" /></div>
       <DotoriForm initial={null}
-        onCancel={() => router.push('/dotori' + secQuery('dotori', sec.id))}
+        onCancel={() => router.push(sectionHref('dotori', sec.id))}
         onSave={v => {
           const it: DotoriItem = {
             id: newId(), ...v, link: v.link, ph: 'cool', date: new Date().toISOString(),
           };
           setItems([{ ...it, ...secStamp(sec.id) }, ...items]);
           toast('도토리가 등록되었습니다');
-          router.push('/dotori' + secQuery('dotori', sec.id));
+          router.push(sectionHref('dotori', sec.id));
         }} />
     </section>
   );

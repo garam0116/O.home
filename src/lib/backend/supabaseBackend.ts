@@ -118,15 +118,33 @@ export async function createSupabaseBackend(
 
     async listMembers() {
       // avatar_url도 함께 — 이미지 정리가 프로필 사진을 「안 쓰는 파일」로 지우지 않게 (v2.0 사용자 제보)
-      const { data, error } = await sb.from('profiles').select('id, nickname, role, avatar_url').order('created_at');
+      // no(회원 번호, v2.4)는 스키마를 다시 실행하기 전에는 칸이 없다 — 없으면 예전 질의로
+      const pick = (cols: string) => sb.from('profiles').select(cols).order('created_at');
+      let res = await pick('id, nickname, role, avatar_url, no, created_at');
+      if (res.error) res = await pick('id, nickname, role, avatar_url, created_at');
+      const { data, error } = res as { data: unknown[] | null; error: unknown };
       if (error) throw error;
       return (data ?? []).map(r => {
-        const p = r as { id: string; nickname: string; role: string; avatar_url?: string | null };
+        const p = r as { id: string; nickname: string; role: string; avatar_url?: string | null; no?: number | null; created_at?: string };
         return {
           id: p.id, nickname: p.nickname, role: (p.role as 'admin' | 'member') ?? 'member',
           avatarUrl: p.avatar_url ?? undefined,
+          no: typeof p.no === 'number' ? p.no : undefined,
+          createdAt: p.created_at ? Date.parse(p.created_at) : undefined,
         };
       });
+    },
+
+    async setMemberNo(uid, no) {
+      const { error } = await sb.from('profiles').update({ no }).eq('id', uid);
+      if (error) throw error;
+    },
+
+    /* 번호 발급 (v2.4) — 서버 함수 reserve_no가 카운터 행을 잠그고 올린다 (supabase/schema.sql) */
+    async reserveNo(kind, count, floor) {
+      const { data, error } = await sb.rpc('reserve_no', { k: kind, cnt: count, floor_n: floor });
+      if (error) throw error;
+      return Number(data);
     },
 
     async fetchList<T extends ListItem>(coll: string): Promise<T[]> {

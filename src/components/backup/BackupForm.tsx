@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/Toast';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useImageSource, resolveImageRef } from '@/components/ui/ImageSource';
 import { isFileUrl } from '@/lib/transfer';
+import { itemPath, allocNo } from '@/lib/itemNo';
 
 interface UpFile {
   id: string; name: string; size?: number;
@@ -143,8 +144,10 @@ export function BackupForm({ initial }: { initial: BackupPost | null }) {
     // 이미지 실저장 (IndexedDB) — 기존 ref는 유지, 새 파일만 저장
     const imageIds = await Promise.all(files.map(f => (f.file ? resolveImageRef({ kind: 'file', file: f.file }) : Promise.resolve(f.ref!))));
     if (isNew) {
+      // 번호는 서버 카운터에서 (v2.4) — 주소 /gallery/{번호}
+      const no = await allocNo('ohome.backup.v1', posts);
       const p: BackupPost = {
-        id: newId(), title: title.trim(), type,
+        id: newId(), no, title: title.trim(), type,
         images: imageIds, phList: files.length ? [] : ['cool'],
         thumbCrop: files[0]?.crop, // 대표 이미지 크롭 (6.1)
         desc, category, tags: parseTags(tagsText), madeDate: madeDate || undefined,
@@ -154,7 +157,7 @@ export function BackupForm({ initial }: { initial: BackupPost | null }) {
       };
       setPosts([{ ...p, ...secStamp(sec.id) }, ...posts]);
       toast('등록되었습니다');
-      router.push(`/gallery/${p.id}`);
+      router.push(itemPath('/gallery', p));
     } else {
       setPosts(posts.map(x => x.id === initial.id ? {
         ...x, title: title.trim(), type,
@@ -164,7 +167,7 @@ export function BackupForm({ initial }: { initial: BackupPost | null }) {
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
       } : x));
       toast('저장되었습니다');
-      router.push(`/gallery/${initial.id}`);
+      router.push(itemPath('/gallery', initial));
     }
   };
 
@@ -279,7 +282,7 @@ export function BackupForm({ initial }: { initial: BackupPost | null }) {
           </div>
           <div className="form-actions">
             <button className="btn btn-onbk"
-              onClick={() => router.push(isNew ? tt.href : `/gallery/${initial.id}`)}>CANCEL</button>
+              onClick={() => router.push(isNew ? tt.href : itemPath('/gallery', initial))}>CANCEL</button>
             <button className="btn btn-accent" onClick={post}>
               {isNew ? 'POST' : 'SAVE'}
             </button>

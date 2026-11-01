@@ -3,7 +3,7 @@
 import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useSectionParam, filterSection, sectionSetter, secQuery } from '@/lib/sectionStore';
+import { useSectionParam, filterSection, sectionSetter, secSubHref } from '@/lib/sectionStore';
 import { useLocalList } from '@/lib/postStore';
 import {
   CommItem, COMM_SEED, useCommSettings, badgeStyle, fmtPrice, slotView, SLOT_CHARS, slotCount, slotTip,
@@ -14,6 +14,7 @@ import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useMainStore } from '@/lib/mainStore';
 import { useCardSort, mergeOrder } from '@/lib/cardSort';
+import { itemPath } from '@/lib/itemNo';
 
 function CommListPageInner() {
   const router = useRouter();
@@ -58,7 +59,7 @@ function CommListPageInner() {
           </Tip>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <SearchBar placeholder="커미션 검색" onSearch={setQ} />
-            {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/comm/new' + secQuery('comm', sec.id))}>＋ ADD COMMISSION</button>}
+            {isAdmin && <button className="btn btn-dark" onClick={() => router.push(secSubHref('comm', sec.id, 'new'))}>＋ ADD COMMISSION</button>}
           </div>
         </div>
       </div>
@@ -71,7 +72,7 @@ function CommListPageInner() {
           const sv = slotView(c, settings);
           return (
             <div key={c.id} className="panel cm-card" {...sort(i)}
-              onClick={() => { if (!editOn) router.push(`/comm/${c.id}`); }}>
+              onClick={() => { if (!editOn) router.push(itemPath('/comm', c)); }}>
               <div className="th" style={{ aspectRatio: settings.ratio.replace(':', '/') }}>
                 <CroppedBlobImg fileRef={c.images[0]} crop={c.thumbCrop} ph={c.ph} />
                 {badge && <span className="cm-badge" style={badgeStyle(badge, settings.badgeShape)}>{badge.label}</span>}

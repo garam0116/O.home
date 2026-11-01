@@ -1,28 +1,38 @@
 'use client';
 // 자관 수정 페이지 (4.5) — 이름/캐치프레이즈/유형/공개범위/폰트/썸네일. 멤버는 상세에서.
-// ?au=<AU id> 로 진입하면 그 AU의 일러·캐치프레이즈를 편집 (v1.9 — AU 선택 상태에서 EDIT)
+// /rels/{…}/au/{AU 번호}/edit 로 진입하면 그 AU의 일러·캐치프레이즈를 편집 (v1.9 — AU 선택 상태에서 EDIT, 주소 v2.4)
 import React, { Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
-import { Character, CHAR_SEED, Relation, REL_SEED, findByKey } from '@/lib/charStore';
+import { Character, CHAR_SEED, Relation, REL_SEED, findByKey, auIdOf, auKeyOf, relPath } from '@/lib/charStore';
 import { REL_RESERVED } from '@/lib/sectionStore';
 import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
+import { useNoKey } from '@/lib/itemNo';
 
 function RelEditInner() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey, au: auParam } = useParams<{ id: string; au?: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const toast = useToast();
   const params = useSearchParams();
-  const auId = params.get('au') ?? undefined;
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
   const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
+  /* 주소 (v2.4) — /rels/{별명 또는 번호}/edit, AU는 /rels/{…}/au/{AU 번호}/edit.
+     옛 주소(`/rels/id/edit`, `?au=AUid`)로 들어오면 새 주소로 바꿔 둔다 */
+  const legacyAu = params.get('au');
+  const relFound = findByKey(rels, decodeURIComponent(rawKey)) ?? undefined;
+  const auKeyRaw = auParam ? decodeURIComponent(auParam) : legacyAu;
+  const auId0 = relFound && auKeyRaw ? auIdOf(relFound, auKeyRaw) : undefined;
+  const id = useNoKey(rels, rawKey,
+    k => `/rels/${k}${relFound && auId0 ? `/au/${auKeyOf(relFound, auId0)}` : ''}/edit`,
+    { slug: true, force: !!legacyAu });
 
   // 별명 주소로도 열린다 (v2.0 사용자 요청)
   const rel = findByKey(rels, id);
+  const auId = rel && auKeyRaw ? auIdOf(rel, auKeyRaw) : undefined;
   const auObj = auId ? rel?.aus.find(a => a.id === auId && a.id !== 'base') : undefined;
   if (!loaded) return <section className="page" />;
   if (!isAdmin || !rel) {
@@ -44,7 +54,7 @@ function RelEditInner() {
         auId={auObj?.id}
         myChars={chars.filter(c => c.own)}
         memberNames={Object.fromEntries(rel.members.map(m => [m.charId, chars.find(c => c.id === m.charId)?.name ?? m.charId]))}
-        onCancel={() => router.push(`/rels/${rel.id}`)}
+        onCancel={() => router.push(relPath(rel))}
         existingIds={rels.filter(r => r.id !== rel.id).flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])]).concat(REL_RESERVED)}
         onSave={v => {
           setRels(rels.map(r => (r.id === rel.id ? {
@@ -153,6 +163,7 @@ function RelEditInner() {
               }),
           } : r)));
           toast('저장되었습니다');
+          // 별명을 바꿨을 수 있으니 id 주소로 — 상세가 지금 주소(별명·번호)로 바꿔 준다
           router.push(`/rels/${rel.id}`);
         }}
       />

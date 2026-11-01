@@ -12,6 +12,8 @@ export interface TrpgFace {
 }
 
 export interface TrpgChar {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   id: string;
   name: string;              // 이름 (필수)
   scenario: string;          // 다녀온 시나리오

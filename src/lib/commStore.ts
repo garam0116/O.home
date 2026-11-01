@@ -44,6 +44,8 @@ export const SLOT_CHARS: Record<SlotShape, { filled: string; empty: string }> = 
 };
 
 export interface CommItem {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   /** 소속 섹션 (v2.0) — 여러 개로 만들었을 때. 없으면 기본 섹션 */
   secId?: string;
   id: string;
@@ -77,6 +79,8 @@ export const COMM_SEED: CommItem[] = [];
 
 /* ---------- 신청자 리스트 ---------- */
 export interface Applicant {
+  /** 번호 (v2.4) — 올린 순서대로 매긴 주소용 번호, 서버 카운터에서 받는다 */
+  no?: number;
   id: string;
   deadline?: string;           // YYYY-MM-DD — 맨 앞 크게 표시
   badgeId: string;             // 대기/작업중/완료

@@ -2,14 +2,14 @@
 // 회원 정보 페이지 (v1.9 사용자 요청) — 관리자 전용.
 // 회원/보안 목록에서 이름을 누르면 진입: 프로필(아바타·닉네임·이메일·태그) ·
 // 연동된 캐릭터(권한 부여분) · 작성한 글/댓글 전체 (myActivity 공용 수집).
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth, mockMemberInfo, User } from '@/lib/auth';
 import {
   useLocalList, BOARD_SEED, GUEST_SEED, Post, GuestEntry, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
-import { Character, CHAR_SEED, charGrant } from '@/lib/charStore';
+import { Character, CHAR_SEED, charGrant, charPath } from '@/lib/charStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
 import { useBoards } from '@/lib/boardStore';
 import { collectMyItems } from '@/lib/myActivity';
@@ -17,14 +17,14 @@ import { useBlobUrl } from '@/lib/blobStore';
 import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { PageTitle } from '@/components/ui/PageText';
 import { getSetting } from '@/lib/settingStore';
-import { useMembers } from '@/lib/members';
+import { useMembers, memberNumbers } from '@/lib/members';
 import { isServerMode } from '@/lib/backend';
 import { Pager } from '@/components/ui/Kit';
 
 const PER = 15;
 
 export default function MemberDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawKey } = useParams<{ id: string }>();
   const router = useRouter();
   const { isAdmin } = useAuth();
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
@@ -35,6 +35,14 @@ export default function MemberDetailPage() {
   const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const { boards } = useBoards();
   const members = useMembers();
+  /* 주소는 회원 번호 (v2.4) — /members/{번호}. 예전 계정 id 주소로 들어오면 번호 주소로 바꿔 둔다 */
+  const key = decodeURIComponent(rawKey);
+  const memberNos = useMemo(() => memberNumbers(members), [members]);
+  const id = (/^\d+$/.test(key) ? members.find(m => memberNos.get(m.id) === Number(key))?.id : undefined) ?? key;
+  const canonNo = memberNos.get(id);
+  useEffect(() => {
+    if (canonNo !== undefined && String(canonNo) !== key) router.replace(`/members/${canonNo}`);
+  }, [canonNo, key, router]);
 
   const [member, setMember] = useState<User | null | undefined>(undefined); // undefined = 로딩
   const [tags, setTags] = useState<string[]>([]);
@@ -110,7 +118,7 @@ export default function MemberDetailPage() {
         {linked.length ? (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
             {linked.map(({ c, level }) => (
-              <div key={c.id} onClick={() => router.push(`/chars/${c.id}`)}
+              <div key={c.id} onClick={() => router.push(charPath(c))}
                 style={{ display: 'flex', gap: 8, alignItems: 'center', border: '1px solid var(--line)', borderRadius: 10, padding: '6px 12px 6px 6px', cursor: 'pointer' }}>
                 <div className={`ph ${c.thumbClass}`} style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                   {(c.thumbId ?? c.arts?.[0]) && <CroppedBlobImg fileRef={c.thumbId ?? c.arts?.[0]} crop={c.thumbCrop} ph={c.thumbClass} />}
