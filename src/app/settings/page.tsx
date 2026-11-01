@@ -38,7 +38,7 @@ import { fileDrop } from '@/lib/dnd';
 import { Character, CHAR_SEED, Relation, REL_SEED } from '@/lib/charStore';
 import { useLocalList } from '@/lib/postStore';
 import {
-  TextSettingEditor, DdayEditor, TodoEditor, BannerEditor, DecoEditor,
+  TextSettingEditor, DdayEditor, DdayCardEditor, TodoEditor, BannerEditor, DecoEditor,
 } from '@/components/main/widgetEditors';
 import { useBgm, BgmTrack, parseVideoId, ytThumb } from '@/lib/bgmStore';
 import { useFonts, fontCssUrl, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
@@ -650,13 +650,14 @@ function WidgetsPane() {
   const { state } = useMainStore();
   // 설정값이 있는 위젯만 — 실데이터 연동 위젯(DIARY·LATEST·UPCOMING)과 메뉴리스트·회원정보창은 설정값 없음
   const editable = state.widgets.filter(w =>
-    (['banner', 'memo', 'dday', 'todo', 'freetext', 'deco'] as const).some(t => t === w.type));
+    (['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco'] as const).some(t => t === w.type));
 
   const editorOf = (w: WidgetConf) => {
     switch (w.type) {
       case 'memo':
       case 'freetext': return <TextSettingEditor conf={w} />;
       case 'dday': return <DdayEditor conf={w} />;
+      case 'ddaycard': return <DdayCardEditor conf={w} />;
       case 'todo': return <TodoEditor conf={w} />;
       case 'deco': return <DecoEditor conf={w} />;
       case 'banner': return <BannerEditor conf={w} />;

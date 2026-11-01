@@ -11,7 +11,7 @@ export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
   | 'member'                            // 회원정보창 — 추가·삭제 가능 (v2.1 사용자 요청)
   | 'menu' | 'memo' | 'diary' | 'latest'
-  | 'dday' | 'todo' | 'upcoming' | 'freetext' | 'deco' | 'memoboard'
+  | 'dday' | 'ddaycard' | 'todo' | 'upcoming' | 'freetext' | 'deco' | 'memoboard'
   | 'apply';   // 'image'는 deco(장식 이미지+링크)로 일원화 (v1.9) · apply = 커미션 신청자 (v2.0)
 
 export interface WidgetConf {
@@ -48,7 +48,8 @@ export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = 
   memo: { title: 'MEMO', desc: '관리자 메모 (클릭 시 관리 모달)' },
   diary: { title: 'DIARY', desc: '최근 일기 (비공개 미노출)' },
   latest: { title: 'LATEST', desc: '최신 그림 3장' },
-  dday: { title: 'D-DAY', desc: '디데이 목록' },
+  dday: { title: '심플 디데이', desc: '디데이 목록 (글자만)' },
+  ddaycard: { title: '디데이', desc: '사진 카드형 — 사진 · 이름 · 디데이 · 시작일' },
   todo: { title: 'TO-DO', desc: '관리자 투두 (방문자는 열람만)' },
   upcoming: { title: 'UPCOMING', desc: '다가오는 일정' },
   freetext: { title: '자유 텍스트', desc: '패널 없이 문구만' },
