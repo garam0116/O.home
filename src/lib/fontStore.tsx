@@ -170,7 +170,9 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   // 웹폰트 로드 — 수정 안 된 내장 구글폰트는 한 번에, 나머지는 URL별로
   useEffect(() => {
     // 첫 페인트를 외부 폰트 CSS 응답으로 막지 않는다.
-    ensureLink('ohome-base-fonts', 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Serif+KR:wght@500;700&display=swap');
+    // 굵기는 전 구간을 받는다 (사용자 발견 — 「본명조가 다른 사이트보다 굵다」). 예전엔 500/700만 받아서
+    // 기본 굵기(400)나 얇은 굵기를 요청해도 브라우저가 가장 가까운 500으로 그렸다
+    ensureLink('ohome-base-fonts', 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300..700&family=Noto+Serif+KR:wght@200..900&display=swap');
     // 기본 산세리프(--sans-base 첫 순위) Pretendard — 이전에는 이름만 스택에 있고 로드가 없어서
     // 설치 안 된 PC(대부분의 윈도우)에서는 맑은 고딕으로 떨어졌다 (게시판 목록 제목 등 본문 전체).
     // 다이내믹 서브셋이라 화면에 쓰인 글자 조각만 받는다

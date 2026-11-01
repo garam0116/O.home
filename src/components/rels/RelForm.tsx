@@ -291,7 +291,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // 전신 이미지 (v1.9 — 페어 · 수정 모드) — AU 편집이면 그 AU의 전신
   const pairMembers = !isNew && (initial!.kind ? initial!.kind === 'pair' : initial!.members.length === 2)
     ? initial!.members.slice(0, 2) : [];
-  const fontMembers = initial?.members ?? [];
   const [fulls, setFulls] = useState<Record<string, FullDraft>>(() => {
     const o: Record<string, FullDraft> = {};
     for (const m of pairMembers) {
@@ -314,11 +313,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // 멤버 카드 이름 크기 (v2.0) — 카드 폭이 좁아 이름마다 알맞은 크기가 다르다
   const [nameSizes, setNameSizes] = useState<Record<string, number>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameSize ?? 17])));
-  // 이름 볼드 (v2.0 사용자 요청) — 폰트에 따라 볼드가 어색한 경우가 있어 끌 수 있게. 기본은 볼드
-  const [nameBolds, setNameBolds] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(pairMembers.map(m => [m.charId, mOf(m).nameBold ?? true])));
-  const [nameFonts, setNameFonts] = useState<Record<string, string>>(
-    () => Object.fromEntries(fontMembers.map(m => [m.charId, mOf(m).nameFontId ?? ''])));
+  // 이름 폰트·볼드는 자관 전체에서 통일 (사용자 요청) — 멤버별 폰트·볼드 설정은 없앴다
   // 히어로 대사 글씨/따옴표색 (페어, v1.9)
   const [quoteColors, setQuoteColors] = useState<Record<string, { fg?: string; mark?: string }>>(
     () => Object.fromEntries(pairMembers.map(m => [m.charId, { fg: mOf(m).quoteColor, mark: mOf(m).quoteMarkColor }])));
@@ -469,8 +464,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       fullOffsets: pairMembers.length ? fullOffsets : undefined,
       quotes: pairMembers.length ? quotes : undefined,
       nameSizes: pairMembers.length ? nameSizes : undefined,
-      nameBolds: pairMembers.length ? nameBolds : undefined,
-      nameFonts: fontMembers.length ? nameFonts : undefined,
       quoteColors: pairMembers.length ? quoteColors : undefined,
       fullFront,
       pickedCharIds: picked,
@@ -749,8 +742,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
             {pairMembers.map((m, i) => (
               <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{i === 0 ? '왼쪽' : '오른쪽'} · {memberNames?.[m.charId] ?? m.charId}</b>
-                <KCheck label="Bold" checked={nameBolds[m.charId] ?? true}
-                  onChange={(v: boolean) => setNameBolds(s => ({ ...s, [m.charId]: v }))} />
                 <KStep value={nameSizes[m.charId] ?? 17}
                   onChange={(v: number) => setNameSizes(s => ({ ...s, [m.charId]: v }))}
                   min={10} max={32} step={1} suffix="px" />
@@ -767,21 +758,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                 <span className="cp-lb">따옴표</span>
                 <ColorField value={quoteColors[m.charId]?.mark ?? '#c96a73'}
                   onChange={hex => setQuoteColors(s => ({ ...s, [m.charId]: { ...s[m.charId], mark: hex } }))} />
-              </div>
-            ))}
-          </>
-        )}
-        {fontMembers.length > 0 && (
-          <>
-            <label className="k-label" style={{ margin: '10px 0 0' }}>이름 폰트 — 멤버 카드·타임라인</label>
-            {fontMembers.map(m => (
-              <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <b style={{ fontSize: 12, width: 92, flexShrink: 0 }}>{memberNames?.[m.charId] ?? m.charId}</b>
-                <KSelect value={nameFonts[m.charId] ?? ''}
-                  onChange={v => setNameFonts(s => ({ ...s, [m.charId]: v }))}
-                  options={[{ value: '', label: '캐릭터 기본' }, ...fonts.map(f => ({
-                    value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span>,
-                  }))]} />
               </div>
             ))}
           </>

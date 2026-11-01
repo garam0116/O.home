@@ -102,7 +102,6 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
   onMoveSide?: () => void;
   onFaceCrop?: (ref: string) => void;   // 얼굴칸(1:1) 크롭 다시 잡기 (v2.0)
 }) {
-  const { familyOf } = useFonts();   // 이름은 캐릭터 프로필에서 지정한 폰트로
   const [lb, setLb] = useState<number | null>(null);
   // 멤버 제거는 우클릭 메뉴로 — 카드 아래에 상시 노출하면 정보가 아닌 것이 자리를 먹는다 (사용자 확정)
   const [ctx, setCtx] = useState<{ x: number; y: number } | null>(null);
@@ -128,7 +127,7 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
   if (auUnregistered) {
     return (
       <div className="panel mini-prof" onClick={onGo} style={{ cursor: 'pointer', textAlign: 'center', padding: '44px 20px' }}>
-        <b style={{ fontSize: 15, letterSpacing: '.08em', fontFamily: familyOf(char.fontId) }}>{char.name}</b>
+        <b style={{ fontSize: 15, letterSpacing: '.08em' }}>{char.name}</b>
         <p className="hint" style={{ marginTop: 10 }}>이 AU의 프로필이 아직 등록되지 않았습니다<br />카드를 누르면 캐릭터 페이지에서 등록할 수 있습니다</p>
       </div>
     );
@@ -149,12 +148,9 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
           <div className={`face ph ${char.thumbClass}`} />
         )}
         <div>
-          {/* 자관 이름 폰트를 우선 쓰고, 미지정이면 캐릭터 프로필 폰트를 쓴다 */}
-          <b style={{
-            fontFamily: familyOf(member.nameFontId ?? char.fontId), fontSize: member.nameSize ?? undefined,
-            // 굵기는 끌 수 있다 (v2.0 사용자 요청) — 기본은 지금처럼 굵게(<b>)
-            fontWeight: (member.nameBold ?? true) ? undefined : 400,
-          }}>
+          {/* 이름 폰트·굵기는 모든 자관에서 하나로 통일 (사용자 요청) — 캐릭터 프로필 폰트나
+              멤버별 폰트·볼드 설정을 따라가면 카드마다 글꼴이 달라진다. 크기만 멤버별로 */}
+          <b style={{ fontSize: member.nameSize ?? undefined }}>
             {char.name}
           </b>
           {char.sub && <small>{char.sub}</small>}
@@ -524,8 +520,8 @@ export default function RelDetailPage() {
      오른쪽 카드에서 추가해도 무조건 왼쪽에 들어갔다. pairRight로 오른쪽에 둘 캐릭터를 지정한다. */
   // 한마디·대사 색·전신 위치는 AU마다 다를 수 있다 (v2.0) — 이 AU 값이 있으면 그것으로 갈아 끼운다
   const asAu = (m: RelMember | null) => (m && !isBaseAu ? auMember(m, au) : m);
-  const nameFontOf = (charId: string) =>
-    familyOf(asAu(rel.members.find(m => m.charId === charId) ?? null)?.nameFontId ?? charOf(charId)?.fontId);
+  // 캐릭터 이름은 자관 어디서나 같은 폰트로 (사용자 요청 — 캐릭터 프로필 폰트를 따라가지 않는다)
+  const NAME_FONT = 'var(--serif)';
   // 색·배경도 AU마다 따로 (v2.0 사용자 요청) — AU에 정해 둔 게 없으면 자관 기본이 그대로 나온다
   const auSt = auStyle(rel, au);
   const pairSlots: (RelMember | null)[] = isDuo
@@ -799,12 +795,12 @@ export default function RelDetailPage() {
                     {unreg ? (
                       /* AU 프로필 미등록 (v1.9) — 원본 프로필 대신 등록 안내 */
                       <>
-                        <b style={{ fontFamily: nameFontOf(m.charId) }}>{findChar(chars, m.charId)?.name}</b>
+                        <b style={{ fontFamily: NAME_FONT }}>{findChar(chars, m.charId)?.name}</b>
                         <small>이 AU의 프로필 미등록 — 눌러서 등록</small>
                       </>
                     ) : (
                       <>
-                        <b style={{ fontFamily: nameFontOf(m.charId) }}>{c.name}</b><i>{c.sub}</i>
+                        <b style={{ fontFamily: NAME_FONT }}>{c.name}</b><i>{c.sub}</i>
                         <small>{c.specs.slice(0, 3).map(s => s.value).join(' · ')}</small>
                         {(m.quote || noteOf(m) || m.keywords[0]) && (
                           <span className="ext">{m.quote || noteOf(m) || m.keywords[0]}</span>
@@ -907,7 +903,7 @@ export default function RelDetailPage() {
                   return (
                     <div key={j} className={`tl-say ${sideOf(s.charId)}`}
                       style={{ ['--cc' as string]: rgbTriple(c?.color ?? '#5d636d') }}>
-                      <div className="who" style={{ fontFamily: nameFontOf(s.charId) }}>{c?.name}</div>
+                      <div className="who" style={{ fontFamily: NAME_FONT }}>{c?.name}</div>
                       <div className="bub">{s.text}</div>
                     </div>
                   );

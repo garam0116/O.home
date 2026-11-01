@@ -132,7 +132,7 @@ export default function BoardDetailPage() {
     <section className="page board-detail">
       <div className="page-head">
         <PageTitle href={boardHref(board.id, boards)}>{boardTitle}</PageTitle>
-        <p>{post.notice ? '공지 · ' : ''}{post.author} · {fmtDate(post.date)}</p>
+        {/* 글쓴이·작성일은 제목 바로 아래에 이미 있다 — 게시판명 아래 중복 표기는 없앴다 (사용자 요청) */}
         <div className="head-actions">
           {/* 수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
           {isAuthor && (
@@ -149,7 +149,7 @@ export default function BoardDetailPage() {
           {post.secret && '🔒 '}{post.title}
         </h2>
         <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
-          {post.author} · {fmtDate(post.date)} · {post.mode.toUpperCase()}
+          {post.notice ? '공지 · ' : ''}{post.author} · {fmtDate(post.date)} · {post.mode.toUpperCase()}
           {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
           {(post.tags ?? []).map(t => (
             <span key={t} style={{ marginLeft: 7, color: 'color-mix(in srgb,var(--accent) 65%,var(--faint))' }}>#{t}</span>
