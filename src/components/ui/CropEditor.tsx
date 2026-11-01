@@ -24,7 +24,11 @@ export function coverImgStyle(crop: CropValue | undefined, wide: boolean): React
     top: `${(0.5 + c.y) * 100}%`,
     transform: 'translate(-50%,-50%)',
     maxWidth: 'none',
-    ...(wide ? { height: `${c.scale * 100}%`, width: 'auto' } : { width: `${c.scale * 100}%`, height: 'auto' }),
+    // +2px 블리드 — translate(-50%) 결과가 소수 픽셀이면 가장자리 1px 행이 반투명하게 래스터되어
+    // 카드 배경(밝은 색)이 얇은 흰 선으로 비친다 (데스크톱 1x 배율에서 주로 발생). 각 변 1px씩 넘치게 덮음
+    ...(wide
+      ? { height: `calc(${c.scale * 100}% + 2px)`, width: 'auto' }
+      : { width: `calc(${c.scale * 100}% + 2px)`, height: 'auto' }),
   };
 }
 
