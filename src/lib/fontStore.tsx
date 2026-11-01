@@ -85,9 +85,20 @@ interface FontState {
   hidden: string[];                              // 삭제(숨김)된 내장 폰트 id
   overrides: Record<string, Partial<FontDef>>;   // 내장 폰트 수정값 (name/family/cssUrl)
   roles: Record<FontRole, RoleSetting>;          // 역할 → 폰트/굵기/크기
+  order?: string[];                              // 목록 순서 (폰트 id) — 없는 id는 원래 순서대로 뒤에 (사용자 요청)
 }
 
 const EMPTY: FontState = { custom: [], hidden: [], overrides: {}, roles: DEFAULT_ROLES };
+
+/** 저장된 순서대로 정렬 — 순서에 없는 폰트(새로 등록 등)는 원래 자리 순서대로 맨 뒤에 */
+function sortByOrder(list: FontDef[], order?: string[]): FontDef[] {
+  if (!order?.length) return list;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return list
+    .map((f, i) => ({ f, k: rank.get(f.id) ?? order.length + i }))
+    .sort((a, b) => a.k - b.k)
+    .map(x => x.f);
+}
 
 /** 저장값 정규화 — 구버전(역할=문자열 id)도 수용 */
 function normRoles(raw?: Record<string, unknown>): Record<FontRole, RoleSetting> {
@@ -114,6 +125,7 @@ interface FontCtx {
   setFontPair: (id: string, pairId?: string) => void;                            // 한글 페어 지정/해제 (v1.9)
   updateFont: (id: string, patch: { name: string; family: string; cssUrl: string }) => boolean;
   removeFont: (id: string) => void;              // 내장이면 숨김, 커스텀이면 삭제
+  moveFont: (id: string, dir: -1 | 1) => void;   // 목록에서 한 칸 위(-1)/아래(+1)로 (사용자 요청)
   resetFont: (id: string) => void;               // 내장 폰트 수정값 초기화 (v2.0)
   restoreBuiltins: () => void;                   // 숨긴 내장 폰트 전부 복원
   familyOf: (id?: string) => string | undefined; // 숨긴 폰트도 해석 (기존 데이터 보호)
@@ -149,10 +161,10 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // 수정값 반영된 내장 + 커스텀 (전체 풀 — familyOf 용)
-  const pool: FontDef[] = [
+  const pool: FontDef[] = sortByOrder([
     ...BUILTIN_FONTS.map(f => ({ ...f, ...(st.overrides[f.id] ?? {}) })),
     ...st.custom,
-  ];
+  ], st.order);
   const fonts = pool.filter(f => !st.hidden.includes(f.id));
 
   // 웹폰트 로드 — 수정 안 된 내장 구글폰트는 한 번에, 나머지는 URL별로
@@ -312,6 +324,21 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  /** 순서 바꾸기 — 보이는 목록에서 바로 옆 폰트와 자리를 맞바꾼다.
+   *  숨긴 내장 폰트도 순서에 함께 넣어 두어, 복원하면 원래 있던 자리로 돌아온다 */
+  const moveFont = useCallback((id: string, dir: -1 | 1) => {
+    apply(s => {
+      const all = sortByOrder([...BUILTIN_FONTS, ...s.custom], s.order).map(f => f.id);
+      const visible = all.filter(x => !s.hidden.includes(x));
+      const vi = visible.indexOf(id);
+      const other = visible[vi + dir];
+      if (vi < 0 || !other) return s;
+      const a = all.indexOf(id), b = all.indexOf(other);
+      [all[a], all[b]] = [all[b], all[a]];
+      return { ...s, order: all };
+    });
+  }, []);
+
   const restoreBuiltins = useCallback(() => apply(s => ({ ...s, hidden: [] })), []);
 
   // 역할 폰트는 드래프트에만 반영 (v1.9) — 디자인 탭 SAVE로 확정
@@ -342,7 +369,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       fonts, hiddenCount: st.hidden.length, roles, setRole, rolesDirty, saveRoles, discardRoles,
-      addFont, addFontFile, setFontPair, updateFont, removeFont, resetFont, restoreBuiltins, familyOf,
+      addFont, addFontFile, setFontPair, updateFont, removeFont, moveFont, resetFont, restoreBuiltins, familyOf,
     }}>
       {children}
     </Ctx.Provider>

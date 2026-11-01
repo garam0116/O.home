@@ -2755,8 +2755,8 @@ function BgmPane() {
 }
 
 /** 폰트 목록 한 줄 — CSS URL 표시 · 수정(이름/family/URL, 업로드 폰트는 이름/한글 페어) · 삭제 */
-function FontRow({ f }: { f: FontDef }) {
-  const { fonts, familyOf, updateFont, removeFont, resetFont, setFontPair } = useFonts();
+function FontRow({ f, first, last }: { f: FontDef; first: boolean; last: boolean }) {
+  const { fonts, familyOf, updateFont, removeFont, moveFont, resetFont, setFontPair } = useFonts();
   const del = useConfirmDelete();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -2827,6 +2827,11 @@ function FontRow({ f }: { f: FontDef }) {
         </small>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+        {/* 순서 바꾸기 (사용자 요청) — 폰트 고르는 모든 목록이 이 순서를 따른다 */}
+        <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }} disabled={first}
+          title="위로" aria-label={`「${f.name}」 위로`} onClick={() => moveFont(f.id, -1)}>↑</button>
+        <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }} disabled={last}
+          title="아래로" aria-label={`「${f.name}」 아래로`} onClick={() => moveFont(f.id, 1)}>↓</button>
         <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
           onClick={() => setEditing(true)}>EDIT</button>
         {!f.locked && (
@@ -2864,9 +2869,9 @@ function FontPane() {
   return (
     <div className="set-sec">
       <h3>폰트 라이브러리</h3>
-      <div className="d">캐릭터 프로필·자관 이름·시나리오 타이틀 등에서 이 목록 중 선택해 사용 — 원하는 폰트만 남기고 삭제 가능</div>
+      <div className="d">캐릭터 프로필·자관 이름·시나리오 타이틀 등에서 이 목록 중 선택해 사용 — 원하는 폰트만 남기고 삭제 가능 · ↑↓로 목록 순서 변경</div>
 
-      {fonts.map(f => <FontRow key={f.id} f={f} />)}
+      {fonts.map((f, i) => <FontRow key={f.id} f={f} first={i === 0} last={i === fonts.length - 1} />)}
       {hiddenCount > 0 && (
         <div style={{ marginTop: 10 }}>
           <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }} onClick={restoreBuiltins}>

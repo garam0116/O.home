@@ -84,7 +84,7 @@ export function FitText({ children, min, minRatio = 0.85, className, style }: {
   );
 }
 
-/* ---------- textarea — 리사이즈 핸들 제거 + 내용 따라 자동 높이 ---------- */
+/* ---------- textarea — 리사이즈 핸들 제거 + 내용 따라 자동 높이 (최대 높이를 넘으면 안에서 스크롤) ---------- */
 export function KTextarea({ autoGrow = true, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { autoGrow?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fit = () => {
@@ -92,6 +92,8 @@ export function KTextarea({ autoGrow = true, ...props }: React.TextareaHTMLAttri
     if (!el || !autoGrow) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
+    // CSS max-height에 걸리면 그때부터 스크롤바를 보인다
+    el.style.overflowY = el.scrollHeight > el.clientHeight + 1 ? 'auto' : 'hidden';
   };
   useEffect(fit, [props.value, autoGrow]);
   return (
