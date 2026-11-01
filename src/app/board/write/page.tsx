@@ -58,8 +58,6 @@ function WriteInner() {
   const [title, setTitle] = useState('');
   const [writeMode, setWriteMode] = useState<'editor' | 'md' | 'html'>('editor'); // 에디터가 기본
   const [body, setBody] = useState('');
-  // HTML 모드 안의 보기 (v2.0 사용자 요청) — 코드 그대로 / 미리보기에서 바로 편집
-  const [htmlView, setHtmlView] = useState<'code' | 'preview'>('code');
   const [pvOpen, setPvOpen] = useState(false);   // 게시 전 미리보기 팝업 (사용자 요청)
   const [askRich, setAskRich] = useState<null | (() => void)>(null);   // 정리 경고 후 실행할 전환
   const [secret, setSecret] = useState(false);
@@ -177,23 +175,17 @@ function WriteInner() {
                 if (writeMode === 'html' && hasRichHtml(body)) { setAskRich(() => () => setWriteMode('editor')); return; }
                 setWriteMode('editor');
               }}>에디터</button>
-              <button className={writeMode === 'md' ? 'on' : ''} onClick={() => { setWriteMode('md'); setHtmlView('code'); }}>Markdown</button>
+              <button className={writeMode === 'md' ? 'on' : ''} onClick={() => setWriteMode('md')}>Markdown</button>
               <button className={writeMode === 'html' ? 'on' : ''} onClick={() => setWriteMode('html')}>HTML</button>
             </div>
-            {/* HTML 모드 안 보기 전환 (v2.0 사용자 요청) — 코드 그대로 / 미리보기에서 바로 편집 */}
-            {writeMode === 'html' && (
-              <div className="mini-seg">
-                <button className={htmlView === 'code' ? 'on' : ''} onClick={() => setHtmlView('code')}>코드</button>
-                <button className={htmlView === 'preview' ? 'on' : ''} onClick={() => {
-                  if (htmlView === 'preview') return;
-                  if (hasRichHtml(body)) { setAskRich(() => () => setHtmlView('preview')); return; }
-                  setHtmlView('preview');
-                }}>미리보기 (편집 가능)</button>
-              </div>
-            )}
+            {/* 미리보기 — 팝업으로 연다 (사용자 요청: SAVE 옆에서 이 자리로 이동, 「편집 가능 미리보기」는 삭제) */}
+            <div className="mini-seg">
+              {writeMode === 'html' && <button className="on" aria-pressed="true">코드</button>}
+              <button onClick={() => setPvOpen(true)}>미리보기</button>
+            </div>
           </div>
           {/* 본문 상자는 일정 높이까지만 늘고 그 뒤는 안에서 스크롤 (사용자 요청) */}
-          {writeMode === 'editor' || (writeMode === 'html' && htmlView === 'preview') ? (
+          {writeMode === 'editor' ? (
             <div className="write-editor">
               <RichEditor value={body} onChange={setBody} placeholder='내용을 작성하세요 — 이미지 삽입 가능 (스크립트 불허 6.3)' />
             </div>
@@ -304,13 +296,12 @@ function WriteInner() {
           <div className="form-actions">
             <button className="btn btn-onbk"
               onClick={() => router.push(editing ? `/board/${editing.id}` : boardHref(board.id))}>CANCEL</button>
-            <button className="btn btn-ghost" onClick={() => setPvOpen(true)}>PREVIEW</button>
             <button className="btn btn-accent" disabled={thumbBusy} onClick={post}>{editing ? 'SAVE' : 'POST'}</button>
           </div>
         </div>
       </div>
 
-      {/* HTML → 에디터/편집 미리보기 전환 경고 (v2.0) — 다루지 못하는 태그는 편집 순간 정리된다 */}
+      {/* HTML → 에디터 전환 경고 (v2.0) — 다루지 못하는 태그는 편집 순간 정리된다 */}
       <ConfirmModal open={askRich !== null} title="여기서 편집하면 일부 태그가 정리됩니다"
         body="에디터는 굵게·목록·제목·이미지 같은 기본 서식만 다룹니다. 표·div·style·class 등은 편집하는 순간 정리되며 되돌릴 수 없습니다. HTML을 그대로 두려면 취소하세요."
         onClose={() => setAskRich(null)}
