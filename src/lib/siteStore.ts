@@ -21,7 +21,17 @@ export interface SiteSettings {
   // 모바일용을 따로 비우면 PC용을 모바일에도 쓴다. 둘 다 비우면 지금처럼 텍스트 로고
   logoImage?: string;
   logoImageM?: string;
+  // 게시판 본문 폭 px (v2.3 사용자 요청) — 목록·글 상세가 같은 폭을 쓴다(동기화). 비우면 700
+  boardW?: number;
+  // 환경설정 왼쪽 메뉴에서 「보관」한 탭 이름 (v2.3 사용자 요청) — 메뉴 맨 아래 보관함에 접어 둔다.
+  // 숨기기만 하고 그 탭의 설정값은 그대로 둔다. 디자인 탭 SAVE와 무관하게 누르는 즉시 저장
+  setArchived?: string[];
 }
+
+/** 게시판 본문 폭 기본값·범위 (v2.3) — 디자인 탭 입력칸과 적용부가 같은 값을 본다 */
+export const BOARD_W = { def: 700, min: 480, max: 1180 } as const;
+export const boardWOf = (s: SiteSettings) =>
+  Math.min(BOARD_W.max, Math.max(BOARD_W.min, s.boardW ?? BOARD_W.def));
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   // 초기 타이틀 = 프로젝트 이름 O.HOME (v1.9 사용자 확정 — 초기화하면 이 값으로 돌아감)

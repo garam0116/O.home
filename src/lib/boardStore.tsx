@@ -31,11 +31,18 @@ export interface BoardSettings {
   /** 갤러리마다 따로 쓰는 말머리 (v2.0 사용자 요청) — 정한 적 없으면 기본 갤러리 것을 그대로.
    *  새로 만들자마자 말머리가 비면 글부터 못 쓴다(감상타래·스케줄러와 같은 규칙). */
   secGalleryCats?: Record<string, BoardBadge[]>;
+  /** 게시판 목록 한 페이지에 보일 글 수 (v2.3 사용자 요청) — 모든 게시판 공통. 비우면 10 */
+  perPage?: number;
 }
 const DEFAULTS: BoardSettings = {
   system: DEFAULT_BOARD_SYSTEM,
   gallery: DEFAULT_GALLERY_BADGES, galleryCats: DEFAULT_GALLERY_CATS,
 };
+
+/** 게시판 목록 페이지당 글 수 — 기본값·범위 (v2.3) */
+export const BOARD_PER_PAGE = { def: 10, min: 3, max: 60 } as const;
+export const perPageOf = (s: BoardSettings) =>
+  Math.min(BOARD_PER_PAGE.max, Math.max(BOARD_PER_PAGE.min, Math.round(s.perPage ?? BOARD_PER_PAGE.def)));
 const KEY = 'ohome.boardset.v1';
 
 /** 그 갤러리에서 쓸 말머리 (v2.0) — 따로 정한 적이 없으면 기본 갤러리 것 */
@@ -59,6 +66,7 @@ export function useBoardSettings() {
           gallery: DEFAULT_GALLERY_BADGES.map(d => p.gallery?.find(g => g.id === d.id) ?? d),
           galleryCats: p.galleryCats ?? DEFAULT_GALLERY_CATS,
           secGalleryCats: p.secGalleryCats,
+          perPage: p.perPage,
         });
       }
     } catch { /* 기본값 */ }
@@ -88,23 +96,33 @@ export function useBoardSettings() {
     mutGalleryCats(secId, cs => cs.filter(b => b.id !== id)), [mutGalleryCats]);
   const setGalleryCats = useCallback((secId: string, cats: BoardBadge[]) =>
     mutGalleryCats(secId, () => cats), [mutGalleryCats]);
+  const setPerPage = useCallback((n: number) => apply(s => ({ ...s, perPage: n })), [apply]);
   return {
-    st, loaded, patchSystem, patchGallery,
+    st, loaded, patchSystem, patchGallery, setPerPage,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   };
 }
 
 /* ---------- 게시판 다중 생성 (5.2 v1.9) ---------- */
-// 같은 유형(리스트형) 게시판을 여러 개 — 게시판별 이름·권한·리스트 스킨(기본형/티켓형).
+// 같은 유형(리스트형) 게시판을 여러 개 — 게시판별 이름·권한·리스트 스킨(기본형/갤러리형).
 // 글은 ohome.board.v1 한 곳에 boardId로 구분 저장(게시판 삭제 시에도 글 데이터는 보존 — 3장 원칙).
-export type BoardSkin = 'list' | 'ticket';
+/* 스킨 (v2.3 사용자 요청) — 티켓형을 없애고 갤러리형 두 가지로 바꿨다.
+   gallery  = 그림 위에 하단 그림자 + 흰 글씨 (갤러리형 1)
+   gallery2 = 그림 위에 반투명 흰 띠 + 글씨 (갤러리형 2) */
+export type BoardSkin = 'list' | 'gallery' | 'gallery2';
+export const BOARD_SKINS: { id: BoardSkin; label: string }[] = [
+  { id: 'list', label: '기본형' }, { id: 'gallery', label: '갤러리형 1' }, { id: 'gallery2', label: '갤러리형 2' },
+];
+/** 저장본 정리 — 예전 티켓형('ticket')은 갤러리형 1로 이어 받는다 (v2.3) */
+const normBoards = (list: Board[]): Board[] =>
+  list.map(b => (BOARD_SKINS.some(k => k.id === b.skin) ? b : { ...b, skin: b.skin === ('ticket' as string) ? 'gallery' : 'list' }));
 export type BoardPerm = 'guest' | 'member' | 'admin';
 
 export interface Board {
   id: string;              // 'main' = 기본 게시판 (삭제 불가)
   name: string;            // 메뉴·페이지 타이틀 표시명
   desc: string;            // 페이지 설명 기본 문구
-  skin: BoardSkin;         // 리스트 스킨 — 기본형 / 티켓형
+  skin: BoardSkin;         // 리스트 스킨 — 기본형 / 갤러리형 1 / 갤러리형 2
   permWrite: BoardPerm;    // 글쓰기 권한 (mock 단계에선 로그인 전제 — 로드뷰와 동일)
   permComment: BoardPerm;  // 댓글 권한
   fg?: string;             // 목록 글씨색 (v1.9 — 미지정이면 테마 기본색)
@@ -128,13 +146,13 @@ export function useBoards(): {
   useEffect(() => {
     try {
       const raw = getRawSetting(BOARDS_KEY);
-      if (raw) setSt(JSON.parse(raw));
+      if (raw) setSt(normBoards(JSON.parse(raw)));
     } catch { /* 기본값 */ }
     setLoaded(true);
     const sync = () => {
       try {
         const raw = getRawSetting(BOARDS_KEY);
-        if (raw) setSt(JSON.parse(raw));
+        if (raw) setSt(normBoards(JSON.parse(raw)));
       } catch { /* 무시 */ }
     };
     window.addEventListener('ohome-boards', sync);

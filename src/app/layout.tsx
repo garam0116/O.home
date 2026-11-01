@@ -17,6 +17,7 @@ import { SettingSync } from '@/components/shell/SettingSync';
 import { ListSync } from '@/components/shell/ListSync';
 import { UploadBusy } from '@/components/shell/UploadBusy';
 import { SpellCheck } from '@/components/shell/SpellCheck';
+import { BoardWidth } from '@/components/shell/BoardWidth';
 import { PageFrame } from '@/lib/pageRefresh';
 import { MenuGuard } from '@/components/shell/MenuGuard';
 import { ServerBoot } from '@/components/shell/ServerBoot';
@@ -101,6 +102,8 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   <UploadBusy />
                   {/* 맞춤법 검사 밑줄 숨김 — 디자인 탭 (v2.0) */}
                   <SpellCheck />
+                  {/* 게시판 본문 폭 — 목록·상세 공통 (v2.3) */}
+                  <BoardWidth />
                   </SetupGate>
                 </BgmStoreProvider>
               </MainStoreProvider>
