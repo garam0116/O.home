@@ -43,12 +43,6 @@ function PostList() {
   const currentPage = Math.min(page, totalPages);
   const rows = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const move = (post: Post, destination: string) => {
-    if (!isAdmin || !postsLoaded || !boardsLoaded || !boards.some(b => b.id === destination)) return;
-    if ((post.boardId ?? MAIN_BOARD_ID) === destination) return;
-    setPosts(posts.map(p => p.id === post.id ? { ...p, boardId: destination } : p));
-  };
-
   // 체크박스로 고른 글을 한 번에 옮긴다 — 이미 삭제된 글 id는 무시
   const selectedIds = posts.filter(p => selected.has(p.id)).map(p => p.id);
   const toggle = (id: string, on: boolean) => setSelected(prev => {
@@ -72,7 +66,8 @@ function PostList() {
 
   return (
     <>
-      <div className="toolrow" style={{ flexWrap: 'wrap', gap: 12 }}>
+      {/* 게시판 선택 + 검색 — 모바일에서도 한 줄 (검색창이 남는 폭을 채우되 넓어도 260px까지) */}
+      <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 10, alignItems: 'center', marginBottom: 14 }}>
         <KSelect value={boardId} onChange={value => { setBoardId(value); setPage(1); }}
           options={[
             { value: '', label: '전체 게시판' },
@@ -80,11 +75,12 @@ function PostList() {
             ...missingBoards.map(id => ({ value: id, label: boardName(id) })),
           ]} />
         <KInput aria-label="제목 또는 작성자 검색" placeholder="제목·작성자 검색" value={query}
+          style={{ flex: '1 1 0', minWidth: 0, maxWidth: 260 }}
           onChange={e => { setQuery(e.target.value); setPage(1); }} />
       </div>
       {!postsLoaded || !boardsLoaded ? <p role="status">게시글을 불러오는 중…</p> : (
         <>
-          <p className="hint">총 {filtered.length}개 · 게시판을 선택하면 바로 이동합니다 · 체크한 글은 아래에서 한 번에 옮길 수 있습니다</p>
+          <p className="hint">총 {filtered.length}개 · 글을 체크한 뒤 옮길 게시판을 고르고 이동을 누르세요</p>
           {/* 일괄 이동 — 체크한 글을 고른 게시판으로 한 번에 */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '10px 0 14px' }}>
             <span style={{ color: 'var(--page-desc)', fontSize: 13 }}>선택한 {selectedIds.length}개를</span>
@@ -93,42 +89,35 @@ function PostList() {
             {selectedIds.length > 0 &&
               <button className="btn btn-ghost" onClick={() => setSelected(new Set())}>선택 해제</button>}
           </div>
-          <div className="panel" style={{ overflowX: 'auto' }}>
+          <div className="panel admin-posts" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead><tr>
-                <th scope="col" style={{ padding: 12, width: 1 }}>
+                <th scope="col" className="ap-check">
                   <KCheck aria-label="이 페이지 전체 선택" checked={pageAllChecked} onChange={togglePage} />
                 </th>
-                {['제목', '현재 게시판', '작성자', '작성일', '게시판 이동'].map(label =>
-                  <th key={label} scope="col" style={{ padding: 12, whiteSpace: 'nowrap' }}>{label}</th>)}
+                <th scope="col" className="ap-title">제목</th>
+                {['게시판', '작성자', '작성일'].map(label =>
+                  <th key={label} scope="col" className="ap-meta">{label}</th>)}
               </tr></thead>
               <tbody>
                 {rows.map(post => {
                   const currentBoard = post.boardId ?? MAIN_BOARD_ID;
                   return (
                     <tr key={post.id} style={{ borderTop: '1px solid var(--line)' }}>
-                      <td style={{ padding: 12 }}>
+                      <td className="ap-check">
                         <KCheck aria-label={`${post.title} 선택`} checked={selected.has(post.id)}
                           onChange={on => toggle(post.id, on)} />
                       </td>
-                      <td style={{ padding: 12 }}>
+                      <td className="ap-title">
                         <Link href={postHref(post, nums)}>{post.secret && '🔒 '}{post.notice && '[공지] '}{post.title}</Link>
                       </td>
-                      <td style={{ padding: 12 }}>{boardName(currentBoard)}</td>
-                      <td style={{ padding: 12 }}>{post.author}</td>
-                      <td style={{ padding: 12, whiteSpace: 'nowrap' }}><time dateTime={post.date}>{ymdLocal(post.date)}</time></td>
-                      <td style={{ padding: 12 }}>
-                        <KSelect value={currentBoard} onChange={value => move(post, value)}
-                          options={[
-                            ...(!boards.some(b => b.id === currentBoard)
-                              ? [{ value: currentBoard, label: boardName(currentBoard) }] : []),
-                            ...boardOptions,
-                          ]} />
-                      </td>
+                      <td className="ap-meta">{boardName(currentBoard)}</td>
+                      <td className="ap-meta">{post.author}</td>
+                      <td className="ap-meta"><time dateTime={post.date}>{ymdLocal(post.date)}</time></td>
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center' }}>게시글이 없습니다</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center' }}>게시글이 없습니다</td></tr>}
               </tbody>
             </table>
           </div>
