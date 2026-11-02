@@ -171,31 +171,46 @@ export interface ThemeStore {
   edits: Partial<ThemeVars>;
 }
 
-/** 모드·톤을 바꿀 때 새 모드의 값 = 초기값 + 사용자가 지정한 항목 */
-export function composeVars(mode: Exclude<ThemeMode, 'custom'>, accent: string, tone: PointTone,
-  edits: Partial<ThemeVars>): ThemeVars {
-  if (mode === 'point') {
-    // 포인트색은 파생의 기준이므로 덮지 않는다 (accent는 pointAccent와 항상 같게 맞춰 둔다)
-    const { accent: _a, accentSoft: _s, ...rest } = edits;
-    void _a; void _s;
-    return { ...derivePointTheme(accent, tone), ...rest };
-  }
-  const out: ThemeVars = { ...defaultVarsFor(mode, accent, tone), ...edits };
-  if (edits.accent && !edits.accentSoft) out.accentSoft = softAccent(edits.accent);
+/* 모드를 바꿔도 이어지는 항목 (v2.0 사용자 제보 — 「테마를 불러와서 라이트/다크를 바꿨더니
+   포인트 컬러도 바뀌고 모든 게 이상해진다」). 예전에는 지정한 **모든** 값(배경색·글씨색 등)을
+   새 모드의 초기값 위에 얹었다 — 다크용으로 고른 색이 라이트 초기값 위에 섞여 반은 어둡고
+   반은 밝은 화면이 됐다. 이제 모드와 상관없는 값(포인트 컬러·배경 이미지·모서리·표시 옵션)만
+   이어 가고, 색 구성은 그 모드의 기본을 쓴다. 직접 꾸민 색 구성은 [커스텀]에 그대로 남는다. */
+export const SHARED_KEYS = [
+  'accent', 'accentSoft',
+  'bgType', 'bgAngle', 'bgImageId', 'bgBlur',
+  'pageHead', 'pageHeadM',
+  'focusRing', 'focusW', 'wgBorder',
+  'radius', 'radiusS',
+] as const satisfies readonly (keyof ThemeVars)[];
+const SHARED = new Set<string>(SHARED_KEYS);
+
+/** 지정 항목 중 모드를 바꿔도 이어지는 것만 */
+export function sharedEdits(e: Partial<ThemeVars>): Partial<ThemeVars> {
+  const out: Partial<ThemeVars> = {};
+  for (const [k, v] of Object.entries(e)) if (SHARED.has(k) && v !== undefined) (out as Record<string, unknown>)[k] = v;
   return out;
 }
 
-/** 저장된 값이 어느 초기값에서 출발했는지 추정해 사용자 지정 항목만 골라낸다
- *  (edits 기록이 없던 예전 저장본 · 테마 보관함 적용용) */
-export function inferEdits(vars: ThemeVars, accent: string, tone: PointTone): Partial<ThemeVars> {
-  const keys = Object.keys(vars) as (keyof ThemeVars)[];
-  const diff = (base: ThemeVars) => {
-    const out: Partial<ThemeVars> = {};
-    for (const k of keys) if (vars[k] !== undefined && vars[k] !== base[k]) (out as Record<string, unknown>)[k] = vars[k];
-    return out;
-  };
-  const cands = [LIGHT_THEME, DARK_THEME, derivePointTheme(accent, tone)].map(diff);
-  return cands.reduce((a, b) => (Object.keys(b).length < Object.keys(a).length ? b : a));
+/** 모드·톤을 바꿀 때 새 모드의 값 = 그 모드의 초기값(커스텀은 보관된 커스텀 값) + 이어지는 항목 */
+export function composeVars(mode: ThemeMode, accent: string, tone: PointTone,
+  edits: Partial<ThemeVars>, custom: ThemeVars): ThemeVars {
+  const shared = sharedEdits(edits);
+  if (mode === 'point') {
+    // 포인트색은 파생의 기준 — accent는 pointAccent와 항상 같게 맞춰 둔다
+    const { accent: _a, accentSoft: _s, ...rest } = shared;
+    void _a; void _s;
+    return { ...derivePointTheme(accent, tone), ...rest };
+  }
+  const base = mode === 'custom' ? custom : defaultVarsFor(mode, accent, tone);
+  const out: ThemeVars = { ...base, ...shared };
+  const a = shared.accent;
+  if (a && a !== base.accent) {
+    if (!shared.accentSoft) out.accentSoft = softAccent(a);
+    // 라이트 상단메뉴 호버 글씨는 원래 포인트색 — 포인트색을 바꿨으면 같이 따라가게
+    if (base.topHv === base.accent) out.topHv = a;
+  }
+  return out;
 }
 
 /** 모드별 초기값 (선택 리셋용) */

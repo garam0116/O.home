@@ -174,10 +174,10 @@ function DesignPane() {
   return (
     <div className="set-sec">
       <h3>테마</h3>
-      <div className="d">변경은 미리보기로만 반영 — [SAVE]를 눌러야 저장 · 지정한 값은 모드를 바꿔도 이어집니다</div>
+      <div className="d">변경은 미리보기로만 반영 — [SAVE]를 눌러야 저장 · 포인트 컬러·배경 이미지는 모드를 바꿔도 이어집니다</div>
 
       <div className="set-row">
-        <div className="l"><b>모드</b><small>전환해도 지정한 포인트 컬러·배경 등은 그대로 유지 — 초기화는 [선택 리셋]에서</small></div>
+        <div className="l"><b>모드</b><small>포인트 컬러·배경 이미지·모서리 등은 전환해도 유지, 색 구성은 그 모드의 기본으로 — 직접 꾸민 색·불러온 테마는 [커스텀]에 그대로 남습니다</small></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div className="seg in-panel">
             {modeBtn('light', '라이트')}
@@ -1170,7 +1170,7 @@ function SecurityRulesRow() {
         앱이 업데이트되며 규칙이 바뀔 때가 있습니다 — 새 기능이 갑자기 안 보이거나 목록이 비어 보이거나
         저장이 거부되면 아래를 다시 적용해 보세요.{' '}
         {cfg?.kind === 'firebase'
-          ? 'Firestore 콘솔의 규칙 화면에 그대로 덮어써도 안전합니다(기존 컬렉션 권한은 그대로 유지).'
+          ? 'Firestore 콘솔의 규칙 화면에 그대로 덮어써도 안전합니다(기존 컬렉션 권한은 그대로 유지). Storage 규칙은 콘솔 왼쪽 메뉴 Storage → 규칙(Rules) 탭에 붙여넣으세요.'
           : 'Supabase 콘솔 → SQL Editor에 통째로 붙여넣고 Run — 여러 번 실행해도 안전합니다(이미 있으면 건너뜀, 쌓아 둔 글·회원은 그대로).'}
       </div>
       {cfg?.kind === 'firebase' ? (
@@ -1182,6 +1182,14 @@ function SecurityRulesRow() {
             {copied === 'st' ? '복사됨 ✓' : 'Storage 규칙 복사'}
           </button>
           <button className="btn btn-ghost" onClick={() => setOpen(o => !o)}>{open ? '내용 접기' : '내용 보기'}</button>
+          {/* 규칙을 붙여넣을 콘솔 화면으로 바로 (사용자 요청) — 새 탭. 프로젝트 id를 알면 그 프로젝트의
+              Firestore 규칙 화면으로, 모르면 콘솔 첫 화면으로. 로그인 안 돼 있으면 구글 로그인부터 뜬다 */}
+          <a className="btn btn-ghost" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}
+            href={!cfg.projectId ? 'https://console.firebase.google.com/'
+              : `https://console.firebase.google.com/project/${encodeURIComponent(cfg.projectId)}/firestore/${
+                cfg.databaseId ? `databases/${encodeURIComponent(cfg.databaseId)}/` : ''}rules`}>
+            Firebase 콘솔 열기 ↗
+          </a>
         </div>
       ) : (
         /* Supabase도 여기서 바로 복사 (v2.0 포크 제보) — 예전에는 「schema.sql을 실행하라」는
