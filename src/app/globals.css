@@ -777,14 +777,21 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 .widget h4{font-size:calc(11.5px*var(--fs,1));letter-spacing:.12em;color:var(--wg-title);margin-bottom:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
 .widget h4 .more{font-size:calc(10px*var(--fs,1));color:var(--wg-title);cursor:pointer;flex-shrink:0;white-space:nowrap}
 .main-grid .g2{align-items:start}
+/* 심플 디데이: 위젯 높이를 줄이면 목록만 스크롤 — 줄 높이·글자 크기는 그대로, 마지막 줄이 잘리지 않음 */
+.dday-wgt{display:flex;flex-direction:column}
+.dday-wgt h4{flex:none}
+.dday-list{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
+.dday-list::-webkit-scrollbar{display:none}
 .dday-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:calc(12.5px*var(--fs,1))}
 .dday-row:last-child{border:none}
 .dday-row b{font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:.05em}
 .dday-row .d-red{color:var(--accent)}
 /* 디데이 사진 카드 — 사진 위에 이름(왼쪽 위) · 디데이(오른쪽 아래) · 시작일 */
-.ddc-wgt{display:grid;gap:10px;height:100%;overflow-y:auto;scrollbar-width:none}
+/* 세로 flex + 카드 flex:none — 위젯 높이를 줄여도 카드가 비율(DDAY_CARD_RATIO) 그대로 아래로 이어지고 스크롤된다.
+   (grid였을 때는 카드의 container-type 때문에 행 높이가 0까지 줄어들 수 있어, 고정 높이에서 카드끼리 겹쳤다) */
+.ddc-wgt{display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto;scrollbar-width:none}
 .ddc-wgt::-webkit-scrollbar{display:none}
-.ddc-card{position:relative;border-radius:var(--radius);overflow:hidden;container-type:inline-size;box-shadow:0 2px 8px rgba(0,0,0,.08);flex-shrink:0}
+.ddc-card{position:relative;border-radius:var(--radius);overflow:hidden;container-type:inline-size;box-shadow:0 2px 8px rgba(0,0,0,.08);flex:none}
 .ddc-bg{position:absolute;inset:0}
 .ddc-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.32) 100%);pointer-events:none}
 .ddc-title{position:absolute;left:5.5cqw;top:5.5cqw;right:40%;font-size:max(11px,4cqw);font-weight:500;letter-spacing:.01em;text-shadow:0 1px 4px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1652,8 +1659,10 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   .admin-posts .ap-title{min-width:140px;font-size:calc(13px*var(--fs,1))}
   .admin-posts .ap-meta{font-size:calc(11px*var(--fs,1))}
 }
-/* 게시판 검색 위젯 (사용자 요청) — 둥근 입력칸 + 오른쪽 어두운 돋보기 버튼. 위젯 색(--wg-*)을 따른다 */
-.search-wg-box{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 13px;border:1.5px solid var(--line);border-radius:999px;background:color-mix(in srgb,var(--wg-bg) 92%,var(--wg-fg));transition:border-color .15s,box-shadow .15s}
+/* 게시판 검색 위젯 (사용자 요청) — 카드·제목 없이 반투명 둥근 입력칸 + 오른쪽 어두운 돋보기 버튼만.
+   크기를 지정하면 그 높이 안에서 세로 가운데 */
+.search-wg{display:flex;align-items:center}
+.search-wg-box{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:4px 4px 4px 13px;border:1.5px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:999px;background:color-mix(in srgb,var(--wg-bg) 55%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:border-color .15s,box-shadow .15s}
 .search-wg-box:focus-within{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
 .search-wg-box input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--wg-fg);font-size:calc(12.5px*var(--fs,1));padding:6px 0}
 .search-wg-box input::placeholder{color:var(--faint)}
