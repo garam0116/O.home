@@ -1317,6 +1317,24 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .brow .dt{display:none}
   .board-thumb{width:56px}
 }
+/* 본문 박스 (v2.6 사용자 요청) — 환경설정 > 게시판 관리 「본문 박스」. 모든 게시판 공통.
+   useBoardBoxStyle()이 <html>에 bbox-on(불투명도를 정함) · bbox-zero(0%) · bbox-theme(글씨 테마 따라감)과 --bbox-a를 단다.
+   정한 적 없으면 아무 클래스도 없어 지금 모양 그대로다. 박스 색은 테마의 카드색(--panel-solid)에 불투명도만 바꾼다.
+   --bbox-fg/sub는 :root에서 계산해 두는 테마 글씨색 — 모바일 글 화면이 --page-title을 어두운 색으로 바꿔 두어도 원래 값을 쓴다 */
+:root{--bbox-fg:var(--page-title);--bbox-sub:var(--page-desc)}
+html.bbox-on :is(.board-page,.board-detail) .panel{background:color-mix(in srgb,var(--panel-solid) calc(var(--bbox-a)*100%),transparent)}
+html.bbox-zero :is(.board-page,.board-detail) .panel{box-shadow:none}
+html.bbox-theme :is(.board-page,.board-detail) .panel{color:var(--bbox-fg);--sub:var(--bbox-sub);--line:color-mix(in srgb,var(--bbox-fg) 16%,transparent)}
+html.bbox-theme .board-detail .post-body{color:var(--bbox-fg)}
+html.bbox-theme .board-detail .post-body blockquote{color:var(--bbox-sub)}
+html.bbox-theme .board-detail .post-body :is(pre,code){background:color-mix(in srgb,var(--bbox-fg) 9%,transparent)}
+html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-fg) 7%,transparent)}
+@media(max-width:620px){
+  /* 모바일 글 화면은 박스 대신 흰 바탕(80%) — 같은 비율로 옅어진다 (94% → 80%) */
+  html.bbox-on #appMain:has(.board-detail){background:rgba(255,255,255,calc(var(--bbox-a)*.851))}
+  html.bbox-on .board-detail>.panel{background:none}
+  html.bbox-theme .board-detail{--page-title:var(--bbox-fg);--page-desc:var(--bbox-sub)}
+}
 /* 본문 렌더 (MD/HTML 공통) */
 .post-body{font-size:calc(14.5px*var(--fs,1));line-height:1.85;color:#2c3037;word-break:break-word}
 /* 빈 문단도 한 줄 높이 유지 (v2.0 사용자 제보 — 「엔터가 잘 안 먹힘」).

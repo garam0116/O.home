@@ -35,6 +35,11 @@ export interface BoardSettings {
   secGalleryCats?: Record<string, BoardBadge[]>;
   /** 게시판 목록 한 페이지에 보일 글 수 (v2.3 사용자 요청) — 모든 게시판 공통. 비우면 10 */
   perPage?: number;
+  /** 본문 박스 불투명도 0~100 (v2.6 사용자 요청) — 게시판 목록·글 화면의 흰 박스(모바일은 글 화면의 흰 바탕).
+   *  모든 게시판 공통. 비우면 지금 모양 그대로(박스 94% · 모바일 바탕 80%) */
+  boxAlpha?: number;
+  /** 박스 안 글씨색 — 'keep': 지금처럼 어두운 글씨(기본) / 'theme': 테마 따라감(다크면 밝게, 라이트면 어둡게) */
+  boxText?: 'keep' | 'theme';
 }
 const DEFAULTS: BoardSettings = {
   system: DEFAULT_BOARD_SYSTEM,
@@ -46,6 +51,31 @@ export const BOARD_PER_PAGE = { def: 10, min: 3, max: 60 } as const;
 export const perPageOf = (s: BoardSettings) =>
   Math.min(BOARD_PER_PAGE.max, Math.max(BOARD_PER_PAGE.min, Math.round(s.perPage ?? BOARD_PER_PAGE.def)));
 const KEY = 'ohome.boardset.v1';
+
+/** 본문 박스 기본 불투명도 (지금 모양 = --panel 94%) */
+export const BOARD_BOX_DEF = 94;
+export const boxAlphaOf = (s: BoardSettings) => Math.min(100, Math.max(0, Math.round(s.boxAlpha ?? BOARD_BOX_DEF)));
+
+/** 게시판 화면에 본문 박스 설정을 건다 (v2.6) — <html>에 클래스·변수를 달고, CSS(globals.css 「본문 박스」)가
+ *  게시판 목록·글 화면 안에서만 그것을 쓴다. 값을 정한 적 없으면 아무것도 달지 않아 지금 모양 그대로다.
+ *  모바일 글 화면의 흰 바탕(#appMain)도 함께 옅어져야 해서 화면 바깥(html)에 단다. */
+export function useBoardBoxStyle() {
+  const { st } = useBoardSettings();
+  const on = st.boxAlpha !== undefined;
+  const a = boxAlphaOf(st);
+  const theme = st.boxText === 'theme';
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('bbox-on', on);
+    root.classList.toggle('bbox-zero', on && a === 0);
+    root.classList.toggle('bbox-theme', theme);
+    if (on) root.style.setProperty('--bbox-a', String(a / 100)); else root.style.removeProperty('--bbox-a');
+    return () => {
+      root.classList.remove('bbox-on', 'bbox-zero', 'bbox-theme');
+      root.style.removeProperty('--bbox-a');
+    };
+  }, [on, a, theme]);
+}
 
 /** 그 갤러리에서 쓸 말머리 (v2.0) — 따로 정한 적이 없으면 기본 갤러리 것 */
 export const galleryCatsOf = (s: BoardSettings, secId: string): BoardBadge[] =>
@@ -70,6 +100,8 @@ export function useBoardSettings() {
           galleryCats: p.galleryCats ?? DEFAULT_GALLERY_CATS,
           secGalleryCats: p.secGalleryCats,
           perPage: p.perPage,
+          boxAlpha: p.boxAlpha,
+          boxText: p.boxText,
         });
       } else setSt(DEFAULTS);
     } catch { /* 기본값 */ } };
@@ -102,8 +134,9 @@ export function useBoardSettings() {
   const setGalleryCats = useCallback((secId: string, cats: BoardBadge[]) =>
     mutGalleryCats(secId, () => cats), [mutGalleryCats]);
   const setPerPage = useCallback((n: number) => apply(s => ({ ...s, perPage: n })), [apply]);
+  const setBox = useCallback((p: Pick<BoardSettings, 'boxAlpha' | 'boxText'>) => apply(s => ({ ...s, ...p })), [apply]);
   return {
-    st, loaded, patchSystem, patchGallery, setPerPage,
+    st, loaded, patchSystem, patchGallery, setPerPage, setBox,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   };
 }

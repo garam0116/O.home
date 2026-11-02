@@ -16,7 +16,7 @@ import { exportBackup, importBackup, resetGroups, RESET_CONTENT, RESET_EXTRA } f
 import { newId } from '@/lib/postStore';
 import {
   useBoardSettings, boardBadgeStyle, BoardBadge, galleryCatsOf,
-  useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf,
+  useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf, BOARD_BOX_DEF, boxAlphaOf,
   boardHref, boardKeys, findBoardByKey,
 } from '@/lib/boardStore';
 import { useThreadSettings, ThreadWork, THREAD_SEED, ThreadCat, threadBadgeStyle, threadCats, threadCatsPatch } from '@/lib/threadStore';
@@ -676,7 +676,7 @@ function WidgetsPane() {
 /** 게시판 관리 탭 (5.2) — 게시판 생성·삭제·스킨·권한 + 뱃지 색 */
 function BoardPane() {
   const {
-    st, patchSystem, patchGallery, setPerPage,
+    st, patchSystem, patchGallery, setPerPage, setBox,
     patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
   } = useBoardSettings();
   const { boards, setBoards: setBoardsRaw } = useBoards();
@@ -809,6 +809,19 @@ function BoardPane() {
       <div className="set-row" style={{ marginTop: 14 }}>
         <div className="l"><b>페이지당 글 수</b><small>모든 게시판 목록에 공통 적용 — 갤러리형은 한 줄에 3개라 3의 배수가 깔끔합니다</small></div>
         <KStep value={perPageOf(st)} min={BOARD_PER_PAGE.min} max={BOARD_PER_PAGE.max} suffix="개" onChange={setPerPage} />
+      </div>
+
+      {/* 본문 박스 (v2.6 사용자 요청) — 목록·글 화면의 흰 박스 불투명도와 그 안의 글씨색. 모든 게시판 공통 */}
+      <div className="set-row">
+        <div className="l"><b>본문 박스 불투명도</b><small>게시판 목록·글 화면의 흰 박스 — 100% 완전한 흰 박스 · {BOARD_BOX_DEF}% 기본 · 0% 박스 없이 배경 위에 바로 글씨 (모바일 글 화면의 흰 바탕도 함께)</small></div>
+        <KStep value={boxAlphaOf(st)} min={0} max={100} step={5} suffix="%" onChange={v => setBox({ boxAlpha: v })} />
+      </div>
+      <div className="set-row">
+        <div className="l"><b>본문 박스 글씨색</b><small>테마 따라감 — 다크 모드면 밝은 글씨, 라이트 모드면 어두운 글씨 (박스를 옅게 했을 때)</small></div>
+        <div className="mini-seg">
+          <button className={st.boxText !== 'theme' ? 'on' : ''} onClick={() => setBox({ boxText: undefined })}>지금처럼 (어두운 글씨)</button>
+          <button className={st.boxText === 'theme' ? 'on' : ''} onClick={() => setBox({ boxText: 'theme' })}>테마 따라감</button>
+        </div>
       </div>
 
       <hr style={{ margin: '24px 0', border: 'none', borderTop: '1.5px solid var(--line)' }} />

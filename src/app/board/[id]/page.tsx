@@ -9,7 +9,7 @@ import {
   useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate, fmtListDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey, postHref } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey, postHref, useBoardBoxStyle } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput } from '@/components/ui/Kit';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
@@ -21,6 +21,7 @@ import { commentTargetMeta } from '@/lib/visFloor';
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
 
 export default function BoardDetailPage() {
+  useBoardBoxStyle();   // 본문 박스 투명도·글씨색 (환경설정 > 게시판 관리, v2.6)
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, isAdmin } = useAuth();
