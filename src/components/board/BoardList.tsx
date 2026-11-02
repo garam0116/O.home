@@ -63,7 +63,10 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
 
   // 댓글 수 — 댓글은 글과 따로 저장된다 (v2.0). 옛 글 안에 남아 있던 것도 함께 센다
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
-  const cmtCount = (p: Post) => commentsFor(cmtRows, 'post', p.id, p.comments).length;
+  // 댓글을 끈 게시판은 목록의 댓글 수도 숨긴다 (v2.5) — 통합 검색은 글마다 소속 게시판을 본다
+  const cmtCount = (p: Post) =>
+    (boards.find(b => b.id === (p.boardId ?? MAIN_BOARD_ID))?.noComment
+      ? 0 : commentsFor(cmtRows, 'post', p.id, p.comments).length);
   const { st: boardSet } = useBoardSettings();   // 시스템 뱃지 색 (환경설정 > 게시판 관리)
   const [cat, setCat] = useState('전체');
   /* 페이지 번호·검색어는 주소(`?page=3&q=단어`)에 둔다 (v2.5 사용자 요청) — 컴포넌트 상태로만 두면 글을 읽고

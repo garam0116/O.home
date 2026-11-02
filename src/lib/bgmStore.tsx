@@ -2,7 +2,7 @@
 // BGM 저장소 (4.1) — 재생목록·설정 localStorage (→ Supabase 이전 예정)
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { newId } from './postStore';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 
 export interface BgmTrack {
   id: string;
@@ -57,14 +57,17 @@ export function parseVideoId(input: string): string | null {
 export function BgmStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<BgmState>(DEFAULT_STATE);
 
+  // 환경설정에서 SAVE 없이 변경을 취소하면 저장본을 다시 읽는다 (v2.5)
   useEffect(() => {
-    try {
+    const load = () => { try {
       const raw = getRawSetting(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as BgmState;
         setState({ tracks: parsed.tracks ?? DEFAULT_STATE.tracks, settings: { ...DEFAULT_STATE.settings, ...parsed.settings } });
-      }
-    } catch { /* 기본값 */ }
+      } else setState(DEFAULT_STATE);
+    } catch { /* 기본값 */ } };
+    load();
+    return onSettingReload(STORAGE_KEY, load);
   }, []);
 
   const persist = (s: BgmState) => {

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_MENU, FEATURES, MenuItem } from './menu';
 import { newId } from './postStore';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 import { boardHref, type Board } from './boardStore';
 import { canonHref } from './urlCanon';
 
@@ -171,7 +171,9 @@ export function useMenuSettings(): [MenuSettings, (patch: Partial<MenuSettings>)
       } catch { /* 무시 */ }
     };
     window.addEventListener('ohome-menuset', sync);
-    return () => window.removeEventListener('ohome-menuset', sync);
+    // 환경설정에서 SAVE 없이 변경을 취소하면 저장본으로 통째로 되돌린다 (v2.5)
+    const offReload = onSettingReload(KEY, () => setSt(currentMenuSettings()));
+    return () => { window.removeEventListener('ohome-menuset', sync); offReload(); };
   }, []);
   const patch = useCallback((p: Partial<MenuSettings>) => {
     setSt(s => {

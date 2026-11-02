@@ -1464,6 +1464,21 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 좌측 미리보기(뱃지 등)는 창이 좁아져도 눌리지 않음 — 오른쪽 컨트롤이 wrap으로 양보 (v1.9) */
 .set-row .l{flex-shrink:0}
 .set-row:last-child{border:none}
+/* SAVE 탭 저장 줄 (v2.5) — 긴 탭에서도 화면 아래에 붙어 따라온다. 패널이 overflow:hidden이면
+   sticky가 패널 안에서만 걸려 붙지 않으므로, 이 줄이 있는 패널은 clip으로 바꿔 둔다(:has) */
+.panel:has(>.set-savebar){overflow:clip}
+.set-savebar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  margin-top:18px;padding:10px 12px;border-radius:calc(var(--radius) - 4px);background:var(--panel-solid);
+  border:1px solid var(--line);box-shadow:var(--sh-md)}
+.set-savebar .sb-msg{margin-right:auto;font-size:calc(11px*var(--fs,1));color:var(--faint)}
+.set-savebar .sb-msg.on{color:var(--accent);font-weight:600}
+.set-savebar .btn{height:35px;padding:0 16px;font-size:calc(11px*var(--fs,1))}
+.set-savebar .btn:disabled{opacity:.45;cursor:default}
+/* BGM 플레이어(화면 구석 레코드판)와 겹치지 않게 그쪽 끝을 비워 둔다 */
+@media(max-width:900px){
+  body:has(.bgm:not(.bgm-left)) .set-savebar{margin-right:44px}
+  body:has(.bgm.bgm-left) .set-savebar{margin-left:44px}
+}
 .set-row .l b{font-size:calc(12.5px*var(--fs,1));display:block;color:var(--ink)}
 .set-row .l small{font-size:calc(10.5px*var(--fs,1));color:var(--faint)}
 /* 설명 속 강조(<b>)는 줄을 끊지 않고 문장 안에 그대로 (제목용 b의 display:block 무효화) */

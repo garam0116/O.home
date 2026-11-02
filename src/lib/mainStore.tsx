@@ -5,7 +5,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 import { isRailPage } from './widgetZone';
 
 export type WidgetType =
@@ -134,9 +134,9 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   const pendingNav = useRef<string | null>(null);
   const snapshot = useRef<MainState | null>(null);
 
-  // 로드
+  // 로드 — 환경설정에서 SAVE 없이 변경을 취소하면 저장본을 다시 읽는다 (v2.5)
   useEffect(() => {
-    try {
+    const load = () => { try {
       const raw = getRawSetting(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as MainState;
@@ -156,8 +156,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
         // 삭제한 기본 위젯은 병합으로 되살리지 않음
         const merged = [...kept, ...DEFAULT_STATE.widgets.filter(w => !ids.has(w.id) && !removed.has(w.id))];
         setState({ ...DEFAULT_STATE, ...parsed, widgets: merged, removedIds: [...removed] });
-      }
-    } catch { /* 기본값 사용 */ }
+      } else setState(DEFAULT_STATE);
+    } catch { /* 기본값 사용 */ } };
+    load();
+    return onSettingReload(STORAGE_KEY, load);
   }, []);
 
   const persist = useCallback((s: MainState) => {

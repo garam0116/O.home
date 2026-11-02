@@ -1,7 +1,7 @@
 ﻿'use client';
 // 환경설정 (기획서 5장) — 0차: 「디자인」 탭(테마) 실동작.
 // 나머지 카테고리는 해당 기능 마일스톤에서 함께 구현.
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useAuth, inviteCode, setInviteCode } from '@/lib/auth';
 import { useMembers, memberNumbers, memberPath } from '@/lib/members';
 import { useTheme } from '@/lib/ThemeProvider';
@@ -43,7 +43,10 @@ import { PageTitle, EditableDesc, getPageText, setPageText } from '@/components/
 import { resyncCommentMeta } from '@/lib/securityMigrate';
 import { putBlob } from '@/lib/blobStore';
 import { useImageSource } from '@/components/ui/ImageSource';
-import { getSetting, setSetting, pushLocalSettings, unsyncedSettingKeys, SETTING_KEYS } from '@/lib/settingStore';
+import {
+  getSetting, setSetting, pushLocalSettings, unsyncedSettingKeys, SETTING_KEYS,
+  beginSettingDraft, endSettingDraft, settingDraftDirty, settingDraftOwner, commitSettingDraft, discardSettingDraft, DRAFT_EVT,
+} from '@/lib/settingStore';
 import { isServerMode, createBackend, backend } from '@/lib/backend';
 import type { BackendConfig, BackendKind } from '@/lib/backend/types';
 import { CONTENT_COLLECTIONS } from '@/lib/backend/types';
@@ -68,6 +71,21 @@ const TAB_SLUG: Record<(typeof CATEGORIES)[number], string> = {
 };
 const tabOfSlug = (v: string | null | undefined) =>
   v ? (CATEGORIES.find(c => TAB_SLUG[c] === v || c === v) ?? null) : null;
+
+/**
+ * SAVE를 눌러야 저장되는 탭 (v2.5 사용자 요청) — 탭이 맡은 설정 키.
+ * 탭을 열면 이 키들에 들어오는 저장을 붙잡아 두고(화면은 미리보기로 바로 바뀐다), SAVE로 한꺼번에 저장한다.
+ * 게시판 관리는 이름·주소를 바꾸면 메뉴 주소도 함께 고치고(menuset), 아래 섹션 목록(sections)도 같은 탭이라 함께 묶는다.
+ */
+const DRAFT_TABS: Partial<Record<(typeof CATEGORIES)[number], readonly string[]>> = {
+  '메인 페이지': ['ohome.main.v1'],
+  '위젯': ['ohome.main.v1'],
+  '게시판 관리': ['ohome.boards.v1', 'ohome.boardset.v1', 'ohome.menuset.v1', 'ohome.sections.v1'],
+  'BGM': ['ohome.bgm.v1'],
+};
+
+/** 설정 화면이 사라질 때 드래프트를 버리는 예약 — 곧바로 다시 그려지는 설정 화면(탭 이동)이 있으면 취소한다 */
+let draftEndTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** 블록·드롭다운 그림자 프리셋 — 숫자 칸에서 다른 값을 넣으면 선택창은 '직접 지정'으로 보인다 */
 const SHADOW_PRESETS = [
@@ -559,10 +577,10 @@ function MainPagePane() {
           onClick={() => setResetAsk(true)}>기본 구성</button>
       </div>
       <ConfirmModal open={resetAsk} title="메인 페이지를 기본 구성으로 되돌릴까요?"
-        body="추가한 위젯과 배치·크기·모바일 순서가 전부 처음 상태로 돌아갑니다. 되돌린 뒤에는 복구할 수 없습니다."
+        body="추가한 위젯과 배치·크기·모바일 순서가 전부 처음 상태로 돌아갑니다. SAVE를 누르기 전에는 [변경 취소]로 되돌릴 수 있습니다."
         onClose={() => setResetAsk(false)}
         buttons={[
-          { label: 'RESET', kind: 'accent', onClick: () => { resetMain(); setResetAsk(false); toast('메인 페이지가 기본 구성으로 돌아갔습니다'); } },
+          { label: 'RESET', kind: 'accent', onClick: () => { resetMain(); setResetAsk(false); toast('기본 구성으로 바꿨습니다 — SAVE를 눌러야 저장됩니다'); } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setResetAsk(false) },
         ]} />
       <div className="d">모바일 표시 여부 + 모바일 세로 나열 순서 — ⠿ 드래그로 순서 변경</div>
@@ -627,7 +645,7 @@ function WidgetsPane() {
   return (
     <div className="set-sec">
       <h3>위젯</h3>
-      <div className="d">메인 위젯의 내용·설정값 관리 — 메인 페이지의 관리 모달과 같은 데이터라서 어느 쪽에서 바꿔도 즉시 반영
+      <div className="d">메인 위젯의 내용·설정값 관리 — 메인 페이지의 관리 모달과 같은 데이터 · 이 탭에서 바꾼 값은 [SAVE]를 눌러야 저장
         <br />⠿ 드래그로 이 목록의 순서만 바꿀 수 있습니다 — 메인의 실제 배치·모바일 순서는 바뀌지 않습니다</div>
 
       <DragList items={editable} keyOf={w => w.id} onReorder={list => setSettingsOrder(list.map(w => w.id))}
@@ -706,11 +724,12 @@ function BoardPane() {
   return (
     <div className="set-sec">
       <h3>게시판 관리</h3>
-      <div className="d">게시판 생성·삭제와 게시판별 스킨·권한 — 변경 즉시 메뉴·목록·글쓰기에 반영</div>
+      <div className="d">게시판 생성·삭제와 게시판별 스킨·댓글 사용 — [SAVE]를 눌러야 저장되고 메뉴·목록·글쓰기에 반영</div>
       <a className="btn btn-ghost" href="/admin/posts">전체 게시글 관리</a>
 
       <h3 style={{ marginTop: 20 }}>게시판 목록</h3>
-      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 — 글쓰기·댓글 권한은 메뉴 관리에서
+      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 · <b>글씨</b>는 목록의 글 제목·날짜 색(갤러리형 1은 그림 위 흰 글씨라 지정하지 않음) ·
+        <b>댓글</b>을 끄면 글 아래 댓글창과 목록의 댓글 수가 숨겨지고, 이미 달린 댓글은 지워지지 않습니다 — 글쓰기·댓글 권한은 메뉴 관리에서
         <br />
         <b>주소</b>는 <code>/board/b/주소</code> — 영소문자·숫자·하이픈만 쓸 수 있고, 비우면 게시판 이름을 영소문자로 바꿔 씁니다
         (이름에 영문·숫자가 없으면 내부 id). 이름이나 주소를 바꾸면 메뉴의 주소도 함께 바뀌고, 글은 그대로 있습니다
@@ -746,13 +765,23 @@ function BoardPane() {
               <KSelect minWidth={110} value={b.skin}
                 onChange={v => patchBoard(b.id, { skin: v as typeof b.skin })}
                 options={BOARD_SKINS.map(k => ({ value: k.id, label: k.label }))} />
-              {/* 목록 글씨색 (v1.9) — 미지정이면 테마 기본색 */}
-              <span className="cp-lb">글씨</span>
-              <ColorField value={b.fg ?? '#2c3037'} onChange={hex => patchBoard(b.id, { fg: hex })} />
-              {b.fg && (
-                <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                  onClick={() => patchBoard(b.id, { fg: undefined })}>기본색</button>
+              {/* 목록 글씨색 (v1.9) — 미지정이면 테마 기본색.
+                  갤러리형 1은 그림 위 흰 글씨로 고정이라 이 색을 쓰지 않는다 — 칸을 숨긴다 (v2.5 사용자 요청) */}
+              {b.skin !== 'gallery' && (
+                <>
+                  <span className="cp-lb">글씨</span>
+                  <ColorField value={b.fg ?? '#2c3037'} onChange={hex => patchBoard(b.id, { fg: hex })} />
+                  {b.fg && (
+                    <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                      onClick={() => patchBoard(b.id, { fg: undefined })}>기본색</button>
+                  )}
+                </>
               )}
+              {/* 댓글 사용 (v2.5 사용자 요청) — 끄면 글 아래 댓글 목록·입력창, 목록의 댓글 수를 숨긴다 */}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span className="cp-lb">댓글</span>
+                <KToggle checked={!b.noComment} onChange={v => patchBoard(b.id, { noComment: v ? undefined : true })} />
+              </span>
               {b.id !== MAIN_BOARD_ID && (
                 <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                   onClick={() => del.ask(`게시판 「${b.name}」를 삭제하시겠습니까?`, () => {
@@ -1942,13 +1971,18 @@ function MenuPane() {
               { value: 'member', label: '글쓰기: 가입자' },
               { value: 'admin', label: '글쓰기: 관리자' },
             ]} />
-          <KSelect minWidth={110} value={bd.permComment}
-            onChange={v => patchBoard(bd.id, { permComment: v as BoardPerm })}
-            options={[
-              { value: 'guest', label: '댓글: 방문자' },
-              { value: 'member', label: '댓글: 가입자' },
-              { value: 'admin', label: '댓글: 관리자' },
-            ]} />
+          {/* 댓글을 끈 게시판은 권한을 고를 일이 없다 (v2.5) — 켜는 곳은 게시판 관리 */}
+          {bd.noComment
+            ? <span className="pill" data-tip="게시판 관리에서 댓글을 켜면 권한을 고를 수 있습니다">댓글 꺼짐</span>
+            : (
+              <KSelect minWidth={110} value={bd.permComment}
+                onChange={v => patchBoard(bd.id, { permComment: v as BoardPerm })}
+                options={[
+                  { value: 'guest', label: '댓글: 방문자' },
+                  { value: 'member', label: '댓글: 가입자' },
+                  { value: 'admin', label: '댓글: 관리자' },
+                ]} />
+            )}
         </>
       );
     }
@@ -2549,7 +2583,7 @@ function BgmPane() {
   return (
     <div className="set-sec">
       <h3>BGM</h3>
-      <div className="d">유튜브 곡 목록 관리 — 플레이어 팝업 리스트에 노출 · 화면은 숨기고 소리만 재생 · 커버 이미지(레코드판·팝업)는 직접 지정하거나, 비워 두면 유튜브 썸네일</div>
+      <div className="d">유튜브 곡 목록 관리 — 플레이어 팝업 리스트에 노출 · 화면은 숨기고 소리만 재생 · 커버 이미지(레코드판·팝업)는 직접 지정하거나, 비워 두면 유튜브 썸네일 · 곡 목록과 재생 설정은 [SAVE]를 눌러야 저장</div>
 
       <DragList
         items={state.tracks}
@@ -2784,18 +2818,65 @@ function SettingsInner() {
   const router = useRouter();
   const params = useSearchParams();
   const route = useParams<{ tab?: string }>();
-  const [tab, setTabState] = useState<(typeof CATEGORIES)[number]>('디자인');
   // 탭별 주소 (v1.9 사용자 요청, v2.4 경로형) — /settings/menu : 뒤로가기로 이전 탭 복귀, 회원 상세에서 돌아오기 등
   const legacyTab = params.get('tab');
   const urlTab = tabOfSlug(route.tab ? decodeURIComponent(route.tab) : legacyTab);
+  // 첫 값부터 주소의 탭으로 — 탭을 옮기면 이 화면이 새로 그려지므로(주소마다 다른 페이지), 잠깐이라도
+  // 「디자인」으로 시작하면 아래 드래프트 처리가 엉뚱한 탭을 기준으로 돈다
+  const [tab, setTabState] = useState<(typeof CATEGORIES)[number]>(() => urlTab ?? '디자인');
+  const toast = useToast();
+
+  /* SAVE로 저장하는 탭 (v2.5 사용자 요청) — 메인 페이지·위젯·게시판 관리·BGM.
+     탭이 열려 있는 동안 그 탭이 맡은 설정 키의 저장을 settingStore가 붙잡아 두고, SAVE로 한꺼번에 저장한다.
+     탭을 옮기기 전에는 확인 창을 띄운다. 뒤로가기처럼 확인 없이 주소가 바뀌면 이 화면이 새로 그려지는데,
+     그때도 드래프트는 settingStore에 남아 있으므로 새 화면이 「저장 안 한 변경이 남았다」고 묻는다.
+     설정 페이지를 아예 떠나면(다음 화면이 이어받지 않으면) 저장 안 한 값은 버린다. */
+  const draftKeys = DRAFT_TABS[tab];
+  const [, forceDraft] = useReducer((x: number) => x + 1, 0);
+  // 변경 취소 때 탭 화면을 새로 그린다 — 화면 안에서 한 번만 읽고 들고 있는 값도 저장본으로 돌아가게
+  const [paneGen, setPaneGen] = useState(0);
+  // 저장 안 한 변경이 남아 있는 이전 탭 (뒤로가기 등으로 확인 없이 넘어온 경우)
+  const [held, setHeld] = useState<(typeof CATEGORIES)[number] | null>(null);
+  const [draftGen, setDraftGen] = useState(0);
+  useEffect(() => {
+    if (draftEndTimer) { clearTimeout(draftEndTimer); draftEndTimer = null; }
+    const owner = settingDraftOwner() as (typeof CATEGORIES)[number] | null;
+    if (owner && owner !== tab && settingDraftDirty()) { setHeld(owner); return; }
+    setHeld(null);
+    if (draftKeys) beginSettingDraft(draftKeys, tab); else endSettingDraft();
+    forceDraft();
+    // 탭을 옮기거나 페이지를 떠날 때 — 바로 버리지 않고, 이어서 그려지는 설정 화면이 없을 때만 버린다
+    return () => { draftEndTimer = setTimeout(() => { draftEndTimer = null; endSettingDraft(); }, 0); };
+  }, [tab, draftKeys, draftGen]);
+  useEffect(() => {
+    window.addEventListener(DRAFT_EVT, forceDraft);
+    return () => window.removeEventListener(DRAFT_EVT, forceDraft);
+  }, []);
+  const paneDirty = !!draftKeys && settingDraftOwner() === tab && settingDraftDirty();
+  const paneSave = () => commitSettingDraft();
+  const paneDiscard = () => { discardSettingDraft(); setPaneGen(g => g + 1); };
+  // 저장 안 한 채 새로고침·창 닫기 경고 (디자인 탭과 같은 방식)
+  useEffect(() => {
+    if (!paneDirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [paneDirty]);
+
+  // 저장 안 한 변경이 있는 채 다른 탭으로 옮기려 하면 확인 창 (v2.5 사용자 확정)
+  const [pendingTab, setPendingTab] = useState<(typeof CATEGORIES)[number] | null>(null);
+  const goTab = (t: (typeof CATEGORIES)[number]) => {
+    setTabState(t);
+    router.push(`/settings/${TAB_SLUG[t]}`);
+  };
   useEffect(() => {
     setTabState(urlTab ?? '디자인');
     // 옛 주소(/settings?tab=메뉴 관리)·한글 주소로 들어오면 새 주소로
     if (urlTab && (legacyTab || route.tab !== TAB_SLUG[urlTab])) router.replace(`/settings/${TAB_SLUG[urlTab]}`);
   }, [urlTab, legacyTab, route.tab, router]);
   const setTab = (t: (typeof CATEGORIES)[number]) => {
-    setTabState(t);
-    router.push(`/settings/${TAB_SLUG[t]}`);
+    if (t !== tab && paneDirty) { setPendingTab(t); return; }
+    goTab(t);
   };
 
   /* 메뉴 보관함 (v2.3 사용자 요청) — 지금 쓰지 않는 탭을 메뉴 맨 아래로 접어 둔다.
@@ -2829,12 +2910,16 @@ function SettingsInner() {
   const { dirty: themeDirty, discard: themeDiscard, save: themeSave } = useTheme();
   const { rolesDirty, saveRoles, discardRoles } = useFonts();
   const siteDraft = useSiteDraft();
-  const dirty = themeDirty || rolesDirty || siteDraft.dirty;
-  const save = () => { themeSave(); saveRoles(); siteDraft.save(); };
-  const discard = () => { themeDiscard(); discardRoles(); siteDraft.discard(); };
-  const themeRef = useRef({ dirty, discard });
-  themeRef.current = { dirty, discard };
-  useEffect(() => () => { if (themeRef.current.dirty) themeRef.current.discard(); }, []);
+  // 상단바로 떠날 때의 확인은 디자인 탭 미리보기와 SAVE 탭(v2.5)의 저장 안 한 변경을 함께 본다
+  const designDirty = themeDirty || rolesDirty || siteDraft.dirty;
+  const designDiscard = () => { themeDiscard(); discardRoles(); siteDraft.discard(); };
+  const dirty = designDirty || paneDirty;
+  const save = () => { themeSave(); saveRoles(); siteDraft.save(); paneSave(); };
+  const discard = () => { designDiscard(); paneDiscard(); };
+  const themeRef = useRef({ dirty, discard, designDirty, designDiscard });
+  themeRef.current = { dirty, discard, designDirty, designDiscard };
+  // 페이지를 떠날 때 디자인 미리보기만 여기서 원복 — SAVE 탭 드래프트는 위의 드래프트 처리가 맡는다
+  useEffect(() => () => { if (themeRef.current.designDirty) themeRef.current.designDiscard(); }, []);
 
   // 미저장 변경이 있을 때 상단바로 이동하려 하면 경고 (v1.9 — 캡처 단계에서 클릭 보류)
   const [leaveAsk, setLeaveAsk] = useState(false);
@@ -2880,14 +2965,36 @@ function SettingsInner() {
         <EditableDesc k="settings-desc" def="노코드 커스터마이징 — 모든 컨트롤은 자체 UI 킷 (기본 브라우저 UI 미사용)" />
       </div>
 
-      {/* 미저장 테마 변경 이탈 경고 (v1.9) */}
-      <ConfirmModal open={leaveAsk} title="테마가 저장되지 않았습니다"
-        body="이대로 이동하면 미리보기 중인 변경사항이 사라지고 저장된 테마로 돌아갑니다."
+      {/* 미저장 변경 이탈 경고 (v1.9 · v2.5 SAVE 탭 포함) */}
+      <ConfirmModal open={leaveAsk} title="저장하지 않은 변경이 있습니다"
+        body="이대로 이동하면 미리보기 중인 변경사항이 사라지고 저장된 상태로 돌아갑니다."
         onClose={() => { pendingClick.current = null; setLeaveAsk(false); }}
         buttons={[
           { label: '저장 후 이동', kind: 'dark', onClick: () => leaveWith('save') },
           { label: '저장하지 않고 이동', kind: 'ghost', onClick: () => leaveWith('discard') },
           { label: 'CANCEL', kind: 'ghost', onClick: () => { pendingClick.current = null; setLeaveAsk(false); } },
+        ]} />
+      {/* 저장 안 한 채 탭 옮기기 확인 (v2.5) */}
+      <ConfirmModal open={!!pendingTab} title="저장하지 않은 변경이 있습니다"
+        body={`「${tab}」에서 바꾼 내용이 아직 저장되지 않았습니다. 저장하지 않고 이동하면 바꾼 내용이 사라집니다.`}
+        onClose={() => setPendingTab(null)}
+        buttons={[
+          { label: '저장 후 이동', kind: 'dark', onClick: () => {
+            const t = pendingTab; paneSave(); setPendingTab(null); toast('저장되었습니다'); if (t) goTab(t);
+          } },
+          { label: '저장하지 않고 이동', kind: 'ghost', onClick: () => {
+            const t = pendingTab; paneDiscard(); setPendingTab(null); if (t) goTab(t);
+          } },
+          { label: 'CANCEL', kind: 'ghost', onClick: () => setPendingTab(null) },
+        ]} />
+      {/* 뒤로가기 등으로 확인 없이 넘어왔는데 이전 탭에 저장 안 한 변경이 남은 경우 (v2.5) */}
+      <ConfirmModal open={!!held} title="저장하지 않은 변경이 있습니다"
+        body={`「${held}」에서 바꾼 내용이 아직 저장되지 않았습니다. 저장하지 않으면 바꾼 내용이 사라집니다.`}
+        onClose={() => { if (held) goTab(held); }}
+        buttons={[
+          { label: '저장', kind: 'dark', onClick: () => { commitSettingDraft(); toast('저장되었습니다'); setDraftGen(g => g + 1); } },
+          { label: '저장하지 않음', kind: 'ghost', onClick: () => { discardSettingDraft(); setPaneGen(g => g + 1); setDraftGen(g => g + 1); } },
+          { label: `「${held}」로 돌아가기`, kind: 'ghost', onClick: () => { if (held) goTab(held); } },
         ]} />
       <div className="settings-layout">
         <div className="panel set-nav">
@@ -2902,7 +3009,7 @@ function SettingsInner() {
             </div>
           )}
         </div>
-        <div className="panel" style={{ padding: 26 }}>
+        <div className="panel" style={{ padding: 26 }} key={draftKeys ? `${tab}-${paneGen}` : tab}>
           {tab === '디자인' ? (
             <DesignPane />
           ) : tab === '메인 페이지' ? (
@@ -2930,6 +3037,18 @@ function SettingsInner() {
               <h3>{tab}</h3>
               {/* (v1.9) 개발 마일스톤 문구 제거 — 배포본에는 노출하지 않음 */}
               <div className="d">설정 항목이 없습니다</div>
+            </div>
+          )}
+          {/* SAVE 탭 저장 줄 (v2.5) — 긴 탭(게시판 관리)에서도 바로 누를 수 있게 아래에 붙어 따라온다 */}
+          {draftKeys && (
+            <div className="set-savebar">
+              <span className={`sb-msg${paneDirty ? ' on' : ''}`}>
+                {paneDirty ? '저장 안 된 변경' : 'SAVE를 눌러야 저장됩니다'}
+              </span>
+              <button className="btn btn-ghost" disabled={!paneDirty}
+                onClick={() => { paneDiscard(); toast('저장된 상태로 되돌렸습니다'); }}>변경 취소</button>
+              <button className="btn btn-dark" disabled={!paneDirty}
+                onClick={() => { paneSave(); toast('저장되었습니다'); }}>SAVE</button>
             </div>
           )}
         </div>
