@@ -807,7 +807,8 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 /* NEW — 모든 게시판 최신글 (v2.6 사용자 요청, 예전 LATEST 그림 위젯 대체)
    패널 없이 배경 위에 얹는다. 글씨색은 페이지 제목색(--page-title)을 따라 배경 그림 위에서 읽힌다.
    위젯 폭이 420px 이하(모바일·좁게 둔 PC)면 사용자 모바일 캡쳐 비율로 줄이고, 어느 폭이든 한 줄 — 긴 제목만 말줄임 */
-.new-wgt{container-type:inline-size;color:var(--page-title);--nw-line:color-mix(in srgb,var(--page-title) 18%,transparent)}
+.new-wgt{container-type:inline-size;color:var(--page-title)}
+.new-row{--nw-line:color-mix(in srgb,currentColor 18%,transparent)}
 .new-lbl{font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:.42em;opacity:.55;margin-bottom:4px}
 .new-row{display:flex;align-items:baseline;gap:16px;padding:13px 1px;border-bottom:1px solid var(--nw-line);cursor:pointer}
 .new-row.locked{cursor:default}
@@ -817,9 +818,13 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 .new-row:not(.locked):hover .new-ttl{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--nw-line)}
 .new-dt{flex-shrink:0;font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:-.02em;opacity:.62;white-space:nowrap}
 .new-empty{font-size:calc(12px*var(--fs,1));opacity:.55;padding:10px 0}
+/* 제목 세로 맞추기 (설정) — 줄마다 같은 칸(subgrid)을 써서 가장 긴 게시판 이름에 제목 시작을 맞춘다 */
+.new-wgt.align .new-list{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px}
+.new-wgt.align .new-row{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:baseline}
 @container (max-width:420px){
   .new-lbl{font-size:calc(12px*var(--fs,1));letter-spacing:.45em;margin-bottom:2px}
   .new-row{gap:11px;padding:9px 0 8px}
+  .new-wgt.align .new-list{column-gap:11px}
   .new-cat{font-size:calc(10px*var(--fs,1));letter-spacing:.3em}
   .new-ttl{font-size:calc(14px*var(--fs,1));letter-spacing:-.04em}
   .new-dt{font-size:calc(12.5px*var(--fs,1));letter-spacing:-.04em}
