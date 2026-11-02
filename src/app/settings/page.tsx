@@ -35,7 +35,7 @@ import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
 import { useLocalList } from '@/lib/postStore';
 import {
-  TextSettingEditor, DdayEditor, DdayCardEditor, TodoEditor, BannerEditor, DecoEditor,
+  TextSettingEditor, DdayEditor, DdayCardEditor, TodoEditor, BannerEditor, DecoEditor, LatestEditor,
 } from '@/components/main/widgetEditors';
 import { useBgm, BgmTrack, parseVideoId, ytThumb } from '@/lib/bgmStore';
 import { useFonts, fontCssUrl, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
@@ -623,9 +623,9 @@ function MainPagePane() {
 /** 위젯 탭 — 메인 위젯들의 내용·설정값을 한곳에서 관리 (메인 페이지의 관리 모달과 같은 데이터) */
 function WidgetsPane() {
   const { state, setSettingsOrder } = useMainStore();
-  // 설정값이 있는 위젯만 — 실데이터 연동 위젯(DIARY·LATEST)과 메뉴리스트·회원정보창은 설정값 없음
+  // 설정값이 있는 위젯만 — 실데이터 연동 위젯(DIARY)과 메뉴리스트·회원정보창은 설정값 없음
   const base = state.widgets.filter(w =>
-    (['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco'] as const).some(t => t === w.type));
+    (['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco', 'latest'] as const).some(t => t === w.type));
   // 목록 순서 (사용자 요청) — 설정하기 편하도록 이 탭에서만 쓰는 순서. 메인 배치·모바일 순서는 그대로.
   // 저장된 순서에 없는 위젯(새로 추가한 것)은 기존 순서대로 뒤에 붙는다
   const ord = state.settingsOrder ?? [];
@@ -643,6 +643,7 @@ function WidgetsPane() {
       case 'todo': return <TodoEditor conf={w} />;
       case 'deco': return <DecoEditor conf={w} />;
       case 'banner': return <BannerEditor conf={w} />;
+      case 'latest': return <LatestEditor conf={w} />;
       default: return null;
     }
   };
@@ -667,7 +668,7 @@ function WidgetsPane() {
           {editorOf(w)}
         </div>
       )} />
-      <p className="hint">DIARY·LATEST는 일기·로드뷰·갤러리 실데이터를 그대로 보여주는 위젯이라 별도 설정값이 없습니다 · 위젯 켜기/끄기와 순서는 「메인 페이지」 카테고리에서</p>
+      <p className="hint">DIARY는 일기 실데이터를 그대로 보여주는 위젯이라 별도 설정값이 없습니다 · 위젯 켜기/끄기와 순서는 「메인 페이지」 카테고리에서</p>
     </div>
   );
 }

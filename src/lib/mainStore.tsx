@@ -49,7 +49,7 @@ export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = 
   menu: { title: '메뉴리스트', desc: '모바일 전용 — PC에서는 상단 메뉴가 대신함' },
   memo: { title: 'MEMO', desc: '관리자 메모 (클릭 시 관리 모달)' },
   diary: { title: 'DIARY', desc: '최근 일기 (비공개 미노출)' },
-  latest: { title: 'LATEST', desc: '최신 그림 3장' },
+  latest: { title: 'NEW', desc: '모든 게시판 최신글 목록 (게시판 · 제목 · 날짜)' },
   dday: { title: '심플 디데이', desc: '디데이 목록 (글자만)' },
   ddaycard: { title: '디데이', desc: '사진 카드형 — 사진 · 이름 · 디데이 · 시작일' },
   todo: { title: 'TO-DO', desc: '관리자 투두 (방문자는 열람만)' },

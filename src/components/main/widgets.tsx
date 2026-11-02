@@ -7,16 +7,15 @@ import { useAuth } from '@/lib/auth';
 import { boardEntries, useMenuSettings, buildMenu, canViewHref } from '@/lib/menuStore';
 import { sectionHref, MAIN_SEC, useSections, sectionMenuEntries } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries } from '@/lib/linkStore';
-import { useBoards } from '@/lib/boardStore';
+import { useBoards, boardHref, postHref, postNumbers, MAIN_BOARD_ID } from '@/lib/boardStore';
 import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
 import { useFonts } from '@/lib/fontStore';
-import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor } from '@/components/main/widgetEditors';
+import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor, LatestEditor, latestCountOf } from '@/components/main/widgetEditors';
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
-import { useLocalList } from '@/lib/postStore';
-import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
+import { useLocalList, Post, BOARD_SEED } from '@/lib/postStore';
 import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
-import { BlobImg, useBlobUrl } from '@/lib/blobStore';
+import { useBlobUrl } from '@/lib/blobStore';
 import { normalizeInternalLink } from '@/lib/link';
 import { itemPath } from '@/lib/itemNo';
 
@@ -207,47 +206,52 @@ export function DiaryWidget() {
   );
 }
 
-/* ---------- LATEST (최신 그림 — 로드비 + 갤러리 통합 최신 3장, v1.9 사용자 피드백) ---------- */
-export function LatestWidget() {
+/* ---------- NEW (최신글 — 모든 게시판 최신글 목록, v2.6 사용자 요청) ----------
+   예전 LATEST(최신 그림 3장)를 대신한다. 게시판 이름 / 제목 / 날짜 한 줄씩, 패널 없이 배경 위에 얹는 모양.
+   메뉴에서 감춘 게시판의 글은 빼고(통합 검색과 같은 판정), 비밀글은 읽을 수 없는 사람에게 「비밀글입니다」로 보인다. */
+const latestDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}.`;
+};
+
+export function LatestWidget({ conf }: { conf: WidgetConf }) {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
-  const [roads] = useLocalList<RoadItem>('ohome.road.v1', ROAD_SEED);
-  const [backups] = useLocalList<BackupPost>('ohome.backup.v1', BACKUP_SEED);
-  /* 메뉴에서 비공개로 둔 곳은 빼고 모은다 (v2.0 사용자 발견) — 로드비와 갤러리를 함께 보여 주는
-     위젯이라 **소스별로** 따진다. 한쪽만 비공개면 나머지는 그대로 나온다. */
+  const [open, setOpen] = useState(false);
+  useEditEvent(conf.id, () => setOpen(true));   // 편집모드 우클릭 → 설정
+  const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  const { boards } = useBoards();
   const [menuSet] = useMenuSettings();
   const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
-  const seeRoad = canViewHref(menuSet, '/loadb', viewer);
-  const seeGal = canViewHref(menuSet, '/gallery', viewer);
-  const latest = [
-    ...(seeRoad ? roads : []).filter(it => canViewHref(menuSet, sectionHref('roadview', it.secId ?? MAIN_SEC), viewer)).map(it => ({
-      id: `r-${it.id}`, date: it.date, ref: it.imgId ?? it.imgUrl, ph: it.ph,
-      href: '/loadb', tip: `로드비 · No.${String(it.no ?? 0).padStart(3, '0')}`,
-    })),
-    // 갤러리 — 전체공개 + 접기 없는 게시물의 대표(첫) 이미지
-    ...(seeGal ? backups : [])
-      .filter(p => canViewHref(menuSet, sectionHref('gallery', p.secId ?? MAIN_SEC), viewer))
-      .filter(p => p.visibility === 'public' && !p.fold).map(p => ({
-      id: `b-${p.id}`, date: p.date, ref: p.images[0], ph: p.phList[0] ?? 'cool',
-      href: itemPath('/gallery', p), tip: `갤러리 · ${p.title}`,
-    })),
-  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
-  const phFallback = ['cool', 'warm', 'red'];
-  if (!seeRoad && !seeGal) return null;   // 둘 다 비공개면 위젯 자체를 띄우지 않는다 (v2.0)
+  const count = latestCountOf(conf.settings);
+  const nums = postNumbers(posts);
+  const seen = new Map(boards.filter(b => canViewHref(menuSet, boardHref(b.id, boards), viewer)).map(b => [b.id, b]));
+  const canRead = (p: Post) => !p.secret || isAdmin || (!!p.authorId && p.authorId === user?.id);
+  const latest = posts
+    .filter(p => seen.has(p.boardId ?? MAIN_BOARD_ID))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, count);
   return (
-    <div className="panel widget" style={{ margin: 0 }}>
-      <h4>LATEST <span className="more" onClick={() => router.push('/gallery')}>더보기 ›</span></h4>
-      <div className="latest-grid">
-        {[0, 1, 2].map(i => {
-          const it = latest[i];
-          return (
-            <div key={it?.id ?? i} style={{ aspectRatio: '1', borderRadius: 9, overflow: 'hidden', position: 'relative', cursor: it ? 'pointer' : undefined }}
-              onClick={() => { if (it) router.push(it.href); }} data-tip={it?.tip}>
-              <BlobImg fileRef={it?.ref} ph={it?.ph || phFallback[i]} />
-            </div>
-          );
-        })}
-      </div>
+    <div className="new-wgt">
+      <div className="new-lbl">NEW</div>
+      {latest.map(p => {
+        const readable = canRead(p);
+        return (
+          <div key={p.id} className={`new-row${readable ? '' : ' locked'}`}
+            onClick={() => { if (readable) router.push(postHref(p, nums)); }}>
+            <span className="new-cat">{seen.get(p.boardId ?? MAIN_BOARD_ID)?.name}</span>
+            <span className="new-ttl">{readable ? p.title : '비밀글입니다'}</span>
+            <span className="new-dt">{latestDate(p.date)}</span>
+          </div>
+        );
+      })}
+      {latest.length === 0 && <p className="new-empty">아직 올라온 글이 없습니다</p>}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="NEW 설정"
+        desc="모든 게시판의 최신글 목록 — 환경설정 「위젯」에서도 관리 가능"
+        actions={<button className="btn btn-dark" onClick={() => setOpen(false)}>CLOSE</button>}>
+        {open && <LatestEditor conf={conf} />}
+      </Modal>
     </div>
   );
 }
@@ -620,7 +624,7 @@ export function renderWidget(conf: WidgetConf) {
     case 'menu': return <MenuListWidget />;
     case 'memo': return <MemoWidget conf={conf} />;
     case 'diary': return <DiaryWidget />;
-    case 'latest': return <LatestWidget />;
+    case 'latest': return <LatestWidget conf={conf} />;
     case 'dday': return <DdayWidget conf={conf} />;
     case 'ddaycard': return <DdayCardWidget conf={conf} />;
     case 'todo': return <TodoWidget conf={conf} />;
