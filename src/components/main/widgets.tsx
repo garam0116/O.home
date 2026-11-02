@@ -11,7 +11,7 @@ import { useBoards, boardHref, postHref, postNumbers, MAIN_BOARD_ID } from '@/li
 import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
 import { useFonts } from '@/lib/fontStore';
-import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor, LatestEditor, latestCountOf } from '@/components/main/widgetEditors';
+import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor, LatestEditor, latestCountOf, type LatestSet } from '@/components/main/widgetEditors';
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList, Post, BOARD_SEED } from '@/lib/postStore';
 import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
@@ -209,9 +209,10 @@ export function DiaryWidget() {
 /* ---------- NEW (최신글 — 모든 게시판 최신글 목록, v2.6 사용자 요청) ----------
    예전 LATEST(최신 그림 3장)를 대신한다. 게시판 이름 / 제목 / 날짜 한 줄씩, 패널 없이 배경 위에 얹는 모양.
    메뉴에서 감춘 게시판의 글은 빼고(통합 검색과 같은 판정), 비밀글은 읽을 수 없는 사람에게 「비밀글입니다」로 보인다. */
-const latestDate = (iso: string) => {
+const latestDate = (iso: string, fmt: LatestSet['dateFmt']) => {
   const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}.`;
+  const md = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  return fmt === 'short' ? md : `${d.getFullYear()}.${md}.`;
 };
 
 export function LatestWidget({ conf }: { conf: WidgetConf }) {
@@ -223,7 +224,8 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
   const { boards } = useBoards();
   const [menuSet] = useMenuSettings();
   const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
-  const count = latestCountOf(conf.settings);
+  const set = conf.settings as LatestSet;
+  const count = latestCountOf(set);
   const nums = postNumbers(posts);
   const seen = new Map(boards.filter(b => canViewHref(menuSet, boardHref(b.id, boards), viewer)).map(b => [b.id, b]));
   const canRead = (p: Post) => !p.secret || isAdmin || (!!p.authorId && p.authorId === user?.id);
@@ -232,8 +234,9 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, count);
   return (
-    <div className="new-wgt">
+    <div className={`new-wgt${set.titleAlign === 'align' ? ' align' : ''}`} style={{ color: freeTextColor(set) }}>
       <div className="new-lbl">NEW</div>
+      <div className="new-list">
       {latest.map(p => {
         const readable = canRead(p);
         return (
@@ -241,14 +244,15 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
             onClick={() => { if (readable) router.push(postHref(p, nums)); }}>
             <span className="new-cat">{seen.get(p.boardId ?? MAIN_BOARD_ID)?.name}</span>
             <span className="new-ttl">{readable ? p.title : '비밀글입니다'}</span>
-            <span className="new-dt">{latestDate(p.date)}</span>
+            <span className="new-dt">{latestDate(p.date, set.dateFmt)}</span>
           </div>
         );
       })}
+      </div>
       {latest.length === 0 && <p className="new-empty">아직 올라온 글이 없습니다</p>}
 
       <Modal open={open} onClose={() => setOpen(false)} title="NEW 설정"
-        desc="모든 게시판의 최신글 목록 — 환경설정 「위젯」에서도 관리 가능"
+        desc="모든 게시판의 최신글 목록 — 바꾸면 바로 반영 · 환경설정 「위젯」에서도 관리 가능"
         actions={<button className="btn btn-dark" onClick={() => setOpen(false)}>CLOSE</button>}>
         {open && <LatestEditor conf={conf} />}
       </Modal>

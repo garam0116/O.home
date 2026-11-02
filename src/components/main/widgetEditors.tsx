@@ -659,19 +659,53 @@ export function BannerEditor({ conf, onSaved, onClose }: {
   );
 }
 
-/* ---------- NEW (최신글) — 표시 개수 (v2.6 사용자 요청) ---------- */
+/* ---------- NEW (최신글) — 표시 개수 · 제목 정렬 · 날짜 형식 · 글씨색 (v2.6 사용자 요청) ---------- */
 export const LATEST_COUNT = { def: 5, min: 1, max: 20 } as const;
-export const latestCountOf = (s: Record<string, unknown>) =>
-  Math.min(LATEST_COUNT.max, Math.max(LATEST_COUNT.min, Math.round((s.count as number | undefined) ?? LATEST_COUNT.def)));
+export interface LatestSet extends FreeTextColorSet {
+  count?: number;
+  /** 제목 시작 위치 — 'len': 게시판 이름 길이대로(기본) / 'align': 가장 긴 게시판 이름에 맞춰 제목을 세로로 맞춤 */
+  titleAlign?: 'len' | 'align';
+  /** 날짜 — 'full': 2026.09.27.(기본) / 'short': 09.27 */
+  dateFmt?: 'full' | 'short';
+}
+export const latestCountOf = (s: LatestSet) =>
+  Math.min(LATEST_COUNT.max, Math.max(LATEST_COUNT.min, Math.round(s.count ?? LATEST_COUNT.def)));
 
 export function LatestEditor({ conf }: { conf: WidgetConf }) {
   const { updateWidget } = useMainStore();
+  const s = conf.settings as LatestSet;
+  // 바꾸는 즉시 반영 — 글씨색 필드(텍스트 위젯과 공용)가 setState 모양을 쓰므로 그 모양으로 받는다
+  const setDraft: React.Dispatch<React.SetStateAction<LatestSet>> = u => {
+    const next = typeof u === 'function' ? u(s) : u;
+    updateWidget(conf.id, { settings: { ...conf.settings, ...next } }, { persist: true });
+  };
+  const align = s.titleAlign ?? 'len';
+  const fmt = s.dateFmt ?? 'full';
   return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-      <span className="cp-lb">표시 개수</span>
-      <KStep value={latestCountOf(conf.settings)} min={LATEST_COUNT.min} max={LATEST_COUNT.max} suffix="개"
-        onChange={v => updateWidget(conf.id, { settings: { ...conf.settings, count: v } }, { persist: true })} />
-      <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 게시판 글을 최신순으로 — 기본 {LATEST_COUNT.def}개</small>
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="cp-lb">표시 개수</span>
+        <KStep value={latestCountOf(s)} min={LATEST_COUNT.min} max={LATEST_COUNT.max} suffix="개"
+          onChange={v => setDraft({ count: v })} />
+        <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 게시판 글을 최신순으로 — 기본 {LATEST_COUNT.def}개</small>
+      </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="cp-lb">제목 시작 위치</span>
+        <div className="mini-seg">
+          <button className={align === 'len' ? 'on' : ''} onClick={() => setDraft({ titleAlign: undefined })}>게시판 이름 길이대로</button>
+          <button className={align === 'align' ? 'on' : ''} onClick={() => setDraft({ titleAlign: 'align' })}>세로로 맞추기</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="cp-lb">날짜</span>
+        <div className="mini-seg">
+          <button className={fmt === 'full' ? 'on' : ''} onClick={() => setDraft({ dateFmt: undefined })}>2026.09.27.</button>
+          <button className={fmt === 'short' ? 'on' : ''} onClick={() => setDraft({ dateFmt: 'short' })}>09.27</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <FreeTextColorField draft={s} setDraft={setDraft} />
+      </div>
     </div>
   );
 }
