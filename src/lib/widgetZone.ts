@@ -40,28 +40,27 @@ export function clampMenuX(x: number, w: number, snap: boolean): number {
 }
 
 /** 본문이 들어갈 구간 (캔버스 좌표) — 왼쪽 위젯들의 오른쪽 끝 ~ 오른쪽 위젯들의 왼쪽 끝.
- *  centered: 「가운데 정렬」(편집모드 버튼) — 좌우 위젯 폭이 달라도 본문이 화면(캔버스) 한가운데에 오게
- *  가운데선에서 더 가까운 쪽 위젯까지의 거리로 좌우를 똑같이 잡는다 */
-export function railBounds(side: WidgetConf[], centered = false): { left: number; right: number } {
+ *  양쪽 모두 위젯에서 RAIL_GAP만큼 띄우므로 본문과 좌우 위젯 사이 간격은 늘 같다.
+ *  (v2.8 사용자 요청 — 예전 「가운데 정렬」은 화면 한가운데를 기준으로 잡아 좌우 위젯 폭이 다르면
+ *  한쪽 간격만 넓어졌다. 이제 정렬 여부와 상관없이 좌우 간격을 똑같이 맞춘다) */
+export function railBounds(side: WidgetConf[]): { left: number; right: number } {
   const ls = side.filter(w => sideOf(w) === 1);
   const rs = side.filter(w => sideOf(w) === 3);
-  let left = ls.length ? Math.max(...ls.map(w => w.ax! + widthOf(w))) + RAIL_GAP : 0;
-  let right = rs.length ? Math.min(...rs.map(w => w.ax!)) - RAIL_GAP : CANVAS_W;
-  if (centered) {
-    const mid = CANVAS_W / 2;
-    const half = Math.max(0, Math.min(mid - left, right - mid));
-    left = mid - half; right = mid + half;
-  }
+  const left = ls.length ? Math.max(...ls.map(w => w.ax! + widthOf(w))) + RAIL_GAP : 0;
+  const right = rs.length ? Math.min(...rs.map(w => w.ax!)) - RAIL_GAP : CANVAS_W;
   return { left, right: Math.max(left, right) };
 }
 
-/** 가운데 열 위젯들을 한 덩어리로 가로 이동해 캔버스 한가운데에 맞춘다 (편집모드 「가운데 정렬」) — 메뉴 카드 제외 */
-export function centerMiddleWidgets(widgets: WidgetConf[]): WidgetConf[] {
+/** 가운데 열 위젯들을 한 덩어리로 가로 이동해 좌우 위젯 사이 한가운데에 맞춘다 (편집모드 「가운데 정렬」) —
+ *  왼쪽 위젯과의 간격 = 오른쪽 위젯과의 간격 (v2.8 사용자 요청 · 예전엔 캔버스 한가운데 기준).
+ *  withMenu: PC 2단형이면 메뉴 카드도 좌우 위젯으로 친다. 메뉴 카드는 옮기지 않는다 */
+export function centerMiddleWidgets(widgets: WidgetConf[], withMenu = false): WidgetConf[] {
   const mids = widgets.filter(w => w.enabled && w.type !== 'menu' && w.ax != null && w.ay != null && sideOf(w) === 2);
   if (!mids.length) return widgets;
   const l = Math.min(...mids.map(w => w.ax!));
   const r = Math.max(...mids.map(w => w.ax! + widthOf(w)));
-  const dx = Math.round((CANVAS_W - (l + r)) / 2);
+  const { left, right } = railBounds(railWidgets(widgets, withMenu));
+  const dx = Math.round((left + right - (l + r)) / 2);
   if (!dx) return widgets;
   return widgets.map(w => (mids.includes(w) ? { ...w, ax: w.ax! + dx } : w));
 }
