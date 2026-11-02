@@ -647,7 +647,12 @@ function PcLayoutRow() {
   return (
     <div className="set-row">
       <div className="l"><b>PC 레이아웃</b>
-        <small>2단형 = 메뉴를 상단바 대신 메뉴 카드로 · 메뉴 카드는 편집모드에서 좌우 열 안으로만 이동 · 자관·로드비·다이어리·환경설정·글쓰기 화면과 모바일은 1단형 그대로</small></div>
+        {/* 한 줄이면 PC에서 라벨이 안 줄어들어(.set-row .l flex-shrink:0) 버튼이 패널 밖으로 밀린다 — 의미 단위로 개행 */}
+        <small>
+          2단형 = 메뉴를 상단바 대신 메뉴 카드로<br />
+          메뉴 카드는 편집모드에서 좌우 열 안으로만 이동<br />
+          자관·로드비·다이어리·환경설정·글쓰기 화면과 모바일은 1단형 그대로
+        </small></div>
       <div className="seg in-panel seg-1line">
         <button className={cur === 'top' ? 'on' : ''} onClick={() => pick('top')}>1단형</button>
         <button className={cur === 'side' ? 'on' : ''} onClick={() => pick('side')}>2단형</button>
