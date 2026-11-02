@@ -606,10 +606,17 @@ function MainPagePane() {
 
 /** 위젯 탭 — 메인 위젯들의 내용·설정값을 한곳에서 관리 (메인 페이지의 관리 모달과 같은 데이터) */
 function WidgetsPane() {
-  const { state } = useMainStore();
+  const { state, setSettingsOrder } = useMainStore();
   // 설정값이 있는 위젯만 — 실데이터 연동 위젯(DIARY·LATEST)과 메뉴리스트·회원정보창은 설정값 없음
-  const editable = state.widgets.filter(w =>
+  const base = state.widgets.filter(w =>
     (['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco'] as const).some(t => t === w.type));
+  // 목록 순서 (사용자 요청) — 설정하기 편하도록 이 탭에서만 쓰는 순서. 메인 배치·모바일 순서는 그대로.
+  // 저장된 순서에 없는 위젯(새로 추가한 것)은 기존 순서대로 뒤에 붙는다
+  const ord = state.settingsOrder ?? [];
+  const rank = (id: string) => { const i = ord.indexOf(id); return i < 0 ? ord.length : i; };
+  const editable = base.map((w, i) => ({ w, i }))
+    .sort((a, b) => rank(a.w.id) - rank(b.w.id) || a.i - b.i)
+    .map(x => x.w);
 
   const editorOf = (w: WidgetConf) => {
     switch (w.type) {
@@ -627,11 +634,14 @@ function WidgetsPane() {
   return (
     <div className="set-sec">
       <h3>위젯</h3>
-      <div className="d">메인 위젯의 내용·설정값 관리 — 메인 페이지의 관리 모달과 같은 데이터라서 어느 쪽에서 바꿔도 즉시 반영</div>
+      <div className="d">메인 위젯의 내용·설정값 관리 — 메인 페이지의 관리 모달과 같은 데이터라서 어느 쪽에서 바꿔도 즉시 반영
+        <br />⠿ 드래그로 이 목록의 순서만 바꿀 수 있습니다 — 메인의 실제 배치·모바일 순서는 바뀌지 않습니다</div>
 
-      {editable.map(w => (
-        <div key={w.id} style={{ padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
+      <DragList items={editable} keyOf={w => w.id} onReorder={list => setSettingsOrder(list.map(w => w.id))}
+        render={w => (
+        <div style={{ padding: '16px 0', borderBottom: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+            <span className="drag-h" data-tip="드래그로 목록 순서 변경">⠿</span>
             {/* 중복 추가 가능한 위젯(이미지·자유 텍스트)은 번호로 구분 (v1.9) */}
             <b style={{ fontSize: 13, letterSpacing: '.04em' }}>{widgetLabel(state.widgets, w)}</b>
             {MULTI_TYPES.includes(w.type) && <span className="pill">중복 추가 가능</span>}
@@ -640,7 +650,7 @@ function WidgetsPane() {
           </div>
           {editorOf(w)}
         </div>
-      ))}
+      )} />
       <p className="hint">DIARY·LATEST는 일기·로드뷰·갤러리 실데이터를 그대로 보여주는 위젯이라 별도 설정값이 없습니다 · 위젯 켜기/끄기와 순서는 「메인 페이지」 카테고리에서</p>
     </div>
   );
