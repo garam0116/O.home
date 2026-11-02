@@ -1466,6 +1466,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .set-row:last-child{border:none}
 .set-row .l b{font-size:calc(12.5px*var(--fs,1));display:block;color:var(--ink)}
 .set-row .l small{font-size:calc(10.5px*var(--fs,1));color:var(--faint)}
+/* 설명 속 강조(<b>)는 줄을 끊지 않고 문장 안에 그대로 (제목용 b의 display:block 무효화) */
+.set-row .l small b{display:inline;font-size:inherit;color:var(--ink)}
 /* 색 입력 한 쌍 (hex + 원형 버튼) 묶음 — 오른쪽 정렬 */
 .cp-group{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 /* 색 항목 2×2 정렬 — 라벨·필드 열이 위아래로 맞도록 (검색창 4색 등) */
