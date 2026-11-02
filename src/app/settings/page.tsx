@@ -441,24 +441,27 @@ function DesignPane() {
 
       {/* 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링<br />번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
-          {/* 미리보기는 왼쪽, 설정 컨트롤은 오른쪽 정렬 (v1.9 사용자 요청) */}
-          <KInput style={{ width: 130, marginRight: 'auto' }} defaultValue="포커스 미리보기" />
-          <CP label="색" k="focusColor" def={state.vars.accent} />
-          {/* 링 방식 — 선택창으로 (각 방식의 뜻은 왼쪽 설명에) */}
-          <KSelect minWidth={96} value={state.vars.focusRing ?? 'glow'}
-            onChange={v => setVar('focusRing', v as 'glow' | 'line' | 'none')}
-            options={[
-              { value: 'glow', label: '번짐' }, { value: 'line', label: '라인' }, { value: 'none', label: '테두리만' },
-            ]} />
-          {(state.vars.focusRing ?? 'glow') !== 'none' && (
-            <>
-              <span className="cp-lb">두께</span>
-              <KStep value={state.vars.focusW ?? 3} min={1} max={6} step={1} suffix="px"
-                onChange={v => setVar('focusW', v)} />
-            </>
-          )}
+        {/* 설명이 길어도 오른쪽 옵션 줄이 눌리지 않게 — 설명 쪽이 줄어들며 줄바꿈 */}
+        <div className="l" style={{ flex: '1 1 240px', minWidth: 0 }}><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링<br />번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
+        {/* 윗줄: 미리보기(오른쪽) / 아랫줄: 색·링 방식·두께를 한 줄로 (v2.6 사용자 요청) */}
+        <div style={{ display: 'grid', gap: 8, justifyItems: 'end', marginLeft: 'auto', flex: 'none', maxWidth: '100%' }}>
+          <KInput style={{ width: 130 }} defaultValue="포커스 미리보기" />
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <CP label="색" k="focusColor" def={state.vars.accent} />
+            {/* 링 방식 — 선택창으로 (각 방식의 뜻은 왼쪽 설명에) */}
+            <KSelect minWidth={96} value={state.vars.focusRing ?? 'glow'}
+              onChange={v => setVar('focusRing', v as 'glow' | 'line' | 'none')}
+              options={[
+                { value: 'glow', label: '번짐' }, { value: 'line', label: '라인' }, { value: 'none', label: '테두리만' },
+              ]} />
+            {(state.vars.focusRing ?? 'glow') !== 'none' && (
+              <>
+                <span className="cp-lb">두께</span>
+                <KStep value={state.vars.focusW ?? 3} min={1} max={6} step={1} suffix="px"
+                  onChange={v => setVar('focusW', v)} />
+              </>
+            )}
+          </div>
         </div>
       </div>
 
