@@ -9,7 +9,7 @@ import {
   useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate, fmtListDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey, postHref } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput } from '@/components/ui/Kit';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
@@ -19,6 +19,12 @@ import { PageTitle } from '@/components/ui/PageText';
 import { commentTargetMeta } from '@/lib/visFloor';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
+
+/** 이전 글/다음 글 날짜 — 해가 같아도 늘 연도까지 (2026.10.22) */
+const fmtFullDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+};
 
 export default function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -108,6 +114,28 @@ export default function BoardDetailPage() {
     if (cmtRows.some(gone)) setCmtRows(cmtRows.filter(x => !gone(x)));
     if (post.comments.some(gone)) update({ comments: post.comments.filter(x => !gone(x)) });
   };
+  /* 이전 글/다음 글 (사용자 요청) — 같은 게시판 안에서 작성일 순서. 다음 글 = 더 최근 글, 이전 글 = 더 예전 글.
+     공지 고정은 목록 표시용이라 여기서는 따지지 않는다. 읽을 수 없는 비밀글은 제목을 가리고 누를 수 없게 */
+  const sameBoard = posts
+    .filter(p => (p.boardId ?? MAIN_BOARD_ID) === board.id)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const at = sameBoard.findIndex(p => p.id === post.id);
+  const older = at > 0 ? sameBoard[at - 1] : undefined;
+  const newer = at >= 0 && at < sameBoard.length - 1 ? sameBoard[at + 1] : undefined;
+  const canRead = (p: Post) => !p.secret || isAdmin || (!!p.authorId && p.authorId === user?.id);
+  const NavRow = ({ label, p }: { label: string; p?: Post }) => (
+    <div className={`post-nav-row${p && canRead(p) ? ' link' : ''}`}
+      onClick={() => { if (p && canRead(p)) router.push(postHref(p, nums)); }}>
+      <span className="pn-label">{label}</span>
+      {p ? (
+        <>
+          <span className="pn-title">{canRead(p) ? <>{p.secret && '🔒 '}{p.title}</> : '🔒 비밀글입니다'}</span>
+          <span className="pn-date">— {fmtFullDate(p.date)}</span>
+        </>
+      ) : <span className="pn-none">없음</span>}
+    </div>
+  );
+
   const roots = comments.filter(c => !c.parentId);
   const childrenOf = (pid: string) => comments.filter(c => c.parentId === pid);
 
@@ -173,6 +201,15 @@ export default function BoardDetailPage() {
             dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </div>
+
+      {/* 다음 글 / 이전 글 / 목록가기 — 본문 바로 아래 (사용자 요청) */}
+      <nav className="post-nav">
+        <NavRow label="다음 글" p={newer} />
+        <NavRow label="이전 글" p={older} />
+        <div className="post-nav-foot">
+          <button onClick={() => router.push(boardHref(board.id, boards))}>목록가기</button>
+        </div>
+      </nav>
 
       {/* 댓글 + 대댓글 — 게시판 관리에서 댓글을 끈 게시판이면 통째로 숨긴다 (v2.5) */}
       {!board.noComment && (
