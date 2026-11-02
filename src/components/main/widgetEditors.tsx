@@ -28,12 +28,52 @@ function WidgetImageSource({ children, onSelect, onFiles }: {
   </div>;
 }
 
+/* ---------- 자유 텍스트 글씨색 (v2.1 사용자 요청) ----------
+   기본은 테마를 따라간다 — 다크/라이트(포인트 톤·커스텀 포함)를 바꾸면 글씨색도 같이 바뀐다.
+   게시글 하단 다음 글/이전 글과 같은 색을 쓴다: 「제목색」 = 환경설정 > 페이지 타이틀(--page-title),
+   「설명색」 = 페이지 설명(--page-desc). 「직접 지정」만 모드와 상관없이 고정된다.
+   colorMode가 없던 예전 위젯 — 색을 골라 둔 적이 있으면 직접 지정으로, 없으면 테마 제목색으로 본다 */
+export type FreeTextColorMode = 'title' | 'desc' | 'custom';
+export interface FreeTextColorSet { color?: string; colorMode?: FreeTextColorMode }
+
+export function freeTextColorMode(s: FreeTextColorSet): FreeTextColorMode {
+  return s.colorMode ?? (s.color ? 'custom' : 'title');
+}
+
+/** 실제로 칠할 글씨색 (CSS 값) */
+export function freeTextColor(s: FreeTextColorSet): string {
+  const m = freeTextColorMode(s);
+  if (m === 'custom') return s.color ?? 'var(--page-title)';
+  return m === 'desc' ? 'var(--page-desc)' : 'var(--page-title)';
+}
+
+export function FreeTextColorField<T extends FreeTextColorSet>({ draft, setDraft }: {
+  draft: T; setDraft: React.Dispatch<React.SetStateAction<T>>;
+}) {
+  const mode = freeTextColorMode(draft);
+  return (
+    <>
+      <span className="cp-lb">글씨색</span>
+      <KSelect minWidth={150} value={mode}
+        onChange={v => setDraft(d => ({ ...d, colorMode: v as FreeTextColorMode }))}
+        options={[
+          { value: 'title', label: '테마 따라감 · 제목색' },
+          { value: 'desc', label: '테마 따라감 · 설명색' },
+          { value: 'custom', label: '직접 지정' },
+        ]} />
+      {mode === 'custom' && (
+        <ColorField value={draft.color ?? '#5d636d'} onChange={hex => setDraft(d => ({ ...d, color: hex }))} />
+      )}
+    </>
+  );
+}
+
 /* ---------- MEMO · 자유 텍스트 — settings.text (+ freetext: 폰트·크기·색·정렬, v1.9) ---------- */
 export function TextSettingEditor({ conf }: { conf: WidgetConf }) {
   const { updateWidget } = useMainStore();
   const { fonts, familyOf } = useFonts();
   const isFree = conf.type === 'freetext';
-  const s = conf.settings as { text?: string; fontId?: string; size?: number; color?: string; align?: 'left' | 'center' | 'right'; bold?: boolean };
+  const s = conf.settings as { text?: string; fontId?: string; size?: number; color?: string; colorMode?: FreeTextColorMode; align?: 'left' | 'center' | 'right'; bold?: boolean };
   const [draft, setDraft] = useState(s);
   // 다른 곳(메인 모달 등)에서 저장되면 반영
   useEffect(() => setDraft({ ...s }), [conf.settings]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -50,8 +90,9 @@ export function TextSettingEditor({ conf }: { conf: WidgetConf }) {
             <span className="cp-lb">크기</span>
             <KStep value={draft.size ?? 15} min={10} max={64} step={1} suffix="px"
               onChange={v => setDraft(d => ({ ...d, size: v }))} />
-            <span className="cp-lb">글씨색</span>
-            <ColorField value={draft.color ?? '#5d636d'} onChange={hex => setDraft(d => ({ ...d, color: hex }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FreeTextColorField draft={draft} setDraft={setDraft} />
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="mini-seg">
