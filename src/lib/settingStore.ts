@@ -104,6 +104,8 @@ export function settingsPrimed(): boolean { return primed; }
 
 /** 동기 읽기 — 서버 캐시 > localStorage > 기본값 */
 export function getSetting<T>(key: string, fallback: T): T {
+  // 설정 탭 SAVE 드래프트 (v2.5) — 저장 전 값이 있으면 그것을 먼저 본다
+  if (draftVals.has(key)) return draftVals.get(key) as T;
   // null·undefined는 "지워진 값"으로 보고 기본값으로 돌아간다 —
   // 초기화가 설정을 null로 저장하는데 그대로 돌려주면 화면이 기본값 대신 null을 받아 깨진다.
   // (false·0·''은 정상값이므로 != null 로만 거른다)
@@ -125,6 +127,15 @@ export function getSetting<T>(key: string, fallback: T): T {
 
 /** 문자열 그대로 저장된 값(구버전 호환)용 — JSON이 아니어도 읽는다 */
 export function getRawSetting(key: string): string | null {
+  if (draftVals.has(key)) {
+    const d = draftVals.get(key);
+    return typeof d === 'string' ? d : JSON.stringify(d);
+  }
+  return savedRaw(key);
+}
+
+/** 저장된 값(드래프트 제외)의 문자열 */
+function savedRaw(key: string): string | null {
   const v = cache.get(key);
   if (v != null) return typeof v === 'string' ? v : JSON.stringify(v);
   try {
@@ -135,6 +146,13 @@ export function getRawSetting(key: string): string | null {
 
 /** 저장 — 캐시·로컬 사본·DB 순. DB 저장 실패는 조용히 무시(로컬은 남는다) */
 export function setSetting(key: string, value: unknown): void {
+  // 설정 탭 SAVE 드래프트 (v2.5) — 지금 열린 탭이 맡은 키는 SAVE 전까지 저장하지 않고 붙잡아 둔다
+  if (draftScope?.has(key)) {
+    draftVals.set(key, value);
+    try { window.dispatchEvent(new CustomEvent(EVT, { detail: key })); } catch { /* 무시 */ }
+    try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
+    return;
+  }
   revisions.set(key, (revisions.get(key) ?? 0) + 1);
   cache.set(key, value);
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 무시 */ }
@@ -160,6 +178,75 @@ export function removeSetting(key: string): void {
   if (isServerMode() && !LOCAL_ONLY.has(key)) {
     void backend()?.saveSetting(key, null).catch(() => { /* 무시 */ });
   }
+}
+
+/* ---------- 설정 탭 SAVE 드래프트 (v2.5 사용자 요청) ----------
+   「메인 페이지 / 위젯 / 게시판 관리 / BGM」도 디자인 탭처럼 SAVE를 눌러야 저장된다.
+   스토어마다 저장 코드를 고치지 않고 이 계층에서 붙잡는다 — 탭이 열려 있는 동안 그 탭이 맡은
+   키에 들어오는 setSetting은 draftVals에만 담기고, 읽기(getSetting·getRawSetting)는 드래프트를
+   먼저 본다(화면은 미리보기로 바로 바뀐다). SAVE = 담긴 값을 실제로 저장, 취소 = 버리고
+   RELOAD_EVT로 각 스토어에 저장본을 다시 읽게 한다. */
+let draftScope: Set<string> | null = null;
+let draftOwner: string | null = null;      // 드래프트를 연 탭 이름
+const draftVals = new Map<string, unknown>();
+/** 드래프트가 바뀔 때 (저장 안 된 변경 표시 갱신용) */
+export const DRAFT_EVT = 'ohome-setting-draft';
+/** 드래프트를 버렸을 때 — detail = 키. 메모리에 값을 들고 있는 스토어는 저장본을 다시 읽는다 */
+export const RELOAD_EVT = 'ohome-setting-reload';
+
+/** 이 키들을 드래프트로 붙잡기 시작 (탭을 열 때) */
+export function beginSettingDraft(keys: readonly string[], owner: string): void {
+  // 같은 탭이 다시 열리면(뒤로가기로 화면이 새로 그려진 경우 등) 붙잡아 둔 값을 그대로 이어 간다
+  if (draftOwner === owner && draftScope) return;
+  if (draftVals.size) discardSettingDraft();
+  draftScope = new Set(keys);
+  draftOwner = owner;
+}
+
+/** 지금 드래프트를 연 탭 — 없으면 null */
+export function settingDraftOwner(): string | null { return draftOwner; }
+
+/** 붙잡기 끝 — 저장 안 한 값은 버린다 (탭을 닫을 때) */
+export function endSettingDraft(): void {
+  discardSettingDraft();
+  draftScope = null;
+  draftOwner = null;
+}
+
+/** 저장본과 다른 드래프트 값이 있는가 */
+export function settingDraftDirty(): boolean {
+  for (const [k, v] of draftVals) {
+    if (JSON.stringify(v) !== (savedRaw(k) ?? 'null')) return true;
+  }
+  return false;
+}
+
+/** SAVE — 드래프트 값을 실제로 저장 */
+export function commitSettingDraft(): void {
+  const entries = [...draftVals];
+  draftVals.clear();
+  const scope = draftScope;
+  draftScope = null;
+  try { entries.forEach(([k, v]) => setSetting(k, v)); } finally { draftScope = scope; }
+  try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
+}
+
+/** 변경 취소 — 드래프트를 버리고 저장본으로 */
+export function discardSettingDraft(): void {
+  const keys = [...draftVals.keys()];
+  draftVals.clear();
+  keys.forEach(k => {
+    try { window.dispatchEvent(new CustomEvent(EVT, { detail: k })); } catch { /* 무시 */ }
+    try { window.dispatchEvent(new CustomEvent(RELOAD_EVT, { detail: k })); } catch { /* 무시 */ }
+  });
+  try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
+}
+
+/** 드래프트를 버렸을 때 이 키를 다시 읽게 하는 구독 */
+export function onSettingReload(key: string, cb: () => void): () => void {
+  const h = (e: Event) => { if ((e as CustomEvent).detail === key) cb(); };
+  window.addEventListener(RELOAD_EVT, h);
+  return () => window.removeEventListener(RELOAD_EVT, h);
 }
 
 /** 다른 화면에서 같은 설정을 바꿨을 때 알림 */

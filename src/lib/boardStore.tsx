@@ -59,7 +59,8 @@ export function useBoardSettings() {
   const [st, setSt] = useState<BoardSettings>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    try {
+    // 환경설정에서 SAVE 없이 변경을 취소하면 저장본을 다시 읽는다 (v2.5)
+    const load = () => { try {
       const raw = getRawSetting(KEY);
       if (raw) {
         const p = JSON.parse(raw) as Partial<BoardSettings>;
@@ -70,9 +71,11 @@ export function useBoardSettings() {
           secGalleryCats: p.secGalleryCats,
           perPage: p.perPage,
         });
-      }
-    } catch { /* 기본값 */ }
+      } else setSt(DEFAULTS);
+    } catch { /* 기본값 */ } };
+    load();
     setLoaded(true);
+    return onSettingReload(KEY, load);
   }, []);
   const apply = useCallback((fn: (s: BoardSettings) => BoardSettings) => {
     setSt(s => {
@@ -128,6 +131,9 @@ export interface Board {
   permWrite: BoardPerm;    // 글쓰기 권한 (mock 단계에선 로그인 전제 — 로드뷰와 동일)
   permComment: BoardPerm;  // 댓글 권한
   fg?: string;             // 목록 글씨색 (v1.9 — 미지정이면 테마 기본색)
+  /** 댓글 기능 끄기 (v2.5 사용자 요청) — true면 글 아래 댓글 목록·입력창과 목록의 댓글 수를 숨긴다.
+   *  비어 있으면 켜짐(예전 게시판 그대로). 이미 달린 댓글은 지우지 않으므로 다시 켜면 그대로 보인다 */
+  noComment?: boolean;
   /** 주소 별명 (v2.4 사용자 요청) — `/board/b/{별명}`. 비우면 게시판 이름을 영소문자로 바꿔 쓰고
    *  (Palimpsest → palimpsest), 이름에 영문·숫자가 없으면 내부 id가 주소에 나온다.
    *  **글의 소속(boardId)은 언제나 id로 저장한다** — 별명·이름을 바꿔도 글이 떨어져 나가지 않는다. */
@@ -162,7 +168,9 @@ export function useBoards(): {
       } catch { /* 무시 */ }
     };
     window.addEventListener('ohome-boards', sync);
-    return () => window.removeEventListener('ohome-boards', sync);
+    // 환경설정에서 SAVE 없이 변경을 취소하면 저장본으로 (v2.5)
+    const offReload = onSettingReload(BOARDS_KEY, () => setSt(currentBoards()));
+    return () => { window.removeEventListener('ohome-boards', sync); offReload(); };
   }, []);
   const setBoards = useCallback((next: Board[]) => {
     setSt(next);
@@ -250,4 +258,4 @@ export function boardBadgeStyle(b?: BoardBadge): React.CSSProperties {
   };
 }
 import type React from 'react';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';

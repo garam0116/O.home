@@ -79,7 +79,7 @@ export default function BoardDetailPage() {
   // 댓글 권한 (5.2) — 방문자 허용 시 게스트 작성(닉네임)
   const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
   const guestMode = !user && board.permComment === 'guest';
-  const canComment = allow(board.permComment) && (!!user || guestMode);
+  const canComment = !board.noComment && allow(board.permComment) && (!!user || guestMode);
 
   const canManage = isAdmin || isAuthor;
   const update = (patch: Partial<Post>) =>
@@ -174,7 +174,8 @@ export default function BoardDetailPage() {
         </div>
       </div>
 
-      {/* 댓글 + 대댓글 */}
+      {/* 댓글 + 대댓글 — 게시판 관리에서 댓글을 끈 게시판이면 통째로 숨긴다 (v2.5) */}
+      {!board.noComment && (
       <div className="panel board-comments" style={{ padding: 0, marginTop: 16 }}>
         <div className="board-comments-body">
           <h4 style={{ fontSize: 11.5, letterSpacing: '.12em', color: 'var(--faint)', marginBottom: 13 }}>
@@ -209,6 +210,7 @@ export default function BoardDetailPage() {
           </div>
         )}
       </div>
+      )}
 
       <ConfirmModal open={delAsk} title="글을 삭제하시겠습니까?" body="삭제한 글은 복구할 수 없습니다."
         onClose={() => setDelAsk(false)}
