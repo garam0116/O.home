@@ -4,9 +4,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { WidgetConf, useMainStore } from '@/lib/mainStore';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { sideOf, LEFT_EDGE, RIGHT_EDGE, SIDE_MIN_W, CENTER_MIN_W } from '@/lib/widgetZone';
 
-export function WidgetFrame({ conf, mobileOrder, children, className, style, onCtx }: {
+export function WidgetFrame({ conf, mobileOrder, children, className, style, onCtx, rail }: {
   conf: WidgetConf;
+  /** 메인 외 페이지의 좌우 위젯 레일 (v2.4) — 본문(중앙) 쪽으로 넘어가지 않게 이동·크기를 제한 */
+  rail?: boolean;
   mobileOrder: number;
   children: React.ReactNode;
   className?: string;
@@ -60,10 +63,19 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
       const canvasW = (ref.current?.closest('.main-grid') as HTMLElement | null)?.clientWidth ?? 0;
       const myW = () => conf.w ?? Math.round(ref.current?.getBoundingClientRect().width ?? 0);
       let centered = false;
+      // 레일(다른 페이지): 위젯 중심이 원래 열을 벗어나지 않게 — 중앙으로 넘어가면 그 페이지에서 사라진다 (v2.4)
+      const side = sideOf(conf);
+      const w0 = myW();
+      const clampX = (x: number, snap: boolean) => {
+        if (!rail) return x;
+        if (side === 1) { const lim = LEFT_EDGE - w0 / 2 - 1; return Math.min(x, snap ? Math.floor(lim / 10) * 10 : Math.floor(lim)); }
+        if (side === 3) { const lim = RIGHT_EDGE - w0 / 2 + 1; return Math.max(x, snap ? Math.ceil(lim / 10) * 10 : Math.ceil(lim)); }
+        return x;
+      };
       const mv = (ev: PointerEvent) => {
         const nx = bx + (ev.clientX - sx), ny = by + (ev.clientY - sy);
         const snap = gridOn && !conf.freeMove;   // freeMove(그리드 무시)는 그리드가 켜져 있어도 자유 배치
-        if (ev.shiftKey && canvasW > 0) {
+        if (ev.shiftKey && canvasW > 0 && !rail) {
           centered = true;
           const cx = (canvasW - myW()) / 2;
           updateWidget(conf.id, {
@@ -73,8 +85,8 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
           return;
         }
         centered = false;
-        if (snap) updateWidget(conf.id, { ax: Math.round(nx / 10) * 10, ay: Math.round(ny / 10) * 10 });
-        else updateWidget(conf.id, { ax: nx, ay: ny });
+        if (snap) updateWidget(conf.id, { ax: clampX(Math.round(nx / 10) * 10, true), ay: Math.round(ny / 10) * 10 });
+        else updateWidget(conf.id, { ax: clampX(nx, false), ay: ny });
       };
       const up = () => {
         document.body.classList.remove('drag-move');
@@ -146,6 +158,11 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
     const gr = ref.current!.closest('.main-grid')?.getBoundingClientRect();
     const absL = abs ? conf.ax! : (gr ? r.left - gr.left : 0);
     const absT = abs ? conf.ay! : (gr ? r.top - gr.top : 0);
+    // 좌우 열 위젯은 120px까지 줄일 수 있다 — 다른 페이지의 본문 폭을 넓히는 용도 (v2.4)
+    const side = sideOf(conf);
+    const minW = side === 2 ? CENTER_MIN_W : SIDE_MIN_W;
+    // 레일(다른 페이지)에서는 넓혀도 중심이 원래 열에 남게 — 왼쪽 열 위젯만 해당(오른쪽은 넓힐수록 중심이 오른쪽)
+    const maxW = rail && side === 1 && abs ? 2 * (LEFT_EDGE - conf.ax!) - 1 : Infinity;
     const mv = (ev: PointerEvent) => {
       const dw = ev.clientX - sx, dh = ev.clientY - sy;
       let w = r.width + dw, h = r.height + dh;
@@ -153,7 +170,8 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
         w = Math.round((absL + w) / 10) * 10 - absL;
         h = Math.round((absT + h) / 10) * 10 - absT;
       }
-      updateWidget(conf.id, autoH ? { w: Math.max(160, w) } : { w: Math.max(160, w), h: Math.max(80, h) });
+      w = Math.min(maxW, Math.max(minW, w));
+      updateWidget(conf.id, autoH ? { w } : { w, h: Math.max(80, h) });
     };
     const up = () => { document.body.classList.remove('drag-rs'); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
     window.addEventListener('pointermove', mv);
