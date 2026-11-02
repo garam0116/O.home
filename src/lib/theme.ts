@@ -16,6 +16,10 @@ export interface ThemeVars {
   bgAngle?: number;          // 그라데이션 각도 (deg, 기본 180)
   bgImageId?: string;        // 배경 이미지 파일 id (IndexedDB)
   bgBlur?: number;           // 배경 이미지 블러 px (0 = 없음)
+  /* 배경 이미지 덮개 % (v2.0 사용자 요청 — 「다크 모드면 사진을 좀 더 어둡게, 라이트 모드면 좀 더 밝게」).
+     사진 위에 그 모드의 배경 끝색(bgG2)을 이만큼 얹는다 — 다크는 어둡게, 라이트는 밝게,
+     포인트 자동은 그 색조로 눌린다. 0 = 사진 그대로 */
+  bgDim?: number;
   // 카드(패널·게시판 리스트·필터 등) 배경/글씨 (v1.9) — 보조 글씨색은 글씨색에서 자동 파생
   cardBg?: string; cardFg?: string;
   // 상단메뉴: 배경 · 글씨 · 호버 글씨(v1.9 분리) · 로고 글씨
@@ -66,10 +70,13 @@ export interface ThemeState {
   vars: ThemeVars;
 }
 
+/** 배경 이미지 덮개 기본값 % — 모든 모드 공통 (색은 모드의 배경 끝색을 따라간다) */
+export const BG_DIM = 35;
+
 /** 다크 모드 (기본 디폴트) — 프로토타입 "시크 모노톤" 기준 */
 export const DARK_THEME: ThemeVars = {
-  bgG1: '#1f2329', bgG2: '#0b0c0f', // 배경을 한 단계 더 어둡게 (v2.0 사용자 요청 · 이전 #2b3038 → #121418)
-  bgType: 'gradient', bgAngle: 180, bgBlur: 0,
+  bgG1: '#2b3038', bgG2: '#121418',
+  bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
   cardBg: '#fbfbfc', cardFg: '#1d2025',
   topBg: '#14161b', topFg: '#aab0ba', topHv: '#ffffff', topBrand: '#f2f3f5',
   ddBg: '#1c1f25', ddFg: '#c6cad1', ddHv: '#ffffff',
@@ -85,8 +92,8 @@ export const DARK_THEME: ThemeVars = {
 
 /** 라이트 모드 — 호버 글씨색은 흰 배경에서도 보이는 색 (v1.9) */
 export const LIGHT_THEME: ThemeVars = {
-  bgG1: '#f9fafb', bgG2: '#eceef1', // 배경을 한 단계 더 밝게 (v2.0 사용자 요청 · 이전 #f2f3f5 → #dfe1e6)
-  bgType: 'gradient', bgAngle: 180, bgBlur: 0,
+  bgG1: '#f2f3f5', bgG2: '#dfe1e6',
+  bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
   cardBg: '#fbfbfc', cardFg: '#1d2025',
   topBg: '#fbfbfc', topFg: '#5d636d', topHv: '#a63a45', topBrand: '#2b3038',
   ddBg: '#ffffff', ddFg: '#3c434d', ddHv: '#000000',
@@ -117,7 +124,7 @@ export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
   if (tone === 'dark') {
     return {
       bgG1: c(0.28, 0.2), bgG2: c(0.32, 0.07),
-      bgType: 'gradient', bgAngle: 180, bgBlur: 0,
+      bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
       cardBg: c(0.12, 0.985), cardFg: c(0.4, 0.14),
       topBg: c(0.3, 0.09), topFg: c(0.14, 0.68), topHv: c(0.2, 0.97), topBrand: c(0.12, 0.95),
       ddBg: c(0.28, 0.11), ddFg: c(0.14, 0.78), ddHv: '#ffffff',
@@ -135,7 +142,7 @@ export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
   const deepAccent = adjust(accent, cc => ({ l: Math.min(cc.l, 0.38) }));
   return {
     bgG1: c(0.25, 0.95), bgG2: c(0.3, 0.86),
-    bgType: 'gradient', bgAngle: 180, bgBlur: 0,
+    bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
     cardBg: c(0.15, 0.99), cardFg: c(0.4, 0.14),
     topBg: c(0.35, 0.97), topFg: c(0.3, 0.38), topHv: deepAccent, topBrand: c(0.45, 0.22),
     ddBg: c(0.3, 0.98), ddFg: c(0.3, 0.3), ddHv: '#000000',
@@ -234,21 +241,6 @@ export const DEFAULT_THEME_STORE: ThemeStore = {
   edits: {},
 };
 
-/* 예전 기본 배경색 (v2.0 이전) — 저장본에 이 값이 그대로 남아 있으면 직접 고른 색이 아니라
-   당시 기본값이므로, 불러올 때 새 기본값으로 바꿔 준다. 직접 바꾼 배경색은 건드리지 않는다. */
-const LEGACY_BG: Partial<Record<ThemeMode, { g1: string; g2: string; to: ThemeVars }>> = {
-  dark: { g1: '#2b3038', g2: '#121418', to: DARK_THEME },
-  light: { g1: '#f2f3f5', g2: '#dfe1e6', to: LIGHT_THEME },
-};
-
-/** 저장된 모드 값의 배경이 예전 기본값 그대로면 새 기본 배경으로 교체 */
-export function migrateLegacyBg(mode: ThemeMode, v: ThemeVars): ThemeVars {
-  const old = LEGACY_BG[mode];
-  if (!old) return v;
-  if (v.bgG1?.toLowerCase() !== old.g1 || v.bgG2?.toLowerCase() !== old.g2) return v;
-  return { ...v, bgG1: old.to.bgG1, bgG2: old.to.bgG2 };
-}
-
 /** 저장해 둔 테마 프리셋 (v1.9 — 드롭다운에서 커스텀으로 적용) */
 export interface ThemePreset { id: string; name: string; vars: ThemeVars }
 
@@ -275,6 +267,10 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
   return {
     '--bg-angle': `${t.bgAngle ?? 180}deg`,
     '--bg-blur': `${Math.max(0, t.bgBlur ?? 0)}px`,
+    // 배경 이미지 덮개 (v2.0) — 사진을 쓸 때만 그린다. 그라데이션 위에는 얹지 않는다
+    '--bg-dim-layer': t.bgType === 'image' && t.bgImageId && (t.bgDim ?? BG_DIM) > 0
+      ? (() => { const c = withAlpha(t.bgG2, Math.min(100, t.bgDim ?? BG_DIM) / 100); return `linear-gradient(${c},${c})`; })()
+      : 'none',
     '--panel-solid': t.cardBg ?? '#fbfbfc',
     '--panel': withAlpha(t.cardBg ?? '#fcfcfd', 0.94),
     '--ink': cardFg, '--sub': cardSub, '--faint': cardFaint,

@@ -5,7 +5,8 @@ import React, { Suspense, useEffect, useMemo, useReducer, useRef, useState } fro
 import { useAuth, inviteCode, setInviteCode } from '@/lib/auth';
 import { useMembers, memberNumbers, memberPath } from '@/lib/members';
 import { useTheme } from '@/lib/ThemeProvider';
-import { ThemeVars } from '@/lib/theme';
+import { ThemeVars, BG_DIM } from '@/lib/theme';
+import { hexToHsl } from '@/lib/color';
 import { ColorField } from '@/components/ui/ColorField';
 import { KStep, KToggle, KInput, LiveInput, KTextarea, KSelect, KCheck, Pager } from '@/components/ui/Kit';
 import { DragList } from '@/components/ui/DragList';
@@ -327,6 +328,10 @@ function DesignPane() {
               <span className="cp-lb">블러</span>
               <KStep value={state.vars.bgBlur ?? 0} min={0} max={30} step={2} suffix="px"
                 onChange={v => setVar('bgBlur', v)} />
+              {/* 사진 덮개 (v2.0 사용자 요청) — 다크 계열은 어둡게, 라이트 계열은 밝게 눌러 준다 */}
+              <span className="cp-lb">{hexToHsl(state.vars.bgG2).l < 0.5 ? '어둡게' : '밝게'}</span>
+              <KStep value={state.vars.bgDim ?? BG_DIM} min={0} max={80} step={5} suffix="%"
+                onChange={v => setVar('bgDim', v)} />
             </>
           )}
         </div>
