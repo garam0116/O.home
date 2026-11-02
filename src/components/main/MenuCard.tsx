@@ -2,74 +2,34 @@
 // 메뉴 카드 (v2.7 사용자 요청 — PC 2단형 레이아웃, 시안 D5 「짧은 카드 + 옆 펼침」)
 // 로고 · 대메뉴 · 사용자 영역을 카드 한 장에 담고, 하위 메뉴는 마우스를 올리면 옆으로 펼친다.
 // 위젯이라 편집모드에서 좌우 열 안에서만 옮길 수 있다(가운데 열 금지 · 삭제 불가 — WidgetFrame/WidgetEditLayer).
-// 스크롤하면 화면 위쪽에 붙어 따라온다(편집모드 중에는 끔). 모바일은 CSS로 숨기고 상단바 ≡가 대신한다.
-import React, { useEffect, useRef } from 'react';
+// 스크롤해도 따라오지 않고 놓인 자리에 그대로 있다(사용자 요청). 모바일은 CSS로 숨기고 상단바 ≡가 대신한다.
+import React, { useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import type { WidgetConf } from '@/lib/mainStore';
-import { useMainStore } from '@/lib/mainStore';
 import { useSiteSettings } from '@/lib/siteStore';
 import { useBlobUrl } from '@/lib/blobStore';
 import { sideOf } from '@/lib/widgetZone';
 import { useSiteMenu, useSiteNav, UserArea, useBrandFit } from '@/components/shell/siteNav';
 
-/** 스크롤 중 카드가 화면 위에서 떨어지는 간격 (px) */
-const STICK_GAP = 16;
-
 export function MenuCard({ conf }: { conf: WidgetConf }) {
   const { menu } = useSiteMenu();
   const nav = useSiteNav();
   const pathname = usePathname();
-  const { editOn } = useMainStore();
   const [site, , siteLoaded] = useSiteSettings();
   const logoRaw = useBlobUrl(site.logoImage);
   const logoMRaw = useBlobUrl(site.logoImageM);
   const logo = logoRaw || logoMRaw;
   const brandRef = useRef<HTMLAnchorElement>(null);
   const brandFit = useBrandFit(brandRef, `${site.title}|${site.subtitle}|${logo ?? ''}|${siteLoaded}|${conf.w ?? 230}`);
-  const cardRef = useRef<HTMLDivElement>(null);
   // 오른쪽 열에 두면 하위 메뉴를 왼쪽으로 펼친다 — 화면 밖으로 나가지 않게
   const right = sideOf(conf) === 3;
 
   const search = typeof window !== 'undefined' ? window.location.search : '';
   const isCur = (href?: string) => !!href && (href === pathname + search || href === pathname);
 
-  // 스크롤 따라오기 — 위젯은 캔버스 절대 좌표라 CSS sticky가 안 먹으므로, 스크롤 영역(#appMain) 기준으로
-  // 카드가 화면 위로 벗어난 만큼 아래로 옮긴다. 카드가 화면보다 길면 카드 아래쪽을 화면 아래에 맞춘다
-  // (그래야 카드가 페이지를 더 길게 늘리지 않는다).
-  useEffect(() => {
-    const card = cardRef.current;
-    const wrap = card?.parentElement;
-    const sc = document.getElementById('appMain');
-    if (!card || !wrap || !sc) return;
-    if (editOn) { card.style.transform = ''; return; }
-    let raf = 0;
-    const run = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        if (window.matchMedia('(max-width:620px)').matches) { card.style.transform = ''; return; }
-        const top = wrap.getBoundingClientRect().top - sc.getBoundingClientRect().top;
-        const vh = sc.clientHeight, ch = card.offsetHeight;
-        const stick = ch + STICK_GAP * 2 <= vh ? STICK_GAP : vh - STICK_GAP - ch;
-        const off = Math.max(0, stick - top);
-        card.style.transform = off ? `translateY(${Math.round(off)}px)` : '';
-      });
-    };
-    run();
-    sc.addEventListener('scroll', run, { passive: true });
-    window.addEventListener('resize', run);
-    const ro = new ResizeObserver(run);
-    ro.observe(card);
-    return () => {
-      cancelAnimationFrame(raf);
-      sc.removeEventListener('scroll', run);
-      window.removeEventListener('resize', run);
-      ro.disconnect();
-      card.style.transform = '';
-    };
-  }, [editOn, pathname]);
 
   return (
-    <div ref={cardRef} className={`menu-card ${right ? 'mc-right' : ''}`}>
+    <div className={`menu-card ${right ? 'mc-right' : ''}`}>
       {/* 로고 — 상단바와 같은 설정(텍스트·서브타이틀·이미지). 진짜 링크라 새 탭 열기도 된다 (v2.5와 같은 규칙) */}
       <a href="/" className={`brand mc-brand ${logo ? 'has-img' : ''}`} ref={brandRef}
         onClick={e => {
