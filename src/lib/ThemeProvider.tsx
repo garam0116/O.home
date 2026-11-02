@@ -8,7 +8,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import {
   ThemeMode, PointTone, ThemeVars, ThemeState, ThemeStore, ThemePreset,
   DARK_THEME, DEFAULT_THEME_STORE, defaultVarsFor, derivePointTheme, themeToCssVars,
-  composeVars, inferEdits,
+  composeVars, sharedEdits,
 } from './theme';
 import { newId } from './postStore';
 import { getBlob } from './blobStore';
@@ -58,10 +58,17 @@ const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => {
     },
     edits: { ...(s?.edits ?? {}) },
   };
-  // 지정 항목 기록이 없던 예전 저장본 — 커스텀 값에서 초기값과 달라진 항목을 골라 이어받는다
-  if (!s?.edits && st.mode === 'custom') st.edits = inferEdits(st.perMode.custom, st.pointAccent, st.pointTone);
+  // 지정 항목 기록이 없던 예전 저장본 — 지금 보이는 값에서 모드와 상관없는 항목을 이어받는다.
+  // 예전 기록에 섞여 있던 색 구성 값은 버린다 (모드 전환 때 다른 모드 위에 섞이던 원인)
+  st.edits = sharedEdits(s?.edits ?? st.perMode[st.mode]);
   return st;
 };
+
+function sameVars(a: ThemeVars, b: ThemeVars): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof ThemeVars>;
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
+}
 
 function applyToDom(vars: ThemeVars) {
   const css = themeToCssVars(vars);
@@ -169,14 +176,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const dirty = useMemo(() => JSON.stringify(saved) !== JSON.stringify(draft), [saved, draft]);
 
-  /* 모드·톤 전환 (v2.0 사용자 요청) — 지정한 포인트 컬러·배경 이미지 등(edits)을 새 모드의
-     초기값 위에 그대로 얹는다. 이전에 그 모드에서 보던 값은 기억하지 않는다 — 되돌리기는 [선택 리셋]. */
+  /* 모드·톤 전환 — 포인트 컬러·배경 이미지·모서리 등 모드와 상관없는 지정 항목만 새 모드에 얹고,
+     색 구성은 그 모드의 기본을 쓴다 (v2.0 사용자 제보 — 불러온 테마에서 라이트/다크를 바꾸면
+     다크용 색이 라이트 위에 섞여 이상해지던 것). [커스텀]으로 돌아오면 보관된 커스텀 값(불러온 테마·
+     직접 꾸민 색)이 그대로 돌아온다. 커스텀을 아직 한 번도 안 꾸몄으면 지금 보이는 값으로 시작. */
   const setMode = useCallback((mode: ThemeMode) =>
     setDraft(d => {
       if (mode === d.mode) return d;
-      const vars = mode === 'custom'
-        ? d.perMode[d.mode]   // 지금 보이는 값을 그대로 이어서 커스텀으로
-        : composeVars(mode, d.pointAccent, d.pointTone, d.edits);
+      const fresh = mode === 'custom' && sameVars(d.perMode.custom, DEFAULT_THEME_STORE.perMode.custom);
+      const vars = fresh
+        ? d.perMode[d.mode]
+        : composeVars(mode, d.pointAccent, d.pointTone, d.edits, d.perMode.custom);
       return { ...d, mode, perMode: { ...d.perMode, [mode]: vars } };
     }), []);
 
@@ -187,14 +197,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       delete edits.accentSoft;
       return {
         ...d, mode: 'point', pointAccent: hex, edits,
-        perMode: { ...d.perMode, point: composeVars('point', hex, d.pointTone, edits) },
+        perMode: { ...d.perMode, point: composeVars('point', hex, d.pointTone, edits, d.perMode.custom) },
       };
     }), []);
 
   const setPointTone = useCallback((tone: PointTone) =>
     setDraft(d => ({
       ...d, mode: 'point', pointTone: tone,
-      perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, tone, d.edits) },
+      perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, tone, d.edits, d.perMode.custom) },
     })), []);
 
   // 세부 수정 (v1.9 확정) — 프리셋 모드(라이트/다크/포인트)에서 뭐 하나라도 바꾸면
@@ -203,7 +213,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // 바꾼 항목은 edits에도 기록해 모드·톤을 바꿔도 이어지게 한다 (v2.0)
   const setVar = useCallback(<K extends keyof ThemeVars>(key: K, value: ThemeVars[K]) =>
     setDraft(d => {
-      const edits = { ...d.edits, [key]: value };
+      const edits = sharedEdits({ ...d.edits, [key]: value });
       const pointAccent = key === 'accent' && typeof value === 'string' ? value : d.pointAccent;
       return d.mode === 'custom'
         ? { ...d, pointAccent, edits, perMode: { ...d.perMode, custom: { ...d.perMode.custom, [key]: value } } }
@@ -251,10 +261,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const p = presets.find(x => x.id === id);
     if (!p) return;
     setDraft(d => {
-      // 보관한 테마도 지정 항목으로 풀어 둔다 — 적용 뒤 모드·톤을 바꿔도 이어지게
-      const edits = inferEdits(p.vars, d.pointAccent, d.pointTone);
+      // 불러온 테마는 커스텀에 통째로 — 포인트 컬러·배경 이미지·모서리 등은 지정 항목으로 풀어 둬서
+      // 라이트/다크로 바꿔도 이어지게 한다 (색 구성은 바꾼 모드의 기본, 커스텀으로 돌아오면 테마 그대로)
+      const edits = sharedEdits(p.vars);
       return {
-        ...d, mode: 'custom', edits, pointAccent: edits.accent ?? d.pointAccent,
+        ...d, mode: 'custom', edits, pointAccent: p.vars.accent || d.pointAccent,
         perMode: { ...d.perMode, custom: { ...p.vars } },
       };
     });
