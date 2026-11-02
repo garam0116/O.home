@@ -1809,9 +1809,17 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   body.side-nav .topbar > :is(.brand,.gnb,.user-wrap,.login-link){display:none}
   body.side-nav .topbar > :is(.btn,.k-toggle.grid-chip.show,.edit-flag.show){background:var(--top-bg);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 }
-/* 로드비 — 2단형이면 본문이 메뉴 카드 옆으로 좁아지므로 댓글 폭을 390→320으로 줄여 그림 자리를 지킨다 (v2.8 사용자 확정).
-   960px 이하는 원래대로 세로 쌓기 */
-@media (min-width:961px){body.side-nav .roadview-item{grid-template-columns:1fr 320px}}
+/* 좌우 위젯 사이 본문이 좁을 때(700px 미만, SideRails가 body.rail-narrow) 페이지별 보정 (v2.8 사용자 확정) —
+   레이아웃은 그대로 두고 폭만 맞춘다. 960px 이하는 원래대로(로드비 세로 쌓기 등) */
+@media (min-width:961px){
+  /* 로드비: 그림 | 댓글 나란히 그대로 — 댓글 칸을 본문의 40%(최소 220px)로 줄여 그림 자리를 남긴다 */
+  body.rail-narrow .roadview-item{grid-template-columns:minmax(0,1fr) max(220px,40%)}
+  /* 다이어리: 달력을 빼고 목록이 본문 폭을 다 쓴다 */
+  body.rail-narrow .dy-layout{grid-template-columns:minmax(0,1fr)}
+  body.rail-narrow .dy-layout > .dy-cal{display:none}
+}
+/* 자관 상세 — 상단바 없이 전체 화면 (v2.8 사용자 요청 · 모바일 포함, SideRails가 body.no-topbar) */
+body.no-topbar .topbar{display:none}
 /* 메뉴 카드 위젯 — 하위 메뉴 펼침·화면 고정이 다른 위젯 위에 오게 */
 .wgt.wgt-menu-card{z-index:40 !important}
 @media (max-width:620px){.wgt.wgt-menu-card{display:none !important}}
@@ -1856,6 +1864,8 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   color:var(--btn-dark-fg,#fff);display:inline-grid;place-items:center;cursor:pointer;opacity:.85;transition:opacity .2s;
   filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))}
 .back-arrow:hover,.back-arrow.play{opacity:1}
+/* 헤더 이미지 위가 아닌 곳(자관을 못 찾았을 때 등)은 페이지 제목색 — 밝은 테마에서 흰 선이 묻히지 않게 */
+.page:not(.page-rel-detail) .back-arrow{color:var(--page-title);filter:none}
 .back-arrow:focus-visible{outline:1px solid currentColor;outline-offset:0;border-radius:6px}
 .back-arrow svg{width:var(--s);height:var(--s);overflow:visible}
 .back-arrow svg *{fill:none;stroke:currentColor;stroke-width:1;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round;

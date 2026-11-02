@@ -280,6 +280,8 @@ export default function RelDetailPage() {
   if (!rel || (rel.visibility === 'private' && !isAdmin) || (rel.visibility === 'member' && !user)) {
     return (
       <section className="page">
+        {/* 상단바가 없는 화면이라(v2.8) 여기에도 뒤로가기 */}
+        <div style={{ margin: '4px 0 10px' }}><BackArrow fallback={tt.href} /></div>
         <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>자관을 찾을 수 없거나 열람 권한이 없습니다</p></div>
       </section>
     );
@@ -451,7 +453,7 @@ export default function RelDetailPage() {
       )}
 
       {/* 왼쪽 위 — 뒤로가기(누구에게나, v2.8) + 관리자 액션.
-          자관 상세는 PC 2단형이어도 1단형으로 두므로(3열이 너무 좁아짐) 목록으로 돌아갈 길을 여기 둔다 */}
+          자관 상세는 상단바 없이 전체 화면이라(v2.8, 모바일 포함) 목록으로 돌아갈 길을 여기 둔다 */}
       <div className="rel-tl">
       <BackArrow fallback={tt.href} />
       {isAdmin && (
