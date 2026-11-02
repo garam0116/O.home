@@ -84,8 +84,12 @@ export async function primeSettings(): Promise<void> {
       if (!LOCAL_ONLY.has(k) && cache.has(k)) snapshot[k] = cache.get(k);
     });
     try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot)); } catch { /* 무시 */ }
+    /* 서버에서 새 값이 오면 화면도 다시 읽게 한다 (v2.5 사용자 발견 — 「댓글을 껐는데 글 아래 댓글창이 살아 있어」).
+       스냅샷으로 먼저 그린 화면은 예전 값을 들고 있는데, 스토어들이 이 알림을 듣지 않아 **새로고침을 한 번 더 해야**
+       바뀐 설정이 보였다. RELOAD_EVT를 들으면 저장본을 다시 읽는다 */
     changed.forEach(k => {
       try { window.dispatchEvent(new CustomEvent(EVT, { detail: k })); } catch { /* 무시 */ }
+      try { window.dispatchEvent(new CustomEvent(RELOAD_EVT, { detail: k })); } catch { /* 무시 */ }
     });
   };
   if (hasSnapshot) {
@@ -156,6 +160,16 @@ export function setSetting(key: string, value: unknown): void {
   revisions.set(key, (revisions.get(key) ?? 0) + 1);
   cache.set(key, value);
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 무시 */ }
+  // 첫 페인트용 스냅샷도 함께 고친다 — 안 고치면 이 브라우저에서 새로고침했을 때 저장 전 값으로 먼저 그린다 (v2.5)
+  if (isServerMode() && !LOCAL_ONLY.has(key)) {
+    try {
+      const snap = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) ?? 'null') as Record<string, unknown> | null;
+      if (snap && typeof snap === 'object' && !Array.isArray(snap)) {
+        snap[key] = value;
+        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snap));
+      }
+    } catch { /* 무시 */ }
+  }
   if (isServerMode() && !LOCAL_ONLY.has(key)) {
     // 실패를 삼키면 이 브라우저에는 남아 저장된 것처럼 보이다가, 다음 접속에 서버 값으로
     // 덮여 "저장했는데 원래대로 돌아가는" 증상이 된다 — 실패는 화면으로 알린다.

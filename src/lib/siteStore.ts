@@ -3,7 +3,7 @@
 // v1.9: 디자인 탭 SAVE 통합 — 드래프트(useSiteDraft)로 즉시 미리보기하고 SAVE를 눌러야 저장.
 // 소비자(useSiteSettings)는 드래프트가 있으면 그 값을 봄 (테마 미리보기와 동일 규칙).
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 
 export interface SiteSettings {
   title: string;             // 로고 텍스트
@@ -64,7 +64,11 @@ export function useSiteSettings(): [SiteSettings, (patch: Partial<SiteSettings>)
     setLoaded(true);
     force();
     window.addEventListener(EVT, force);
-    return () => window.removeEventListener(EVT, force);
+    // 서버에서 새 값이 오면 저장본을 다시 읽는다 (v2.5) — 첫 화면은 이 브라우저의 스냅샷으로 그린다
+    const offReload = onSettingReload(KEY, () => {
+      cacheLoaded = false; savedCache = DEFAULT_SITE_SETTINGS; loadSaved(); notify();
+    });
+    return () => { window.removeEventListener(EVT, force); offReload(); };
   }, []);
   // 즉시 저장 patch — 디자인 탭 밖 소비자용 (드래프트가 떠 있으면 드래프트에도 반영해 미리보기 유지)
   const patch = useCallback((p: Partial<SiteSettings>) => {

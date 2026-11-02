@@ -10,7 +10,7 @@
  * 원하는 상위 메뉴에 직접 넣는다(자동 배치 없음 — 사용자 확정).
  */
 import { useCallback, useEffect, useReducer } from 'react';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 import type { ExtraEntry } from './menuStore';
 
 const KEY = 'ohome.links.v1';
@@ -70,7 +70,9 @@ export function useCustomLinks(): {
     const h = () => force();
     window.addEventListener(EVT, h);
     window.addEventListener('ohome-setting', h);
-    return () => { window.removeEventListener(EVT, h); window.removeEventListener('ohome-setting', h); };
+    // 서버에서 새 값이 오거나 설정 드래프트를 취소하면 모듈 캐시를 저장본으로 다시 채운다 (v2.5)
+    const offReload = onSettingReload(KEY, () => { cache = []; loaded = false; load(); force(); });
+    return () => { window.removeEventListener(EVT, h); window.removeEventListener('ohome-setting', h); offReload(); };
   }, []);
   load();
 
