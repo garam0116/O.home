@@ -177,9 +177,9 @@ function DesignPane() {
       <div className="d">변경은 미리보기로만 반영 — [SAVE]를 눌러야 저장 · 포인트 컬러·배경 이미지는 모드를 바꿔도 이어집니다</div>
 
       <div className="set-row">
-        <div className="l"><b>모드</b><small>포인트 컬러·배경 이미지·모서리 등은 전환해도 유지, 색 구성은 그 모드의 기본으로 — 직접 꾸민 색·불러온 테마는 [커스텀]에 그대로 남습니다</small></div>
+        <div className="l"><b>모드</b><small>포인트 컬러·배경 이미지·모서리 등은 전환해도 유지</small></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="seg in-panel">
+          <div className="seg in-panel seg-1line">
             {modeBtn('light', '라이트')}
             {modeBtn('dark', '다크')}
             {modeBtn('point', '포인트 자동')}
@@ -192,7 +192,7 @@ function DesignPane() {
 
       {/* 저장/취소 — 이리저리 실험 후 저장하지 않을 수 있음 (v1.9) */}
       <div className="set-row">
-        <div className="l"><b>저장</b><small>화면에는 바로 보이지만 <b>SAVE를 눌러야 실제로 저장</b>됩니다 — 색·폰트·로고·탭 제목 모두</small></div>
+        <div className="l"><b>저장</b><small>화면에는 바로 보이지만 <b>SAVE를 눌러야 실제로 저장</b>됩니다</small></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {dirty && <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>저장 안 된 변경</span>}
           {/* 컨트롤 세로 크기 통일 — 35px (btn-dark 기본과 동일) */}

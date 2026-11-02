@@ -587,7 +587,7 @@ export function SearchWidget({ conf }: { conf: WidgetConf }) {
     <div className="search-wg">
       <form className="search-wg-box" role="search" onSubmit={e => { e.preventDefault(); go(); }}>
         <input value={q} onChange={e => setQ(e.target.value)} aria-label="전체 글 검색"
-          placeholder={s.placeholder?.trim() || '전체 글 검색'} />
+          placeholder={s.placeholder?.trim() || ''} />
         <button type="submit" aria-label="검색">
           <svg viewBox="0 0 24 24" aria-hidden>
             <circle cx="10.5" cy="10.5" r="6.3" />
@@ -606,7 +606,7 @@ export function SearchWidget({ conf }: { conf: WidgetConf }) {
         </>}>
         <div style={{ display: 'grid', gap: 10 }}>
           <label className="cp-lb">입력칸 안내 문구</label>
-          <KInput value={draft.placeholder ?? ''} placeholder="전체 글 검색" onChange={e => setDraft(d => ({ ...d, placeholder: e.target.value }))} />
+          <KInput value={draft.placeholder ?? ''} placeholder="비워 두면 안내 문구 없음" onChange={e => setDraft(d => ({ ...d, placeholder: e.target.value }))} />
         </div>
       </Modal>
     </div>
