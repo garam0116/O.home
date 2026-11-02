@@ -1847,10 +1847,17 @@ body.no-topbar .topbar{display:none}
 .mc-sub::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:16px} /* 카드↔펼침 사이 호버 다리 */
 .mc-right .mc-sub{left:auto;right:calc(100% + 14px)}
 .mc-right .mc-sub::before{right:auto;left:100%}
-.mc-item:hover > .mc-sub,.mc-item:focus-within > .mc-sub{display:block;animation:fade .15s}
-.mc-sub button{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:7px;white-space:nowrap;transition:.13s;
+/* 키보드는 :focus-visible일 때만 — 마우스로 누른 버튼에 남은 포커스 때문에 펼침이 남아 다른 펼침과 겹치지 않게.
+   메뉴를 눌러 이동하면 .shut으로 접고, 마우스가 그 대메뉴를 벗어나면 다시 펼칠 수 있다 */
+.mc-item:hover > .mc-sub,.mc-item:has(:focus-visible) > .mc-sub{display:block;animation:fade .15s}
+.mc-item.shut > .mc-sub{display:none}
+.mc-sub button{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;padding:8px 12px;border-radius:7px;white-space:nowrap;transition:.13s;
   font-size:calc(12px*var(--fs,1));color:var(--dd-fg);font-family:var(--font-dropdown,var(--sans));font-weight:var(--fw-dropdown,400)}
 .mc-sub button:hover,.mc-sub button.on{background:var(--dd-hv)}
+/* 게시판 글 수 — 메뉴 이름 오른쪽 끝, 이름보다 작고 흐리게 */
+.mc-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mc-cnt{flex-shrink:0;margin-left:auto;font-size:.82em;opacity:.55;font-variant-numeric:tabular-nums;letter-spacing:0}
+.mc-top .mc-cnt{font-size:calc(11px*var(--fs,1))}
 .menu-card .mc-foot{margin-top:8px;padding-top:8px;border-top:1px solid var(--line-dark)}
 .menu-card .user-menu{left:0;right:auto}
 .menu-card.mc-right .user-menu{left:auto;right:0}

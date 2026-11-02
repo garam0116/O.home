@@ -45,7 +45,7 @@ interface MainState {
   settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
   pcLayout?: PcLayout;                  // 없으면 top (v2.7)
-  centerBody?: boolean;                 // 가운데 정렬 — 다른 페이지 본문을 좌우 위젯 사이가 아니라 화면 한가운데에 (편집모드 버튼)
+  centerBody?: boolean;                 // 가운데 정렬 — 메인 가운데 위젯을 좌우 위젯 사이 한가운데에 (편집모드 버튼 · 좌우 간격을 같게, v2.8)
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
@@ -163,6 +163,14 @@ interface MainCtx {
 
 const Ctx = createContext<MainCtx | null>(null);
 
+/** 「가운데 정렬」이 켜져 있으면 가운데 위젯을 좌우 위젯 사이 한가운데로 (v2.8 — 왼쪽·오른쪽 간격을 같게).
+ *  예전 저장분(캔버스 한가운데 기준)도 불러올 때 새 기준으로 맞춰진다 */
+function recenter(s: MainState): MainState {
+  if (!s.centerBody) return s;
+  const widgets = centerMiddleWidgets(s.widgets, s.pcLayout === 'side');
+  return widgets === s.widgets ? s : { ...s, widgets };
+}
+
 export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAuth();
   const pathname = usePathname();
@@ -198,7 +206,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
         const ids = new Set(kept.map(w => w.id));
         // 삭제한 기본 위젯은 병합으로 되살리지 않음
         const merged = [...kept, ...DEFAULT_STATE.widgets.filter(w => !ids.has(w.id) && !removed.has(w.id))];
-        setState({ ...DEFAULT_STATE, ...parsed, widgets: merged, removedIds: [...removed] });
+        setState(recenter({ ...DEFAULT_STATE, ...parsed, widgets: merged, removedIds: [...removed] }));
       } else setState(DEFAULT_STATE);
     } catch { /* 기본값 사용 */ } };
     load();
@@ -266,7 +274,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   // opts.persist: 상태 갱신과 동시에 저장 (모달 SAVE 등 — saveNow는 클로저가 이전 상태를 보므로 사용 금지)
   const updateWidget = useCallback((id: string, patch: Partial<WidgetConf>, opts?: { persist?: boolean }) => {
     setState(s => {
-      const n = { ...s, widgets: s.widgets.map(w => (w.id === id ? { ...w, ...patch } : w)) };
+      let n = { ...s, widgets: s.widgets.map(w => (w.id === id ? { ...w, ...patch } : w)) };
+      // 좌우 위젯을 옮기거나 크기를 바꾸면 가운데 정렬도 다시 맞춘다 — 가운데 위젯을 직접 옮길 때는 건드리지 않는다
+      const moved = n.widgets.find(w => w.id === id);
+      if (moved && sideOf(moved) !== 2 && ('ax' in patch || 'w' in patch)) n = recenter(n);
       if (opts?.persist) persist(n);
       return n;
     });
@@ -307,7 +318,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
 
   const setPcLayout = useCallback((m: PcLayout, estH: number) => {
     setState(s => {
-      const n = m === 'side' ? placeMenuCard({ ...s, pcLayout: 'side' }, estH) : { ...s, pcLayout: 'top' as const };
+      const n = recenter(m === 'side' ? placeMenuCard({ ...s, pcLayout: 'side' }, estH) : { ...s, pcLayout: 'top' as const });
       persist(n); return n;
     });
   }, [persist]);
@@ -322,7 +333,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   }, [sideNav]);
 
   const setCenterAlign = useCallback((on: boolean) => {
-    setState(s => ({ ...s, centerBody: on, widgets: on ? centerMiddleWidgets(s.widgets) : s.widgets }));
+    setState(s => recenter({ ...s, centerBody: on }));
   }, []);
 
   // 토글은 모바일 표시만 제어 (v1.9 사용자 확정) — PC 메인에서 빼려면 편집모드 우클릭 삭제
