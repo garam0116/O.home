@@ -21,7 +21,7 @@ export function RailHost({ children }: { children: React.ReactNode }) {
   // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 레일 없는 페이지는 isRailPage가 거르므로 1단형 그대로
   const side = useMemo(() => (onPage ? railWidgets(state.widgets, sideNav) : []), [onPage, state.widgets, sideNav]);
   const active = side.length > 0;
-  const { left, right } = railBounds(side);
+  const { left, right } = railBounds(side, !!state.centerBody);
   const { ctx, setCtx, openCtx } = useWidgetCtx(side);
 
   // 위젯 아래 끝까지 페이지가 길어지게 — 본문이 짧아도 위젯이 잘리지 않는다
@@ -77,7 +77,7 @@ function RailWidthHint() {
   const boardW = boardWOf(site);
   const side = railWidgets(state.widgets, state.pcLayout === 'side');
   if (!side.length) return null;
-  const { left, right } = railBounds(side);
+  const { left, right } = railBounds(side, !!state.centerBody);
   const w = Math.round(right - left);
   const short = boardW - w;
   return (

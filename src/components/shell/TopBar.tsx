@@ -13,7 +13,7 @@ import { isRailPage } from '@/lib/widgetZone';
 import { useSiteMenu, useSiteNav, UserArea, useBrandFit, type SiteMenuItem } from './siteNav';
 
 export function TopBar() {
-  const { editOn, gridOn, setGridOn, requestExit } = useMainStore();
+  const { state, editOn, gridOn, setGridOn, requestExit, setCenterAlign } = useMainStore();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);       // 모바일 메뉴 패널 (≡) — 메뉴리스트 위젯 대체
   // 메뉴 관리(5.2)·다중 게시판·섹션·커스텀 링크 — 메뉴 카드(PC 2단형)와 공용 (v2.7)
@@ -169,6 +169,13 @@ export function TopBar() {
         <button className="btn btn-ghost" style={{ height: 27, padding: '0 11px', fontSize: 10.5, whiteSpace: 'nowrap' }}
           onClick={() => window.dispatchEvent(new Event('ohome-add-widget'))}>＋ 위젯</button>
       )}
+      {/* 가운데 정렬 — 가운데 열 위젯을 캔버스 한가운데로, 다른 페이지 본문을 화면 한가운데로 (사용자 요청) */}
+      <KToggle
+        className={`grid-chip ${editOn && (pathname === '/' || isRailPage(pathname)) ? 'show' : ''}`}
+        label="가운데 정렬"
+        checked={!!state.centerBody}
+        onChange={setCenterAlign}
+      />
       {/* 그리드 토글 — 위젯이 있는 페이지에서 편집모드 켰을 때 (v1.9 · 모든 페이지 v2.4) */}
       <KToggle
         className={`grid-chip ${editOn && (pathname === '/' || isRailPage(pathname)) ? 'show' : ''}`}

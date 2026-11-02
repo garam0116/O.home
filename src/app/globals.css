@@ -1816,6 +1816,8 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
 .menu-card .mc-brand{display:block;padding:2px 10px 12px;overflow:hidden;--fs:1}
 .menu-card .mc-brand.has-img{display:flex}
 .menu-card .brand-img{max-width:100%}
+/* 로고 이미지는 카드 가로폭에 맞춘다 (사용자 요청) — 상단바용 세로 한도(38px·서브타이틀 있으면 30px)를 풀고 폭 기준으로 */
+.menu-card .mc-brand.has-img .brand-img{width:100%;max-width:100%;max-height:none;height:auto}
 .menu-card .mc-hr{height:1px;background:var(--line-dark);margin:0 4px 6px}
 .menu-card .mc-list{display:flex;flex-direction:column;gap:2px;--fs:var(--fs-menu,1)}
 .mc-item{position:relative}
