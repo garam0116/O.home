@@ -1423,7 +1423,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* ---------- 세그먼트 컨트롤 ---------- */
 /* 안 고른 쪽 배경·글씨는 디자인 탭에서 (v2.0 사용자 요청) · 고른 쪽은 진한 버튼색 그대로 */
 .seg{display:inline-flex;background:var(--seg-bg,#f0f1f3);border:1px solid var(--line-dark);border-radius:9px;padding:3px}
-.seg button{padding:6px 14px;font-size:calc(11.5px*var(--fs,1));color:var(--seg-fg,#8a8f98);border-radius:7px;transition:.15s}
+.seg button{white-space:nowrap;padding:6px 14px;font-size:calc(11.5px*var(--fs,1));color:var(--seg-fg,#8a8f98);border-radius:7px;transition:.15s}
 /* 선택 칩 = 진한 버튼 3색 연동 (v1.9 사용자 확정 — 체크박스와 동일 토큰) */
 .seg button.on{background:var(--btn-dark,var(--panel-solid));color:var(--btn-dark-fg,var(--ink))}
 .seg.in-panel{border-color:transparent}
@@ -1560,6 +1560,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .settings-layout .btn,.settings-layout .cp-lb,.settings-layout .pill,.settings-layout small[style*="width"]{white-space:nowrap;flex-shrink:0}
   .settings-layout .color-field{max-width:100%;min-width:0}
   .settings-layout .seg{flex-wrap:wrap;max-width:100%}
+  .settings-layout .seg.seg-1line{flex-wrap:nowrap}   /* 모드 4종은 항상 한 줄 */
+  .settings-layout .seg.seg-1line button{padding:6px 10px}
   .settings-layout .set-row small{overflow-wrap:anywhere}
   .settings-layout input:not([type=checkbox]):not([type=radio]){min-width:0;max-width:100%}
   .page{padding:16px 16px 90px}
@@ -1687,6 +1689,6 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
 .search-wg-box:focus-within{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
 .search-wg-box input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--wg-fg);font-size:calc(12.5px*var(--fs,1));padding:6px 0}
 .search-wg-box input::placeholder{color:var(--faint)}
-.search-wg-box button{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff);transition:background .15s}
-.search-wg-box button:hover{background:var(--btn-dark-hv,#33373e)}
+.search-wg-box button{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;transition:background .15s}
+.search-wg-box button:hover{background:color-mix(in srgb,var(--accent) 82%,#000)}
 .search-wg-box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;display:block}
