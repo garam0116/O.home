@@ -375,7 +375,7 @@ function DesignPane() {
 
       {/* 브라우저 탭 아이콘 (v2.0 사용자 요청) — 지정 전에는 배포 기본 아이콘이 뜬다 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        <div className="l"><b>브라우저 탭 아이콘</b><small>탭·즐겨찾기에 표시되는 작은 그림 — 정사각형 PNG 권장, 비우면 기본 아이콘</small></div>
+        <div className="l"><b>브라우저 탭 아이콘</b><small>탭·즐겨찾기·휴대폰 홈 화면 아이콘에 함께 쓰임 — 정사각형 PNG(180×180 이상) 권장, 비우면 기본 아이콘</small></div>
         <FaviconControl />
       </div>
 

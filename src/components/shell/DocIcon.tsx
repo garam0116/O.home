@@ -1,5 +1,6 @@
 'use client';
 // 브라우저 탭 아이콘 (v2.0 사용자 요청) — 디자인 탭에서 지정, 비우면 기본 아이콘.
+// 같은 그림을 아이폰 홈 화면·즐겨찾기 아이콘(apple-touch-icon)에도 쓴다 (v2.9).
 //
 // 서버 메타데이터(generateMetadata)로도 넣지만 그건 **저장소 주소일 때만** 가능하다.
 // 로컬 모드에서는 참조가 파일 id라 서버가 알 수 없으므로 화면에서 붙여 준다.
@@ -21,11 +22,14 @@ export function DocIcon() {
   useEffect(() => {
     if (!loaded) return;
 
-    const apply = () => {
-      const mine = document.querySelector<HTMLLinkElement>(`link[data-${MARK}]`);
+    /** rel 하나(탭 아이콘 / 애플 홈 화면 아이콘)를 우리 주소로 맞춘다 */
+    const applyRel = (rel: 'icon' | 'apple-touch-icon') => {
+      const mark = `data-${MARK}-${rel}`;
+      const mine = document.querySelector<HTMLLinkElement>(`link[${mark}]`);
       // 우리가 만들지 않은 아이콘 링크 = Next(React)가 그린 것
-      const theirs = [...document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')]
-        .filter(l => !l.hasAttribute(`data-${MARK}`));
+      // (rel~="icon"은 단어 단위 비교라 apple-touch-icon과 섞이지 않는다)
+      const theirs = [...document.querySelectorAll<HTMLLinkElement>(`link[rel~="${rel}"]`)]
+        .filter(l => !l.hasAttribute(mark));
 
       if (!url) {
         // 지정을 지웠으면 우리 것만 걷어내고(우리가 만든 노드라 안전) 남의 것은 원래대로 되돌린다
@@ -54,10 +58,16 @@ export function DocIcon() {
         return;
       }
       const link = document.createElement('link');
-      link.rel = 'icon';
+      link.rel = rel;
       link.href = url;
-      link.setAttribute(`data-${MARK}`, '');
+      link.setAttribute(mark, '');
       document.head.appendChild(link);
+    };
+
+    const apply = () => {
+      applyRel('icon');
+      // 아이폰 홈 화면·사파리 즐겨찾기 아이콘 (v2.9 사용자 요청) — 탭 아이콘 하나로 같이 바뀌게
+      applyRel('apple-touch-icon');
     };
 
     apply();
