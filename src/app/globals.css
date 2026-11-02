@@ -823,16 +823,16 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 .wgt.sized > .widget{margin-bottom:0}
 /* 높이 자동 위젯(디데이 2종): 저장 높이를 쓰지 않고 내용만큼 아래로 길어진다 — 가로만 조절, 캔버스(페이지)가 따라 늘어남 */
 .wgt.sized.auto-h > *:first-child{height:auto}
-body.edit-on .page-main-wrap .wgt{outline:1.5px dashed rgba(201,106,115,.6);outline-offset:3px;cursor:grab;user-select:none}
+body.edit-on .rail-canvas .wgt,body.edit-on .page-main-wrap .wgt{outline:1.5px dashed rgba(201,106,115,.6);outline-offset:3px;cursor:grab;user-select:none}
 /* 드래그 중 커서가 위젯 내부 요소(버튼·링크)를 지나며 모양이 튀지 않게 — 영역 전체 통일
    핸들(.rs·.rr)은 제외 — 자기 커서를 쓴다 */
-body.edit-on .page-main-wrap, body.edit-on .page-main-wrap *:not(.rs):not(.rr){cursor:grab}
+body.edit-on .page-main-wrap, body.edit-on .page-main-wrap *:not(.rs):not(.rr),body.edit-on .rail-canvas .wgt, body.edit-on .rail-canvas .wgt *:not(.rs):not(.rr){cursor:grab}
 body.edit-on .page-main-wrap .wgt:active,
 body.edit-on .page-main-wrap *:not(.rs):not(.rr):active{cursor:grabbing}
 /* 핸들 커서 — 전체 grab 규칙(!important)에 덮이지 않게 여기서도 !important */
 .wgt .rs{display:none;position:absolute;right:5px;bottom:5px;width:15px;height:15px;border-radius:4px;background:var(--accent);cursor:nwse-resize !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .wgt .rs::after{content:"";position:absolute;right:3px;bottom:3px;width:6px;height:6px;border-right:2px solid #fff;border-bottom:2px solid #fff}
-body.edit-on .page-main-wrap .wgt .rs{display:block}
+body.edit-on .page-main-wrap .wgt .rs,body.edit-on .rail-canvas .wgt .rs{display:block}
 /* 드래그 중 전역 커서 고정 (v1.9 사용자 피드백) — 빠른 드래그로 커서가 다른 요소·페이지 밖을 지나도
    기본 커서로 튀지 않음 (WidgetFrame이 body에 클래스 토글) */
 body.drag-move, body.drag-move *{cursor:grabbing !important}
@@ -840,7 +840,7 @@ body.drag-rs, body.drag-rs *{cursor:nwse-resize !important}
 /* 기울기 핸들 (v1.9 — 이미지·자유 텍스트): 왼쪽 위, 드래그로 회전 · 더블클릭 초기화 */
 .wgt .rr{display:none;position:absolute;left:5px;top:5px;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:grab !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .wgt .rr::after{content:"";position:absolute;inset:3.5px;border:2px solid #fff;border-radius:50%;border-left-color:transparent}
-body.edit-on .page-main-wrap .wgt .rr{display:block}
+body.edit-on .page-main-wrap .wgt .rr,body.edit-on .rail-canvas .wgt .rr{display:block}
 /* (v1.9) 위젯 삭제는 편집모드 우클릭 메뉴로 이동 — 상시 ✕ 버튼 제거 */
 .add-wgt{display:none;width:100%;padding:20px;border:2px dashed rgba(255,255,255,.3);border-radius:var(--radius);color:#aab0ba;font-size:calc(12.5px*var(--fs,1));transition:.15s;margin-top:14px}
 .add-wgt:hover{border-color:rgba(255,255,255,.55);color:#fff}
@@ -854,6 +854,31 @@ body.edit-on .add-wgt{display:block}
 }
 /* 그리드 표시 중엔 점선 테두리를 위젯 모서리에 밀착 — 3px 띄우면 격자에 맞아도 어긋나 보임 */
 body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
+/* 좌우 위젯 레일 (v2.4 사용자 요청) — 메인의 왼쪽·오른쪽 열 위젯을 다른 페이지에도 같은 자리에 고정.
+   틀(1180px · 왼쪽 기준 margin)과 캔버스 원점(좌 30px · 위 28px = 페이지 상단 16 + 캔버스 12)이 메인과 같아
+   위젯 위치가 픽셀 단위로 일치한다. 본문(.rail-body)은 좌우 위젯 사이 구간(--rail-l ~ --rail-r, SideRails가 계산).
+   모바일(620px 이하)은 위젯을 메인에서만 보여 주므로 레일 전체를 끈다 — 본문은 원래 레이아웃 */
+.rail-canvas{display:none}
+@media (min-width:621px){
+  .rail-host.on{position:relative;width:1180px;min-width:1180px;margin-left:max(0px, calc(50% - 590px))}
+  body.rails-on #appMain{overflow-x:auto}
+  /* 캔버스는 본문 위에 겹쳐 있지만 빈 곳은 클릭이 통과 — 위젯만 받는다 */
+  .rail-host.on > .rail-canvas{display:block;position:absolute;left:30px;top:28px;width:1120px;z-index:2;pointer-events:none}
+  .rail-host.on > .rail-canvas > .wgt{pointer-events:auto}
+  .rail-host.on > .rail-body{position:relative;z-index:1;margin-left:calc(30px + var(--rail-l));width:calc(var(--rail-r) - var(--rail-l))}
+  /* 좌우 여백은 레일 간격(20px)이 대신한다 — 본문은 구간을 꽉 쓰고, 게시판은 지정한 본문 폭까지만 */
+  .rail-host.on > .rail-body .page{max-width:none;padding-left:0;padding-right:0}
+  .rail-host.on > .rail-body .page.board-page,.rail-host.on > .rail-body .page.board-detail{max-width:var(--board-w,700px)}
+}
+/* 편집모드 본문 폭 안내 (v2.4) — 좌우 위젯 크기에 따라 다른 페이지 본문이 몇 px인지 */
+.rail-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;pointer-events:none;
+  background:rgba(28,31,37,.92);color:#e6e8ec;border:1px solid var(--line-dark);border-radius:999px;
+  padding:7px 16px;font-size:calc(11.5px*var(--fs,1));white-space:nowrap;box-shadow:var(--sh-dd)}
+.rail-hint b{color:#fff}
+.rail-hint.warn{border-color:rgba(201,106,115,.7)}
+.rail-hint.warn b{color:var(--accent-soft)}
+/* 모바일 스택 규칙(.main-grid 흐름 복원)이 위 display:none을 덮지 않게 !important */
+@media (max-width:620px){.rail-hint,.main-grid.abs.rail-canvas{display:none !important}}
 /* 우클릭 컨텍스트 메뉴 (자체 스타일) */
 .ctx-menu{position:fixed;z-index:95;min-width:110px;display:none;
   background:rgba(28,31,37,.97);border:1px solid var(--line-dark);border-radius:10px;padding:5px;

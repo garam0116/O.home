@@ -268,8 +268,6 @@ function ddayLabel(date: string, plusOne?: boolean): { label: string; passed: bo
 }
 
 export function DdayWidget({ conf }: { conf: WidgetConf }) {
-  const { isAdmin } = useAuth();
-  const { editOn } = useMainStore();
   const { familyOf } = useFonts();
   const [open, setOpen] = useState(false);
   const items = (conf.settings.items as DdayItem[]) ?? [];
@@ -277,11 +275,11 @@ export function DdayWidget({ conf }: { conf: WidgetConf }) {
   // 'serif'는 폰트 라이브러리의 실제(잠금) 폰트라 편집기의 기본 옵션과 값이 늘 일치한다
   const dFontId = (conf.settings.fontId as string | undefined) ?? 'serif';
   const dColor = conf.settings.color as string | undefined;
-  useEditEvent(conf.id, () => setOpen(true));   // 편집모드 우클릭 → 설정 (v1.9)
+  // 관리는 편집모드 우클릭 「설정」과 환경설정 「위젯」 탭에서만 — 위젯 클릭으로는 열지 않는다 (v2.4 사용자 요청)
+  useEditEvent(conf.id, () => setOpen(true));
   return (
-    <div className="panel widget" style={{ cursor: isAdmin ? 'pointer' : undefined }}
-      onClick={e => { if ((e.target as HTMLElement).closest('.modal-ov')) return; if (isAdmin && !editOn) setOpen(true); }}>
-      <h4>D-DAY {isAdmin && <span className="more">관리 ›</span>}</h4>
+    <div className="panel widget">
+      <h4>D-DAY</h4>
       {items.map(it => {
         const d = ddayLabel(it.date, it.plusOne);
         return (
@@ -305,17 +303,15 @@ export function DdayWidget({ conf }: { conf: WidgetConf }) {
 
 /* ---------- 디데이 (사진 카드) — 사진 위에 이름 · 디데이 · 시작일 ---------- */
 export function DdayCardWidget({ conf }: { conf: WidgetConf }) {
-  const { isAdmin } = useAuth();
-  const { editOn } = useMainStore();
   const { familyOf } = useFonts();
   const [open, setOpen] = useState(false);
   const items = (conf.settings.items as DdayCardItem[]) ?? [];
   const fontId = conf.settings.fontId as string | undefined;
   const color = (conf.settings.color as string | undefined) ?? '#ffffff';
+  // 관리는 편집모드 우클릭 「설정」과 환경설정 「위젯」 탭에서만 (v2.4 사용자 요청)
   useEditEvent(conf.id, () => setOpen(true));
   return (
-    <div className="ddc-wgt" style={{ cursor: isAdmin ? 'pointer' : undefined, fontFamily: fontId ? familyOf(fontId) : undefined, color }}
-      onClick={e => { if ((e.target as HTMLElement).closest('.modal-ov')) return; if (isAdmin && !editOn) setOpen(true); }}>
+    <div className="ddc-wgt" style={{ fontFamily: fontId ? familyOf(fontId) : undefined, color }}>
       {items.map(it => {
         const d = ddayLabel(it.date, it.plusOne);
         return (
@@ -335,7 +331,7 @@ export function DdayCardWidget({ conf }: { conf: WidgetConf }) {
       })}
       {items.length === 0 && (
         <div className="panel widget" style={{ margin: 0 }}>
-          <h4>디데이 {isAdmin && <span className="more">관리 ›</span>}</h4>
+          <h4>디데이</h4>
           <p className="hint">등록된 디데이가 없습니다</p>
         </div>
       )}

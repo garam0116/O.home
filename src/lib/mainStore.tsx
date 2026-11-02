@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
 import { getRawSetting, setSetting } from './settingStore';
+import { isRailPage } from './widgetZone';
 
 export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
@@ -95,7 +96,9 @@ const REMOVED_TYPES = ['image', 'upcoming', 'apply', 'memoboard'];
  *  /trpg 로그 백업이 빠져 있던 것은 실수 — 드래그 정렬·목록 숨김 확인 모두 이 토글이 있어야 켜진다
  *  (v2.0 사용자 발견 — 목록 숨김 기능을 만들다 보니 편집모드 자체가 이 페이지에서 켜지지 않는 걸 발견) */
 const EDIT_PAGES = ['/', '/rels', '/gallery', '/trpg'];
-const EDIT_PAGE_NAMES = '메인 · 자관 · 갤러리 · TRPG 로그';
+/** 좌우 위젯 레일이 있는 페이지는 모두 편집모드 가능 (v2.4 — 위젯을 어느 페이지에서든 옮기게) */
+const canEditAt = (pathname: string) => EDIT_PAGES.includes(pathname) || isRailPage(pathname);
+const EDIT_PAGE_NAMES = '자관 상세·작성, 글쓰기·수정 화면, 환경설정을 제외한 모든 페이지';
 
 interface MainCtx {
   state: MainState;
@@ -175,7 +178,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
       setNotice('모바일에서는 편집모드를 사용할 수 없습니다. PC에서 해주세요.');
       return;
     }
-    if (!EDIT_PAGES.includes(pathname)) {
+    if (!canEditAt(pathname)) {
       setNotice(`이 페이지에서는 편집모드를 켤 수 없습니다.\n가능한 페이지: ${EDIT_PAGE_NAMES}`);
       return;
     }
@@ -284,7 +287,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      state, editOn, editAvailable: EDIT_PAGES.includes(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
+      state, editOn, editAvailable: canEditAt(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
       updateWidget, addWidget, removeWidget, setLayoutMode, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
     }}>
       {children}

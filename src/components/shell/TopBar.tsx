@@ -15,6 +15,7 @@ import { useMainStore } from '@/lib/mainStore';
 import { useBlobUrl } from '@/lib/blobStore';
 import { refreshPage } from '@/lib/pageRefresh';
 import { KToggle } from '@/components/ui/Kit';
+import { isRailPage } from '@/lib/widgetZone';
 
 export function TopBar() {
   const { user, isAdmin, logout } = useAuth();
@@ -202,13 +203,13 @@ export function TopBar() {
       </nav>
 
       {/* 위젯 추가 — 그리드 토글 왼쪽 (v1.9 사용자 확정: 본문 하단 버튼 대체) */}
-      {editOn && pathname === '/' && (
+      {editOn && (pathname === '/' || isRailPage(pathname)) && (
         <button className="btn btn-ghost" style={{ height: 27, padding: '0 11px', fontSize: 10.5, whiteSpace: 'nowrap' }}
           onClick={() => window.dispatchEvent(new Event('ohome-add-widget'))}>＋ 위젯</button>
       )}
-      {/* 그리드 토글 — 메인에서 편집모드 켰을 때만 (v1.9) */}
+      {/* 그리드 토글 — 위젯이 있는 페이지에서 편집모드 켰을 때 (v1.9 · 모든 페이지 v2.4) */}
       <KToggle
-        className={`grid-chip ${editOn && pathname === '/' ? 'show' : ''}`}
+        className={`grid-chip ${editOn && (pathname === '/' || isRailPage(pathname)) ? 'show' : ''}`}
         label="그리드"
         checked={gridOn}
         onChange={setGridOn}
