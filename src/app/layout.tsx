@@ -38,8 +38,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     // 탭 아이콘 (v2.0 사용자 요청) — 지정했으면 기본 favicon.ico 대신 그것을 쓴다.
-    // 지정이 없으면 icons를 아예 넣지 않아 Next의 기본 파일 처리를 그대로 둔다
-    ...(favicon ? { icons: { icon: favicon } } : {}),
+    // 지정이 없으면 icons를 아예 넣지 않아 Next의 기본 파일 처리를 그대로 둔다.
+    // apple: 아이폰 「홈 화면에 추가」·사파리 즐겨찾기 타일 아이콘 (apple-touch-icon).
+    // 이게 없으면 iOS는 제목 첫 글자(「I」) 타일이나 기본 favicon.ico(버셀 삼각형)를 쓴다 — 탭 아이콘 하나로 둘 다 맞춘다
+    ...(favicon ? { icons: { icon: favicon, apple: favicon } } : {}),
     openGraph: { title, description, type: 'website' },
     twitter: { card: 'summary', title, description },
   };
