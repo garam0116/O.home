@@ -28,7 +28,7 @@ function ImgThumb({ item, onReplace }: { item: ImgItem; onReplace: (url: string)
     {/* eslint-disable-next-line @next/next/no-img-element */}
     {src && <img src={src} alt="" referrerPolicy="no-referrer" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6 }} />}
     <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10 }}
-      onClick={() => source.open()}>🔗 주소로 교체</button>
+      onClick={() => source.open()}>🔗 URL</button>
     {source.element}
   </div>;
 }
@@ -94,7 +94,7 @@ export function DiaryForm({ initial, onSave, onCancel }: {
           {...imageSource.handlers} {...fileDrop(addImages)}
           onClick={() => document.getElementById('dyImgF')?.click()}>＋ ADD IMAGE</button>
         <button type="button" className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11, justifySelf: 'center' }}
-          onClick={() => imageSource.open()}>🔗 이미지 주소로 넣기</button>
+          onClick={() => imageSource.open()}>🔗 URL</button>
         {imageSource.element}
       </div>
 

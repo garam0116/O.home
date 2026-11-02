@@ -202,7 +202,7 @@ export function BackupForm({ initial }: { initial: BackupPost | null }) {
             </b>
             여러 장 선택 가능 · ⠿ 드래그로 순서 조정
           </div>
-          <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 이미지 주소 붙여넣기</button>
+          <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 URL</button>
           <input id="bkFiles" type="file" accept="image/*" multiple style={{ display: 'none' }}
             onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
           {files.length > 0 && (

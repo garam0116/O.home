@@ -272,7 +272,7 @@ function RoadviewPageInner() {
                 onChange={e => { upload(e.target.files?.[0]); e.target.value = ''; }} />
               <button className="btn btn-dark" onClick={() => fileRef.current?.click()}
                 {...fileDrop(fl => upload(fl[0]))} {...imageSource.handlers}>↑ UPLOAD</button>
-              <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 이미지 주소 붙여넣기</button>
+              <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 URL</button>
             </>
           )}
           <SearchBar onSearch={setQ} />

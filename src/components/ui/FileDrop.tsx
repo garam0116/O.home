@@ -58,7 +58,7 @@ export function FileDrop({ accept, multiple, onFiles, onUrl, label }: {
       />
       {images && <>
         <button type="button" className="btn btn-ghost" style={{ marginTop: 8 }}
-          onClick={() => source.open()}>🔗 이미지 주소 붙여넣기</button>
+          onClick={() => source.open()}>🔗 URL</button>
         {source.element}
       </>}
       {urls.map((url, i) => <div className="file-row" key={`${url}-${i}`}>

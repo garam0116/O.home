@@ -162,7 +162,7 @@ export function ThreadForm({ editId }: { editId?: string }) {
                 <button className="btn btn-ghost" style={{ padding: '5px 11px', fontSize: 11 }}
                   onClick={() => setCropOpen(true)}>✂ 위치·확대 조정</button>
               )}
-              <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 이미지 주소 붙여넣기</button>
+              <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 URL</button>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>

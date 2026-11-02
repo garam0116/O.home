@@ -504,7 +504,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
               if (f) selectThumb({ kind: 'file', file: f });
               ev.target.value = '';
             }} />
-          <button type="button" className="btn btn-ghost" style={{ justifySelf: 'start' }} onClick={() => thumbSource.open()}>🔗 이미지 주소 붙여넣기</button>
+          <button type="button" className="btn btn-ghost" style={{ justifySelf: 'start' }} onClick={() => thumbSource.open()}>🔗 URL</button>
           {thumbSource.element}
           {thumbMode === 'image' && (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
