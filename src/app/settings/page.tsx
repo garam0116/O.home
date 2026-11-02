@@ -69,6 +69,14 @@ const TAB_SLUG: Record<(typeof CATEGORIES)[number], string> = {
 const tabOfSlug = (v: string | null | undefined) =>
   v ? (CATEGORIES.find(c => TAB_SLUG[c] === v || c === v) ?? null) : null;
 
+/** 블록·드롭다운 그림자 프리셋 — 숫자 칸에서 다른 값을 넣으면 선택창은 '직접 지정'으로 보인다 */
+const SHADOW_PRESETS = [
+  { value: '0', label: '없음' }, { value: '30', label: '약하게' },
+  { value: '50', label: '보통' }, { value: '100', label: '강하게' },
+];
+/** 갤러리·감상타래 고르는 탭 — 이보다 많아지면 줄이 넘어가므로 선택창으로 바꿔 보여 준다 */
+const TAB_MAX = 4;
+
 /** 색 항목 한 쌍 렌더 헬퍼 */
 function CP({ label, k, def }: { label?: string; k: keyof ThemeVars; def?: string }) {
   const { state, setVar } = useTheme();
@@ -115,9 +123,6 @@ function WidgetStyleRow() {
 function FontRoleRow({ role }: { role: FontRole }) {
   const { fonts, roles, setRole, familyOf } = useFonts();
   const cfg = roles[role];
-  const wBtn = (w: number | undefined, label: string) => (
-    <button className={cfg.weight === w ? 'on' : ''} onClick={() => setRole(role, { weight: w })}>{label}</button>
-  );
   return (
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>{ROLE_LABEL[role].label}</b>{ROLE_LABEL[role].desc && <small>{ROLE_LABEL[role].desc}</small>}</div>
@@ -129,12 +134,13 @@ function FontRoleRow({ role }: { role: FontRole }) {
             ...(role === 'pagetitle' ? [{ value: FOLLOW_TITLE, label: <span>타이틀 폰트와 동일</span> }] : []),
             ...fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> })),
           ]} />
-        <div className="mini-seg">
-          {wBtn(undefined, '기본')}
-          {wBtn(300, '가늘게')}
-          {wBtn(400, '보통')}
-          {wBtn(700, '굵게')}
-        </div>
+        {/* 굵기 — 폰트 선택·크기와 한 줄이라 버튼 나열 대신 선택창 (줄바꿈 방지) */}
+        <KSelect minWidth={92} value={cfg.weight === undefined ? '' : String(cfg.weight)}
+          onChange={v => setRole(role, { weight: v ? Number(v) : undefined })}
+          options={[
+            { value: '', label: '굵기: 기본' }, { value: '300', label: '가늘게' },
+            { value: '400', label: '보통' }, { value: '700', label: '굵게' },
+          ]} />
         <KStep value={cfg.scale ?? 100} min={80} max={130} step={5} suffix="%"
           onChange={v => setRole(role, { scale: v })} />
       </div>
@@ -375,22 +381,17 @@ function DesignPane() {
         <div className="l"><b>페이지 타이틀</b><small>각 메뉴 상단 큰 제목과 설명 문구</small></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {/* 헤더 표시 옵션 (v1.9): 둘 다 / 제목만 / 설명만 / 안 띄움 */}
-          <div className="mini-seg">
-            {(['both', 'title', 'desc', 'none'] as const).map(m => (
-              <button key={m} className={(state.vars.pageHead ?? 'both') === m ? 'on' : ''}
-                onClick={() => setVar('pageHead', m)}>
-                {m === 'both' ? '둘 다' : m === 'title' ? '제목만' : m === 'desc' ? '설명만' : '안 띄움'}
-              </button>
-            ))}
-          </div>
+          <KSelect minWidth={96} value={state.vars.pageHead ?? 'both'}
+            onChange={v => setVar('pageHead', v as 'both' | 'title' | 'desc' | 'none')}
+            options={[
+              { value: 'both', label: '둘 다' }, { value: 'title', label: '제목만' },
+              { value: 'desc', label: '설명만' }, { value: 'none', label: '안 띄움' },
+            ]} />
           {/* 모바일에서만 헤더를 생략할지 (v1.9 사용자 요청) */}
           <span className="cp-lb">모바일</span>
-          <div className="mini-seg">
-            <button className={(state.vars.pageHeadM ?? 'same') === 'same' ? 'on' : ''}
-              onClick={() => setVar('pageHeadM', 'same')}>동일</button>
-            <button className={state.vars.pageHeadM === 'none' ? 'on' : ''}
-              onClick={() => setVar('pageHeadM', 'none')}>생략</button>
-          </div>
+          <KSelect minWidth={80} value={state.vars.pageHeadM ?? 'same'}
+            onChange={v => setVar('pageHeadM', v as 'same' | 'none')}
+            options={[{ value: 'same', label: '동일' }, { value: 'none', label: '생략' }]} />
           <CP label="제목" k="pageTitle" />
           <CP label="설명" k="pageDesc" />
         </div>
@@ -408,20 +409,17 @@ function DesignPane() {
 
       {/* 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링</small></div>
+        <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링 — 번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
           {/* 미리보기는 왼쪽, 설정 컨트롤은 오른쪽 정렬 (v1.9 사용자 요청) */}
           <KInput style={{ width: 130, marginRight: 'auto' }} defaultValue="포커스 미리보기" />
           <CP label="색" k="focusColor" def={state.vars.accent} />
-          {/* 한 줄에 들어가도록 짧게 — 자세한 뜻은 툴팁 (v1.9) */}
-          <div className="mini-seg">
-            <button data-tip="은은하게 번지는 링" className={(state.vars.focusRing ?? 'glow') === 'glow' ? 'on' : ''}
-              onClick={() => setVar('focusRing', 'glow')}>번짐</button>
-            <button data-tip="선명한 실선 링" className={state.vars.focusRing === 'line' ? 'on' : ''}
-              onClick={() => setVar('focusRing', 'line')}>라인</button>
-            <button data-tip="링 없이 테두리 색만 바뀜" className={state.vars.focusRing === 'none' ? 'on' : ''}
-              onClick={() => setVar('focusRing', 'none')}>테두리만</button>
-          </div>
+          {/* 링 방식 — 선택창으로 (각 방식의 뜻은 왼쪽 설명에) */}
+          <KSelect minWidth={96} value={state.vars.focusRing ?? 'glow'}
+            onChange={v => setVar('focusRing', v as 'glow' | 'line' | 'none')}
+            options={[
+              { value: 'glow', label: '번짐' }, { value: 'line', label: '라인' }, { value: 'none', label: '테두리만' },
+            ]} />
           {(state.vars.focusRing ?? 'glow') !== 'none' && (
             <>
               <span className="cp-lb">두께</span>
@@ -500,11 +498,9 @@ function DesignPane() {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
           <span className="cp-lb" style={{ marginLeft: 'auto' }}>색</span>
           <ColorField value={state.vars.shColor ?? '#000000'} onChange={hex => setVar('shColor', hex)} />
-          <div className="mini-seg" style={{ marginLeft: 10 }}>
-            {([['없음', 0], ['약하게', 30], ['보통', 50], ['강하게', 100]] as const).map(([label, v]) => (
-              <button key={label} className={state.vars.shadow === v ? 'on' : ''}
-                onClick={() => setVar('shadow', v)}>{label}</button>
-            ))}
+          <div style={{ marginLeft: 10 }}>
+            <KSelect minWidth={96} value={String(state.vars.shadow)} placeholder="직접 지정"
+              onChange={v => setVar('shadow', Number(v))} options={SHADOW_PRESETS} />
           </div>
           <KStep value={state.vars.shadow} min={0} max={200} step={10} suffix="%" onChange={v => setVar('shadow', v)} />
         </div>
@@ -513,12 +509,8 @@ function DesignPane() {
       <div className="set-row">
         <div className="l"><b>드롭다운 그림자</b><small>하위메뉴·프로필 메뉴·셀렉트 팝업·달력 — 블록 그림자와 별개, 없음도 가능</small></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div className="mini-seg">
-            {([['없음', 0], ['약하게', 30], ['보통', 50], ['강하게', 100]] as const).map(([label, v]) => (
-              <button key={label} className={(state.vars.ddShadow ?? 100) === v ? 'on' : ''}
-                onClick={() => setVar('ddShadow', v)}>{label}</button>
-            ))}
-          </div>
+          <KSelect minWidth={96} value={String(state.vars.ddShadow ?? 100)} placeholder="직접 지정"
+            onChange={v => setVar('ddShadow', Number(v))} options={SHADOW_PRESETS} />
           <KStep value={state.vars.ddShadow ?? 100} min={0} max={200} step={10} suffix="%" onChange={v => setVar('ddShadow', v)} />
         </div>
       </div>
@@ -820,11 +812,18 @@ function BoardPane() {
         {galSecs.length > 1 && <><br />갤러리마다 따로 정합니다 — <b>손대기 전까지는 기본 갤러리의 말머리를 그대로 씁니다</b></>}
       </div>
       {galSecs.length > 1 && (
-        <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
-          {galSecs.map(s2 => (
-            <button key={s2.id} className={galSec === s2.id ? 'on' : ''} onClick={() => setGalSec(s2.id)}>{s2.name}</button>
-          ))}
-        </div>
+        galSecs.length > TAB_MAX ? (
+          <div style={{ marginBottom: 10 }}>
+            <KSelect minWidth={160} value={galSec} onChange={setGalSec}
+              options={galSecs.map(s2 => ({ value: s2.id, label: s2.name }))} />
+          </div>
+        ) : (
+          <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
+            {galSecs.map(s2 => (
+              <button key={s2.id} className={galSec === s2.id ? 'on' : ''} onClick={() => setGalSec(s2.id)}>{s2.name}</button>
+            ))}
+          </div>
+        )
       )}
       <DragList items={galCats} keyOf={c => c.id} onReorder={next => setGalleryCats(galSec, next)}
         render={c => (
@@ -1313,13 +1312,9 @@ function LogoControls() {
         style={{ width: 130, height: 35, boxSizing: 'border-box' }} />
       <LiveInput value={site.subtitle} onValue={v => set({ subtitle: v })}
         style={{ width: 160, height: 35, boxSizing: 'border-box' }} />
-      <div className="mini-seg">
-        {(['left', 'center', 'right'] as const).map(a => (
-          <button key={a} className={site.align === a ? 'on' : ''} onClick={() => set({ align: a })}>
-            {a === 'left' ? '왼쪽' : a === 'center' ? '가운데' : '오른쪽'}
-          </button>
-        ))}
-      </div>
+      <KSelect minWidth={88} value={site.align}
+        onChange={v => set({ align: v as typeof site.align })}
+        options={[{ value: 'left', label: '왼쪽' }, { value: 'center', label: '가운데' }, { value: 'right', label: '오른쪽' }]} />
     </>
   );
 }
@@ -2398,11 +2393,18 @@ function ThreadPane() {
         {secs.length > 1 && <><br />감상타래마다 따로 정합니다 — <b>손대기 전까지는 기본 감상타래의 분류를 그대로 씁니다</b></>}
       </div>
       {secs.length > 1 && (
-        <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
-          {secs.map(s => (
-            <button key={s.id} className={cur === s.id ? 'on' : ''} onClick={() => setSecId(s.id)}>{s.name}</button>
-          ))}
-        </div>
+        secs.length > TAB_MAX ? (
+          <div style={{ marginBottom: 10 }}>
+            <KSelect minWidth={160} value={cur} onChange={setSecId}
+              options={secs.map(s => ({ value: s.id, label: s.name }))} />
+          </div>
+        ) : (
+          <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
+            {secs.map(s => (
+              <button key={s.id} className={cur === s.id ? 'on' : ''} onClick={() => setSecId(s.id)}>{s.name}</button>
+            ))}
+          </div>
+        )
       )}
       <DragList items={cats} keyOf={c => c.id} onReorder={next => setCats(next)}
         render={c => (
@@ -2595,13 +2597,8 @@ function BgmPane() {
         <KToggle checked={state.settings.enabled} onChange={v => setSettings({ enabled: v })} />
       </div>
       <div className="set-row">
-        <div className="l"><b>재생 방식</b><small>자동: 접속 후 처음 클릭/키 입력하는 순간 재생 (브라우저 정책상 완전 무동작 자동재생은 불가) · 수동: 재생 버튼을 눌러야 재생 · 모바일에서는 항상 수동</small></div>
-        <div className="mini-seg">
-          <button className={state.settings.autoplay ? 'on' : ''}
-            onClick={() => setSettings({ autoplay: true })}>접속 시 자동 재생</button>
-          <button className={!state.settings.autoplay ? 'on' : ''}
-            onClick={() => setSettings({ autoplay: false })}>버튼 눌러야 재생</button>
-        </div>
+        <div className="l"><b>자동 재생</b><small>켜면 접속 후 처음 클릭하거나 키를 누르는 순간 재생 (브라우저 정책상 아무 동작 없이 자동 재생은 불가) · 끄면 재생 버튼을 눌러야 재생 · 모바일에서는 항상 수동 · 플레이어 표시가 꺼져 있으면 동작하지 않음</small></div>
+        <KToggle checked={state.settings.autoplay} onChange={v => setSettings({ autoplay: v })} />
       </div>
     </div>
   );
