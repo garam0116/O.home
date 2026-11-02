@@ -38,16 +38,14 @@ export interface MenuSettings {
   galWrite?: Record<string, MenuPerm>;
   /** 갤러리 글쓰기를 특정 회원으로 좁히기 (v2.0) — 'member'일 때만 의미 · 비우면 모든 회원 */
   galWriteMembers?: Record<string, string[]>;
-  calTitle: 'en' | 'num';            // 스케줄러 달 표기 (v1.9) — AUGUST 2026 / 2026.08
   imgProtect: ImgProtectArea[];      // 이미지 저장 방지 영역 (v1.9 — 우클릭·드래그 차단, 관리자 제외)
 }
 
 /** 이미지 저장 방지 영역 (v1.9) — 게시판은 갤러리·로드비 포함 */
-export type ImgProtectArea = 'board' | 'comm' | 'tchar' | 'chars' | 'rels';
+export type ImgProtectArea = 'board' | 'tchar' | 'chars' | 'rels';
 
 export const IMG_PROTECT_AREAS: { key: ImgProtectArea; label: string; paths: string[] }[] = [
   { key: 'board', label: '게시판 (갤러리·로드비 포함)', paths: ['/board', '/gallery', '/loadb'] },
-  { key: 'comm', label: '커미션', paths: ['/comm', '/comm-apply'] },
   { key: 'tchar', label: 'TRPG 캐릭터', paths: ['/tchars'] },
   { key: 'chars', label: '자캐 (캐릭터)', paths: ['/chars'] },
   { key: 'rels', label: '자관', paths: ['/rels'] },
@@ -97,7 +95,6 @@ export const DEFAULT_MENU_SETTINGS: MenuSettings = {
   labels: {},
   roadUpload: 'member', roadComment: 'guest',
   backupView: 'gal',
-  calTitle: 'en',
   imgProtect: [],
 };
 
@@ -227,7 +224,7 @@ export function menuLabelFor(href: string, extra?: ExtraEntry[]): string | null 
  * 같은 기준을 보도록 판정을 여기로 모은다.
  *
  * · 상세 페이지(`/board/123`)는 목록(`/board`)의 범위를 따른다.
- * · 경계는 `/`와 `?`로 끊는다 — 안 그러면 `/comm-apply`가 `/comm`에 딸려 들어간다.
+ * · 경계는 `/`와 `?`로 끊는다 — 안 그러면 앞부분이 같은 다른 주소가 딸려 들어간다.
  * · 여러 곳에 걸려 있으면 **더 구체적인 주소**가 이긴다(`/gallery?s=fan` > `/gallery`).
  *   같은 구체성이면 느슨한 쪽 — 그 링크가 실제로 보이는 경로가 하나라도 있다는 뜻이므로.
  */

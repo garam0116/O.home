@@ -295,18 +295,8 @@ a{color:inherit;text-decoration:none}
 /* 연필 표시는 실제 편집 가능한 문구(.editable)에만 — 동적 메타 문구에는 표시하지 않음 */
 .admin .page-head p.editable{cursor:text}
 .admin .page-head p.editable:hover::after{content:"✎";font-size:calc(11px*var(--fs,1));color:#c9cdd4;display:inline-block;margin-left:8px;transform:scaleX(-1)}
-/* 우측 액션(검색·등록·슬롯)은 절대배치 — 높이가 커도 제목·설명 줄 간격을 벌리지 않음
-   (커미션처럼 액션이 2단이면 설명 윗여백이 다른 메뉴보다 넓어지던 문제, v1.9 사용자 발견) */
+/* 우측 액션(검색·등록)은 절대배치 — 높이가 커도 제목·설명 줄 간격을 벌리지 않음 (v1.9 사용자 발견) */
 .head-actions{position:absolute;right:0;bottom:0;display:flex;gap:8px;align-items:center}
-/* 2단 액션(커미션의 슬롯+검색·등록)은 헤더보다 키가 크다. 아래에 붙여 두면 설명 문구를 끈 순간
-   헤더가 짧아지면서 위로 삐져나간다 — 슬롯이 상단 메뉴까지 올라갔다 (v2.0 사용자 발견).
-   위에 붙여 제목과 나란히 두고 아래로 자라게 한다: 설명이 있든 없든 슬롯 자리가 그대로다 */
-.head-actions.stack{top:0;bottom:auto;flex-direction:column;align-items:flex-end;gap:10px}
-/* 2단 액션은 헤더보다 키가 커서 아래로 자란다 — 그만큼 헤더가 자리를 갖지 않으면
-   검색·등록 버튼이 아래 리스트와 겹친다 (v2.0 사용자 발견) */
-/* 액션을 위에 붙였으므로 제목도 위에 맞춘다 — 아래 정렬로 두면 설명을 끈 순간
-   제목만 아래로 내려가 슬롯과 어긋난다 */
-.page-head.head-stack{min-height:calc(80px*var(--fs,1));align-items:start}
 
 /* 게시판 공통 검색 (6.4) — 접힘형, 세로 35px 통일 */
 /* 검색창 — 테마 토큰 (환경설정 > 디자인 「검색창」에서 색 지정, 라이트/다크 자동 연동) */
@@ -478,7 +468,7 @@ a{color:inherit;text-decoration:none}
   padding:7px 12px;border-radius:9px;max-width:300px;white-space:pre-line;
   box-shadow:var(--sh-dd);transition:opacity .15s,transform .15s}
 .tip-pop.on{opacity:1;transform:none}
-/* 드롭다운 색을 따르는 툴팁 변형 (신청자 리스트 잠금 등, v1.9) */
+/* 드롭다운 색을 따르는 툴팁 변형 (v1.9) */
 .tip-pop.dd{background:var(--dd-bg);color:var(--dd-fg)}
 
 /* ================= TRPG 캐릭터 (v1.9 신규 — 1:1 인장 + 표정 전환) ================= */
@@ -924,12 +914,6 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 .main-grid .g2{align-items:start}
 .dday-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:calc(12.5px*var(--fs,1))}
 .dday-row:last-child{border:none}
-/* 커미션 신청자 위젯 (v2.0 사용자 요청) — D-day 줄과 같은 결, 오른쪽에 상태 뱃지 */
-.apply-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:calc(12.5px*var(--fs,1));line-height:calc(18px*var(--fs,1))}
-.apply-row:last-of-type{border-bottom:none}
-.apply-row b{font-family:var(--serif);font-size:calc(13.5px*var(--fs,1));letter-spacing:.05em;flex-shrink:0;min-width:44px}
-.apply-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.apply-row i{font-style:normal;flex-shrink:0;font-size:calc(9.5px*var(--fs,1))}
 .dday-row b{font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:.05em}
 .dday-row .d-red{color:var(--accent)}
 /* 디데이 사진 카드 — 사진 위에 이름(왼쪽 위) · 디데이(오른쪽 아래) · 시작일 */
@@ -1191,32 +1175,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .multi-row .meta{margin-left:auto;font-size:calc(11px*var(--fs,1));color:var(--sub);text-align:right}
 .drag-hint{font-size:calc(10px*var(--fs,1));color:var(--faint);border:1px dashed var(--line);padding:6px 10px;border-radius:8px;display:inline-block;margin-top:12px}
 
-/* ---------- 스케줄러 (4.12) — 월간 캘린더 + 우측 위젯 ---------- */
-.cal-layout{display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start}
-@media (max-width:960px){.cal-layout{grid-template-columns:1fr}}
-.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.cal-head b{font-family:var(--serif);font-size:calc(20px*var(--fs,1));letter-spacing:.2em}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.cal-grid .dow{text-align:center;font-size:calc(10px*var(--fs,1));letter-spacing:.2em;color:var(--faint);padding:6px 0}
-.cal-cell{aspect-ratio:1/1.02;border-radius:9px;padding:7px 8px;font-size:calc(11px*var(--fs,1));color:var(--sub);background:#fff;border:1px solid var(--line);transition:.13s;cursor:pointer;overflow:hidden}
-.cal-cell:hover{border-color:var(--steel-3)}
-.cal-cell.dim{opacity:.35}
-/* 스케줄러 우측 열 — 짧은 목록 카드가 세로로 여럿 쌓이는 곳이라
-   메인 위젯 기본값보다 촘촘하게 (v2.0 사용자 피드백: 세로 간격이 너무 넓다) */
-.cal-side{gap:8px}
-.cal-side .panel.widget{padding:13px 14px}
-.cal-side .panel.widget h4{margin-bottom:7px}
-.cal-side .dday-row{padding:4px 0}
-.cal-cell.today{border:1.5px solid var(--ink)}
-/* 지금 고른 날짜 (v2.0) — 오른쪽 카드가 이 날짜의 일정을 보여 준다.
-   표시는 **다른 포커스 표시와 같은 설정**(디자인 > 입력 포커스)을 따른다 (v2.0 사용자 발견).
-   예전에는 링 색이 기본 강조색(빨강)으로 박혀 있어, 강조색을 바꾸면 테두리만 바뀌고
-   번지는 링은 빨간 채로 남아 어긋나 보였다 */
-.cal-cell.picked{border-color:var(--focus-bd,var(--accent));box-shadow:var(--focus-ring,0 0 0 2px rgba(166,58,69,.16))}
-/* 달력 칸에는 위에서 3개까지 — 나머지 개수만 표시 */
-.cal-cell .ev.more{background:transparent;color:var(--faint);font-weight:700;padding-left:0}
-.cal-cell .ev{margin-top:4px;font-size:calc(11.5px*var(--fs,1));padding:3px 7px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600} /* 일정 글씨 확대 9.5→11.5 (v1.9 사용자 피드백) */
-
 /* ---------- 다이어리 (4.14) — 좌 리스트 + 우 미니 캘린더 ---------- */
 .dy-layout{display:grid;grid-template-columns:1fr 250px;gap:14px} /* 풀 콘텐츠 폭 · 두 열 높이 일치(stretch) */
 /* 중간뷰에서는 달력을 내리지 않음 — 옆폭만 축소, 모바일에서만 아래로 (v1.9 사용자 확정) */
@@ -1264,74 +1222,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 @media (max-width:620px){.dy-thumb{width:76px}}
 .dy-row .dy-body .post-body{font-size:calc(14px*var(--fs,1));line-height:1.85}
 
-/* ---------- 커미션 (4.18) ---------- */
-.cm-total-slot{display:inline-flex;align-items:center;padding:7px 15px;border-radius:999px;background:var(--panel);box-shadow:var(--sh-sm);font-size:calc(11.5px*var(--fs,1));font-weight:700;letter-spacing:.14em;color:var(--sub);cursor:default}
-.cm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-@media (max-width:960px){.cm-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:620px){.cm-grid{grid-template-columns:1fr}}
-.cm-card{padding:0;overflow:visible;cursor:pointer;transition:.2s} /* 슬롯 툴팁이 카드 밖으로 나올 수 있게 */
-.cm-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md)}
-.cm-card .th{position:relative;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0}
-.cm-card .cm-badge{position:absolute;top:9px;right:9px;z-index:3}
-.cm-card .bd{padding:14px 16px 16px}
-/* 글씨는 한 단계씩 크게, 금액·슬롯은 오른쪽 정렬 (v2.0 사용자 요청) */
-.cm-card .nm{display:block;font-size:calc(15.5px*var(--fs,1));white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* 긴 제목 말줄임 (v1.9) */
-.cm-card .sub{display:block;font-size:calc(10.5px*var(--fs,1));letter-spacing:.18em;color:var(--faint);margin-top:2px}
-.cm-card .price{margin-top:8px;font-family:var(--serif);font-size:calc(16.5px*var(--fs,1));letter-spacing:.03em;text-align:right}
-.cm-card .slotline{text-align:right}
-.cm-card .slot{display:inline-block;margin-top:5px;font-size:calc(11.5px*var(--fs,1));font-weight:700;letter-spacing:.08em}
-/* 상세 */
-.cm-hero{text-align:center;margin:0 0 20px}
-.cm-hero h2{font-family:var(--serif);font-size:calc(34px*var(--fs,1));font-weight:600;letter-spacing:.1em;color:var(--page-title)}
-.cm-hero small{display:block;margin-top:4px;font-size:calc(11.5px*var(--fs,1));letter-spacing:.32em;color:var(--page-desc)}
-/* 하드코딩 배경 제거 + 이미지는 잘리지 않게 프레임 안 비율 유지 (갤러리 단일형과 동일 규칙, v1.9) */
-.cm-viewer{position:relative;aspect-ratio:16/10;border-radius:var(--radius);overflow:hidden;box-shadow:var(--sh-md)}
-.cm-viewer .nav{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:36px;height:36px;border-radius:50%;background:rgba(15,17,20,.55);color:#fff;font-size:13px;display:grid;place-items:center}
-.cm-viewer:hover .hv-actions{opacity:1;pointer-events:auto}
-.cm-strip{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.cm-strip .t{position:relative;width:76px;aspect-ratio:4/3;border-radius:8px;overflow:hidden;cursor:pointer;outline:2px solid transparent;outline-offset:2px;transition:.15s}
-.cm-strip .t.on{outline-color:var(--accent)}
-.cm-meta{margin-top:16px;text-align:right}
-.cm-meta .price{font-family:var(--serif);font-size:calc(26px*var(--fs,1));letter-spacing:.04em;color:var(--page-title)}
-.cm-meta .due{margin-top:3px;font-size:calc(11.5px*var(--fs,1));color:var(--page-desc)}
-.cm-meta .slot-row{margin-top:10px;display:flex;justify-content:flex-end;align-items:center;gap:10px}
-/* 슬롯 글리프(14px)와 SLOT n/n 텍스트(11px)는 베이스라인이 달라 어긋남 — flex 세로 중앙 정렬 */
-.cm-meta .slots{display:inline-flex;align-items:center;font-size:calc(14px*var(--fs,1));color:var(--page-title);cursor:default}
-.cm-meta .slots b{font-size:calc(11px*var(--fs,1));letter-spacing:.12em}
-.cm-meta .mail{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--panel);color:var(--accent);box-shadow:var(--sh-sm);transition:.15s}
-.cm-meta .mail:hover{transform:translateY(-2px)}
-/* 신청자 리스트 */
-.ap-layout{display:grid;grid-template-columns:1fr 210px;gap:14px;align-items:start} /* 풀 콘텐츠 폭 · 필터는 자기 높이만 (리스트와 독립) */
-.ap-layout > .tagside{align-self:start}
-@media (max-width:960px){.ap-layout{grid-template-columns:1fr}}
-.ap-row{display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px dashed var(--line);transition:.13s}
-.ap-row:last-child{border-bottom:none}
-.ap-row:hover{background:rgba(127,127,127,.05)}
-.ap-row .dl{width:100px;flex-shrink:0} /* 마감일 없는 행도 같은 폭 — 열 정렬 유지 */
-.ap-row .dl small{display:block;font-size:calc(8.5px*var(--fs,1));letter-spacing:.2em;color:var(--faint)}
-.ap-row .dl b{font-size:calc(15px*var(--fs,1));letter-spacing:.04em;white-space:nowrap} /* 연도 포함 · 진한 글씨 (4.18) */
-.ap-row .bwrap{width:78px;display:grid;place-items:center;flex-shrink:0} /* 뱃지 고정폭 — 글자 수 달라도 정렬 유지 */
-.ap-row .who{flex:1;min-width:0}
-/* 폭이 줄면 이름 영역만 계속 줄어듦(말줄임) — 중간뷰에서도 뱃지·종류가 내려가지 않음 (v1.9 사용자 확정) */
-.ap-row .who b{display:block;font-size:calc(13px*var(--fs,1));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ap-row .who small{display:block;font-size:calc(10px*var(--fs,1));color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 휴지통에서 보이는 남은 기간 + 되돌리기/완전삭제 (v2.0) */
-.ap-row .ap-trash{display:flex;align-items:center;gap:7px;flex-shrink:0}
-.ap-row .ap-trash small{font-size:calc(10px*var(--fs,1));color:var(--faint);white-space:nowrap}
-.ap-row .ap-trash .btn{height:24px;padding:0 10px;font-size:calc(10.5px*var(--fs,1));display:inline-flex;align-items:center}
-
-/* 모바일에서만 진행상태·커미션종류가 아랫줄로 (v1.9 사용자 확정) */
-@media (max-width:620px){
-  .ap-row{display:grid;grid-template-columns:auto 1fr 28px;gap:3px 12px;align-items:center}
-  .ap-row .dl{grid-row:1;grid-column:1;width:auto}
-  .ap-row .who{grid-row:1;grid-column:2;min-width:0}
-  .ap-row .lock{grid-row:1;grid-column:3}
-  .ap-row .ap-trash{grid-row:3;grid-column:1/4;justify-content:flex-end}
-  .ap-row .bwrap{grid-row:2;grid-column:1;width:auto;justify-content:start;display:flex}
-  .ap-row .kind{grid-row:2;grid-column:2/4;white-space:normal}
-}
-.ap-row .kind{font-size:calc(11.5px*var(--fs,1));color:var(--sub);white-space:nowrap}
-.ap-row .lock{display:grid;place-items:center;width:28px;flex-shrink:0}
 .drag-h.idle{opacity:.25;cursor:default;pointer-events:none} /* 드래그는 편집모드에서만 (4.18) */
 
 /* ---------- 가로 필터 칩 탭 (다이어리 등 — 페이지 배경 위) ---------- */
@@ -1603,16 +1493,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .sym-pop .sym-grid{display:grid;grid-template-columns:repeat(8,30px);gap:2px}
 .sym-pop .sym-grid button{width:30px;height:30px;border-radius:7px;font-size:15px;display:grid;place-items:center;color:var(--ink);transition:.12s}
 .sym-pop .sym-grid button:hover{background:var(--dd-hv,rgba(127,127,127,.14))}
-/* 커미션 양식 빌더 (v1.9) — 항목 카드 */
-.cmf-field{border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px;background:color-mix(in srgb,var(--panel) 45%,transparent)}
-/* 커미션 상세 — 양식 표시 */
-.cmf-view{display:grid;gap:14px}
-.cmf-view .q{font-size:calc(13px*var(--fs,1));font-weight:600}
-.cmf-view .q .req{color:var(--accent);margin-left:3px}
-.cmf-view .qd{font-size:calc(11px*var(--fs,1));color:var(--faint);margin-top:2px}
-.cmf-view .op{display:flex;gap:8px;align-items:center;font-size:calc(12px*var(--fs,1));color:var(--sub);padding:3px 0 0 4px}
-.cmf-view .op .mk{color:var(--faint);font-size:calc(11px*var(--fs,1))}
-/* 게스트 신원 바 (v1.9) — 방문자 댓글 허용 시 GUEST 칩 + 닉네임·비밀번호 한 줄 */
+/* 게스트 신원 바 (v1.9) — 방문자 댓글 허용 시 GUEST 칩 + 닉네임 한 줄 */
 .guest-id{display:flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--panel) 55%,transparent)}
 .guest-id .gi-tag{font-size:calc(8.5px*var(--fs,1));letter-spacing:.14em;font-weight:700;color:var(--faint);border:1px dashed var(--line);padding:2.5px 8px;border-radius:999px;flex-shrink:0;font-family:var(--sans)}
 .guest-id input{flex:1;min-width:0;border:none;background:transparent;font-size:calc(11.5px*var(--fs,1));color:var(--ink);font-family:var(--sans);outline:none}
@@ -1695,15 +1576,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .pv-modal .modal-actions{position:sticky;bottom:-24px;margin:20px -24px -24px;padding:12px 24px 18px;background:var(--panel-solid);border-top:1px solid var(--line)}
 .preview-box{border:1.5px dashed var(--line);border-radius:var(--radius-s);padding:16px;min-height:120px;background:#fff}
 .preview-box .pv-label{font-size:calc(10px*var(--fs,1));letter-spacing:.16em;color:var(--faint);margin-bottom:8px}
-/* 방명록 (4.7) */
-.gb-item{padding:16px 18px;border-bottom:1px solid var(--line)}
-.gb-item:last-child{border-bottom:none}
-.gb-item .hd{display:flex;justify-content:space-between;font-size:calc(12px*var(--fs,1));margin-bottom:6px}
-.gb-item .hd b{font-size:calc(13px*var(--fs,1))}
-.gb-item .hd small{color:var(--faint)}
-.gb-item p{font-size:calc(12.5px*var(--fs,1));line-height:1.7;color:#3a3f47;white-space:pre-line}
-.gb-item .reply{margin-top:10px;padding:10px 13px;background:#f2f3f5;border-radius:9px;font-size:calc(12px*var(--fs,1));color:#3a3f47;white-space:pre-line}
-.gb-item .reply b{color:var(--accent);font-size:calc(11px*var(--fs,1));letter-spacing:.05em;display:block;margin-bottom:3px}
 
 /* ---------- 세그먼트 컨트롤 ---------- */
 /* 안 고른 쪽 배경·글씨는 디자인 탭에서 (v2.0 사용자 요청) · 고른 쪽은 진한 버튼색 그대로 */
@@ -1920,20 +1792,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   /* 스티커 메모장 — 리스트를 보드 아래로 (v1.9 사용자 확정) */
   .memo-layout{grid-template-columns:1fr}
   .memoboard{height:440px}
-  /* 스케줄러 — 달력 대신 단순 일정 나열 (v1.9 사용자 확정, cal-mlist는 page.tsx 렌더) */
-  .cal-layout > .panel.cal{display:none}
   /* TRPG 로그 — 필터 사이드는 리스트 아래로 (모바일은 티켓 스킨 대신 기본형, v1.9) */
   .trpg-layout{grid-template-columns:1fr}
 }
-/* 스케줄러 모바일 일정 나열 — PC에서는 숨김 (v1.9) */
-.cal-mlist{display:none}
-@media (max-width:620px){.cal-mlist{display:block}}
-.cal-mlist .ev-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px dashed var(--line);font-size:calc(12.5px*var(--fs,1))}
-.cal-mlist .ev-row:last-child{border-bottom:none}
-.cal-mlist .ev-row .dt{font-size:calc(11px*var(--fs,1));color:var(--sub);letter-spacing:.03em;width:74px;flex-shrink:0}
-.cal-mlist .ev-row .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cal-mlist .ev-row i{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-
 /* 이미지 위젯 슬라이드 표시점 (v2.0) — 배너와 같은 모양, 위젯이 작으니 조금 작게 */
 .deco-dots{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:3}
 .deco-dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.5);box-shadow:0 0 3px rgba(0,0,0,.35);transition:.2s;cursor:pointer}

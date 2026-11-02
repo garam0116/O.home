@@ -11,8 +11,8 @@ export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
   | 'member'                            // 회원정보창 — 추가·삭제 가능 (v2.1 사용자 요청)
   | 'menu' | 'memo' | 'diary' | 'latest'
-  | 'dday' | 'ddaycard' | 'todo' | 'upcoming' | 'freetext' | 'deco' | 'memoboard'
-  | 'apply' | 'search';   // search = 게시판 통합 검색창 · 'image'는 deco(장식 이미지+링크)로 일원화 (v1.9) · apply = 커미션 신청자 (v2.0)
+  | 'dday' | 'ddaycard' | 'todo' | 'freetext' | 'deco' | 'memoboard'
+  | 'search';   // search = 게시판 통합 검색창 · 'image'는 deco(장식 이미지+링크)로 일원화 (v1.9)
 
 export interface WidgetConf {
   id: string;
@@ -51,11 +51,9 @@ export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = 
   dday: { title: '심플 디데이', desc: '디데이 목록 (글자만)' },
   ddaycard: { title: '디데이', desc: '사진 카드형 — 사진 · 이름 · 디데이 · 시작일' },
   todo: { title: 'TO-DO', desc: '관리자 투두 (방문자는 열람만)' },
-  upcoming: { title: 'UPCOMING', desc: '다가오는 일정' },
   freetext: { title: '자유 텍스트', desc: '패널 없이 문구만' },
   deco: { title: '이미지', desc: '패널 없이 이미지만' },
   memoboard: { title: 'STICKY', desc: '스티커 메모 미니보드 — 클릭 시 메모장 (4.6)' },
-  apply: { title: 'COMMISSION', desc: '커미션 신청자 — 마감 빠른 순 (몇 명까지 볼지 설정)' },
   search: { title: 'SEARCH', desc: '전체 글 검색창 — 결과는 게시판 목록(갤러리형 1) 모양으로' },
 };
 
@@ -86,17 +84,18 @@ const DEFAULT_STATE: MainState = {
     { id: 'member', type: 'member', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 0, w: 260, h: 150, settings: {} },
     { id: 'dday', type: 'dday', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 160, w: 260, h: 90, settings: { items: [] } },
     { id: 'todo', type: 'todo', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 260, w: 260, h: 90, settings: { items: [] } },
-    // UPCOMING은 기본 구성에서 제외 — 필요하면 [＋ 위젯]으로 추가 (v1.9: 켬/끔 대신 추가/삭제 모델)
   ],
   mobileOrder: ['menu', 'memo', 'diary', 'latest', 'dday', 'todo'],
 };
 
 const STORAGE_KEY = 'ohome.main.v1';
+/** 없어진 위젯 종류 — 예전 저장분에 남아 있어도 불러올 때 버린다 */
+const REMOVED_TYPES = ['image', 'upcoming', 'apply'];
 /** 편집모드를 지원하는 페이지 (v1.9 — 카드 그리드 드래그 정렬 포함)
  *  /trpg 로그 백업이 빠져 있던 것은 실수 — 드래그 정렬·목록 숨김 확인 모두 이 토글이 있어야 켜진다
  *  (v2.0 사용자 발견 — 목록 숨김 기능을 만들다 보니 편집모드 자체가 이 페이지에서 켜지지 않는 걸 발견) */
-const EDIT_PAGES = ['/', '/comm-apply', '/chars', '/rels', '/comm', '/gallery', '/tchars', '/trpg'];
-const EDIT_PAGE_NAMES = '메인 · 신청자 리스트 · 캐릭터 · 자관 · 커미션 · 갤러리 · TRPG 캐릭터 · TRPG 로그';
+const EDIT_PAGES = ['/', '/chars', '/rels', '/gallery', '/tchars', '/trpg'];
+const EDIT_PAGE_NAMES = '메인 · 캐릭터 · 자관 · 갤러리 · TRPG 캐릭터 · TRPG 로그';
 
 interface MainCtx {
   state: MainState;
@@ -137,12 +136,13 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
       const raw = getRawSetting(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as MainState;
-        // 새 위젯 타입이 추가돼도 기본값과 병합 · 제거된 'image' 위젯은 걸러냄 (v1.9 — deco로 일원화)
+        // 새 위젯 타입이 추가돼도 기본값과 병합 · 제거된 위젯 종류는 걸러냄
+        // ('image'는 deco로 일원화 v1.9 · 'upcoming'·'apply'는 스케줄러·커미션 기능 삭제로 함께 제거)
         // 구 enabled:false(전체 숨김)는 삭제로 이관 — 토글은 이제 모바일 표시만 제어 (v1.9 사용자 확정)
         const removed = new Set(parsed.removedIds ?? []);
         const kept: WidgetConf[] = [];
         for (let w of parsed.widgets) {
-          if ((w.type as string) === 'image') continue;
+          if (REMOVED_TYPES.includes(w.type as string)) continue;
           // 회원정보창은 고정 요소에서 빠짐 (v2.1) — 예전 저장분의 fixed 표시를 걷어내야 삭제할 수 있다
           if (w.type === 'member' && w.fixed) w = { ...w, fixed: undefined };
           if (!w.enabled && !w.fixed) { removed.add(w.id); continue; }

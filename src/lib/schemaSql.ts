@@ -69,14 +69,13 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ── 6. 콘텐츠 테이블 21종 ────────────────────────────────────
+-- ── 6. 콘텐츠 테이블 18종 ────────────────────────────────────
 -- 항목 하나 = 행 하나 (행 단위 권한·실시간). 항목의 세부 필드는 data(jsonb)에 담고,
 -- 권한·정렬·필터에 쓰는 값만 별도 컬럼으로 뽑아 둔다.
 do $$
 declare t text;
 declare content_tables text[] := array[
   'posts',        -- 게시판 글
-  'guestbook',    -- 방명록
   'characters',   -- 캐릭터
   'relations',    -- 자관
   'gallery',      -- 그림 백업(갤러리)
@@ -88,8 +87,6 @@ declare content_tables text[] := array[
   'threads',      -- 감상타래
   'diary',        -- 다이어리
   'memos',        -- 스티커 메모
-  'commissions',  -- 커미션
-  'applicants',   -- 신청자
   'comments',     -- 댓글 (v2.0 — 글 안이 아니라 자기 행으로. 글을 수정하지 않고 댓글을 달 수 있게)
   'rp_messages'   -- 역극 발화 (v2.0 — 같은 이유로 방 안이 아니라 자기 행으로)
 ];
@@ -124,7 +121,7 @@ begin
         or public.is_admin()
       )$p$, t);
 
-    -- 쓰기: 로그인 회원 (방명록만 아래에서 비로그인 허용으로 덮어씀)
+    -- 쓰기: 로그인 회원 (댓글만 아래에서 비로그인 허용으로 덮어씀)
     execute format('drop policy if exists "insert" on public.%I', t);
     execute format($p$
       create policy "insert" on public.%I for insert to authenticated with check (true)$p$, t);
@@ -144,11 +141,7 @@ begin
   end loop;
 end $$;
 
--- 방명록·게시판 댓글은 비로그인 방문자도 남길 수 있음 (닉네임+비밀번호 방식)
-drop policy if exists "insert" on public.guestbook;
-create policy "insert" on public.guestbook for insert with check (true);
-
--- 댓글도 비로그인 방문자가 남길 수 있다 (닉네임+비밀번호 방식 — 방명록과 동일, v2.0).
+-- 댓글은 비로그인 방문자도 남길 수 있다 (닉네임 방식, v2.0).
 -- 수정·삭제는 위 공통 정책 그대로: 작성자 본인 또는 관리자.
 drop policy if exists "insert" on public.comments;
 create policy "insert" on public.comments for insert with check (true);
@@ -234,7 +227,7 @@ do $$
 declare t text;
 begin
   -- 발화·댓글이 각자 행으로 분리됐으므로(v2.0) 실시간도 그 테이블을 봐야 한다
-  foreach t in array array['rp_rooms', 'rp_messages', 'relations', 'posts', 'comments', 'guestbook'] loop
+  foreach t in array array['rp_rooms', 'rp_messages', 'relations', 'posts', 'comments'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when others then null;  -- 이미 추가돼 있으면 무시

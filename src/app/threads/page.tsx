@@ -231,7 +231,7 @@ function ThreadsPageInner() {
   const [cmt, setCmt] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [gName, setGName] = useState('');
-  const guestMode = !user;                       // 손님 작성 허용 (방명록·로드비 기본과 동일)
+  const guestMode = !user;                       // 손님 작성 허용 (로드비 기본과 동일)
   const comments = sel ? commentsFor(cmtRows, 'thread', sel.id) : [];
   const addComment = () => {
     if (!sel || !cmt.trim()) return;

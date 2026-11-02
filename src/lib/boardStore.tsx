@@ -31,7 +31,7 @@ export const DEFAULT_GALLERY_CATS: BoardBadge[] = ['합작', '낙서', '커미�
 export interface BoardSettings {
   system: BoardBadge[]; gallery: BoardBadge[]; galleryCats: BoardBadge[];
   /** 갤러리마다 따로 쓰는 말머리 (v2.0 사용자 요청) — 정한 적 없으면 기본 갤러리 것을 그대로.
-   *  새로 만들자마자 말머리가 비면 글부터 못 쓴다(감상타래·스케줄러와 같은 규칙). */
+   *  새로 만들자마자 말머리가 비면 글부터 못 쓴다(감상타래와 같은 규칙). */
   secGalleryCats?: Record<string, BoardBadge[]>;
   /** 게시판 목록 한 페이지에 보일 글 수 (v2.3 사용자 요청) — 모든 게시판 공통. 비우면 10 */
   perPage?: number;

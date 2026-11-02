@@ -29,7 +29,7 @@ function RoadBlock({ item, comments, onComment, onEditComment, onDeleteComment, 
   onEditComment: (id: string, cid: string, text: string) => void;
   onDeleteComment: (id: string, cid: string) => void;
   canComment: boolean;
-  guestMode: boolean;                                   // 비로그인 방문자 작성 (닉네임+비밀번호 — 방명록 4.7과 동일)
+  guestMode: boolean;                                   // 비로그인 방문자 작성 (닉네임)
   editLevel: (c: Comment) => 'free' | 'pw' | null;      // 수정 — 본인만 (게스트는 비밀번호)
   delLevel: (c: Comment) => 'free' | 'pw' | null;       // 삭제 — 본인·관리자 (게스트는 비밀번호)
   canEditItem: boolean;                                 // 그림 수정 — 작성자 본인만 (v1.9)
