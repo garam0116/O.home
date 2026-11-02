@@ -25,7 +25,21 @@ export interface SiteSettings {
   // 환경설정 왼쪽 메뉴에서 「보관」한 탭 이름 (v2.3 사용자 요청) — 메뉴 맨 아래 보관함에 접어 둔다.
   // 숨기기만 하고 그 탭의 설정값은 그대로 둔다. 디자인 탭 SAVE와 무관하게 누르는 즉시 저장
   setArchived?: string[];
+  // 모바일 메뉴 모양 (v2.9 사용자 요청) — 휴대폰에서 ≡를 눌렀을 때 열리는 패널. 비우면 accordion
+  mNav?: MobileNavStyle;
+  // Cover 모양에서 쓰는 상위 메뉴별 커버 이미지 — 메뉴 트리 그룹 id → 파일 주소.
+  // 다른 모양을 골라도 지우지 않고 보관한다(다시 Cover를 고르면 그대로 쓰임)
+  mNavCovers?: Record<string, string>;
 }
+
+/** 모바일 메뉴 모양 4종 (v2.9) — Accordion · Stage · Cover · Ledger */
+export type MobileNavStyle = 'accordion' | 'stage' | 'cover' | 'ledger';
+export const MOBILE_NAV_STYLES: { value: MobileNavStyle; label: string; desc: string }[] = [
+  { value: 'accordion', label: 'Accordion', desc: '지금 메뉴만 펼침' },
+  { value: 'stage', label: 'Stage', desc: '가운데 정렬 · 별 장식' },
+  { value: 'cover', label: 'Cover', desc: '왼쪽 메뉴 · 오른쪽 커버' },
+  { value: 'ledger', label: 'Ledger', desc: '상단바 아래 줄 목록' },
+];
 
 /** 게시판 본문 폭 기본값·범위 (v2.3) — 디자인 탭 입력칸과 적용부가 같은 값을 본다 */
 export const BOARD_W = { def: 700, min: 480, max: 1180 } as const;

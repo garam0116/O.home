@@ -3,6 +3,8 @@
 // ※ 프로토타입의 「로그인」 gnb 항목은 임시 배치 — 실제로는 우상단 사용자 영역에 표시 (3장 주석)
 // TODO(환경설정 메뉴 관리): 관리자가 이 구조를 GUI로 편집 → DB 저장으로 이전
 export interface MenuItem {
+  /** 메뉴 트리의 상위 항목 id — 모바일 메뉴 Cover의 메뉴별 커버 이미지를 이 id로 찾는다 */
+  id?: string;
   label: string;
   href?: string;             // 하위가 없는 단독 메뉴
   children?: { label: string; href: string }[];

@@ -1,9 +1,10 @@
 'use client';
 // 상단바·메뉴 카드(PC 2단형, v2.7) 공용 — 메뉴 구성 · 이동 규칙 · 사용자 영역(프로필 드롭다운)
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { boardEntries, useMenuSettings, buildMenu } from '@/lib/menuStore';
-import { useBoards } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID } from '@/lib/boardStore';
+import { useLocalList, BOARD_SEED, type Post } from '@/lib/postStore';
 import { useSections, sectionMenuEntries } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries } from '@/lib/linkStore';
 import { useAuth } from '@/lib/auth';
@@ -25,6 +26,21 @@ export function useSiteMenu(): { menu: SiteMenuItem[]; ready: boolean } {
     ? buildMenu(menuSet, [...boardEntries(boards), ...sectionMenuEntries(secMap), ...linkEntries(links)], { loggedIn: !!user, isAdmin, id: user?.id })
     : [];
   return { menu, ready };
+}
+
+/** 게시판 메뉴 글 수 — 게시판 주소(href) → 그 게시판에 속한 글 전체 수. 게시판 목록과 같은 기준.
+ *  메뉴 카드(PC)와 모바일 메뉴가 같이 쓴다. 글을 아직 못 읽었으면 빈 맵 */
+export function useBoardCounts(): Map<string, number> {
+  const { boards } = useBoards();
+  const [posts, , postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
+  return useMemo(() => {
+    const m = new Map<string, number>();
+    if (!postsLoaded) return m;
+    const per = new Map<string, number>();
+    for (const p of posts) { const b = p.boardId ?? MAIN_BOARD_ID; per.set(b, (per.get(b) ?? 0) + 1); }
+    for (const b of boards) m.set(boardHref(b.id, boards), per.get(b.id) ?? 0);
+    return m;
+  }, [posts, postsLoaded, boards]);
 }
 
 /**

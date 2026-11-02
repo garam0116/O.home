@@ -10,12 +10,15 @@ import { useMainStore } from '@/lib/mainStore';
 import { useBlobUrl } from '@/lib/blobStore';
 import { KToggle } from '@/components/ui/Kit';
 import { isRailPage } from '@/lib/widgetZone';
-import { useSiteMenu, useSiteNav, UserArea, useBrandFit, type SiteMenuItem } from './siteNav';
+import { useSiteMenu, useSiteNav, UserArea, useBrandFit } from './siteNav';
+import { MobileNav } from './MobileNav';
 
 export function TopBar() {
   const { state, editOn, gridOn, setGridOn, requestExit, setCenterAlign } = useMainStore();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);       // 모바일 메뉴 패널 (≡) — 메뉴리스트 위젯 대체
+  const [navTop, setNavTop] = useState(0);             // 상단바 아래쪽 — Ledger 모양이 그 아래로 내려온다
+  const headerRef = useRef<HTMLElement>(null);
   // 메뉴 관리(5.2)·다중 게시판·섹션·커스텀 링크 — 메뉴 카드(PC 2단형)와 공용 (v2.7)
   const { menu } = useSiteMenu();
   const [site, , siteLoaded] = useSiteSettings();    // 로고 텍스트/서브/정렬 (5.2)
@@ -83,7 +86,7 @@ export function TopBar() {
   const moreMenu = menu.slice(visCount);
 
   return (
-    <header className="topbar">
+    <header className={`topbar ${navOpen ? 'm-nav-on' : ''}`} ref={headerRef}>
       {/* 로고 — 텍스트·서브타이틀·정렬은 환경설정 > 디자인 (5.2) */}
       {/* 로고 이미지 (v2.2) — 지정하면 텍스트 대신 이미지 · 모바일용이 따로 있으면 620px 이하에서 교체.
           텍스트 로고는 폭이 모자라면 글자 크기·간격을 함께 줄여 맞춘다 (useBrandFit) */}
@@ -192,57 +195,24 @@ export function TopBar() {
       <UserArea nav={nav} onOpen={() => setNavOpen(false)} />
 
       {/* 모바일 메뉴 버튼 — 아이콘: Lucide 「menu」 (ISC 라이선스) */}
-      <button className="m-nav-btn" aria-label="메뉴 열기" aria-expanded={navOpen}
-        onClick={() => setNavOpen(o => !o)}>
+      <button className="m-nav-btn" aria-label={navOpen ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={navOpen}
+        onClick={() => {
+          setNavTop(Math.max(0, Math.round(headerRef.current?.getBoundingClientRect().bottom ?? 0)));
+          setNavOpen(o => !o);
+        }}>
+        {/* 열려 있으면 × (Ledger는 상단바가 보이는 채로 열리므로 같은 자리에서 닫는다) */}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" />
+          {navOpen
+            ? <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>
+            : <><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></>}
         </svg>
       </button>
       {/* 상단바에 backdrop-filter가 있어 fixed 패널이 바 안에 갇히므로 body로 내보낸다 */}
       {navOpen && createPortal(
-        <MobileNav menu={menu} pathname={pathname} onNav={href => { setNavOpen(false); nav(href); }} onClose={() => setNavOpen(false)} />,
+        <MobileNav menu={menu} pathname={pathname} topOffset={navTop} onNav={href => { setNavOpen(false); nav(href); }} onClose={() => setNavOpen(false)} />,
         document.body,
       )}
     </header>
-  );
-}
-
-type MenuItem = SiteMenuItem;
-
-/** 모바일 메뉴 패널 — 오른쪽에서 열림. 하위 메뉴는 펼침/접힘, 현재 페이지가 속한 그룹은 처음부터 펼침 */
-function MobileNav({ menu, pathname, onNav, onClose }: {
-  menu: MenuItem[]; pathname: string; onNav: (href: string) => void; onClose: () => void;
-}) {
-  const cur = pathname + (typeof window !== 'undefined' ? window.location.search : '');
-  const isCur = (href?: string) => !!href && (href === cur || href === pathname);
-  const [open, setOpen] = useState<string | null>(() => menu.find(m => m.children?.some(c => isCur(c.href)))?.label ?? null);
-  return (
-    <div className="m-nav" role="dialog" aria-modal="true" aria-label="메뉴">
-      <div className="m-nav-dim" onClick={onClose} />
-      <nav className="m-nav-panel">
-        <div className="m-nav-head">
-          <button className="m-nav-x" aria-label="메뉴 닫기" onClick={onClose}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </button>
-        </div>
-        <div className="m-nav-list">
-          {menu.map(m => m.children ? (
-            <div key={m.label} className={`m-nav-grp ${open === m.label ? 'open' : ''} ${m.children.some(c => isCur(c.href)) ? 'on' : ''}`}>
-              <button className="m-nav-top" aria-expanded={open === m.label}
-                onClick={() => setOpen(o => (o === m.label ? null : m.label))}>{m.label}</button>
-              <div className="m-nav-sub">
-                {m.children.map(c => (
-                  <button key={c.href} className={isCur(c.href) ? 'on' : ''} onClick={() => onNav(c.href)}>{c.label}</button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <button key={m.label} className={`m-nav-top ${isCur(m.href) ? 'on' : ''}`} onClick={() => onNav(m.href!)}>{m.label}</button>
-          ))}
-        </div>
-      </nav>
-    </div>
   );
 }

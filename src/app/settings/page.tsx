@@ -30,7 +30,7 @@ import { FEATURES } from '@/lib/menu';
 import { SectionsBlock } from '@/components/settings/SectionList';
 import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection, cleanSlug } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
-import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf } from '@/lib/siteStore';
+import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf, MOBILE_NAV_STYLES } from '@/lib/siteStore';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
@@ -419,6 +419,9 @@ function DesignPane() {
           <CP label="호버" k="ddHv" />
         </div>
       </div>
+
+      {/* 모바일 메뉴 모양 (v2.9 사용자 요청) — Cover를 고르면 상위 메뉴별 커버 이미지 칸이 이어서 나온다 */}
+      <MobileNavRow />
 
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>페이지 타이틀</b><small>각 메뉴 상단 큰 제목과 설명 문구</small></div>
@@ -1315,6 +1318,87 @@ function SiteImageControl({ field, accept, emptyText, failText, wide }: {
 function FaviconControl() {
   return <SiteImageControl field="favicon" emptyText="기본" failText="아이콘"
     accept="image/png,image/x-icon,image/svg+xml,image/webp,.ico" />;
+}
+
+/** 모바일 메뉴 모양 (v2.9 사용자 요청) — 휴대폰 ≡ 패널 4종 중 하나. 디자인 탭 SAVE로 저장 (사이트 드래프트) */
+function MobileNavRow() {
+  const { site, set } = useSiteDraft();
+  const cur = site.mNav ?? 'accordion';
+  return (
+    <>
+      <div className="set-row" style={{ flexWrap: 'wrap' }}>
+        <div className="l"><b>모바일 메뉴</b><small>휴대폰에서 ≡를 눌렀을 때 열리는 메뉴 모양 — 색은 하위메뉴 드롭다운, 강조는 포인트 컬러를 따름 · 게시판 메뉴에는 글 수 표시</small></div>
+        <div className="mnav-opts" role="radiogroup" aria-label="모바일 메뉴 모양">
+          {MOBILE_NAV_STYLES.map(o => (
+            <button key={o.value} type="button" role="radio" aria-checked={cur === o.value}
+              className={`mnav-opt ${cur === o.value ? 'on' : ''}`} title={o.desc}
+              onClick={() => set({ mNav: o.value })}>
+              <span className={`mnav-th mnav-th-${o.value}`} aria-hidden><i /><i /><i /><i /><i /></span>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {cur === 'cover' && <MobileNavCovers />}
+    </>
+  );
+}
+
+/** Cover 모양의 상위 메뉴별 커버 이미지 — 메뉴 트리 그룹(하위가 있는 상위 메뉴)마다 하나. 비우면 이름만 표시 */
+function MobileNavCovers() {
+  const { site, set } = useSiteDraft();
+  const [ms] = useMenuSettings();
+  const groups = (ms.tree ?? defaultTree()).filter(g => !g.href);
+  const setCover = (id: string, ref: string | undefined) => {
+    const next = { ...(site.mNavCovers ?? {}) };
+    if (ref) next[id] = ref; else delete next[id];
+    set({ mNavCovers: next });
+  };
+  return (
+    <div className="set-row" style={{ flexWrap: 'wrap' }}>
+      <div className="l"><b>모바일 메뉴 커버</b><small>Cover 모양에서 상위 메뉴를 고르면 오른쪽 위에 깔리는 이미지 — 가로로 긴 사진 권장 · 비워 두면 메뉴 이름만 크게 표시 · 다른 모양으로 바꿔도 지우지 않고 보관</small></div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'flex-end', flex: 1 }}>
+        {groups.length === 0 && <small style={{ color: 'var(--faint)' }}>하위 메뉴가 있는 상위 메뉴가 없습니다</small>}
+        {groups.map(g => (
+          <CoverPick key={g.id} label={g.label} value={site.mNavCovers?.[g.id]} onChange={ref => setCover(g.id, ref)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CoverPick({ label, value, onChange }: { label: string; value?: string; onChange: (ref: string | undefined) => void }) {
+  const toast = useToast();
+  const url = useBlobUrl(value);
+  const imageSource = useImageSource(u => onChange(u));
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div style={{ display: 'grid', gap: 5, justifyItems: 'center' }} onDragOver={e => e.preventDefault()} {...imageSource.handlers}>
+      <button type="button" onClick={() => inputRef.current?.click()} title={`${label} 커버 ${value ? '바꾸기' : '올리기'}`}
+        style={{
+          width: 96, height: 56, borderRadius: 'var(--radius-s)', border: `1px ${url ? 'solid' : 'dashed'} var(--line)`,
+          background: url ? `center/cover no-repeat url("${url}")` : 'var(--panel)', display: 'grid', placeItems: 'center',
+          color: 'var(--faint)', fontSize: 16, cursor: 'pointer',
+        }}>{url ? '' : '＋'}</button>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={async e => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (!f) return;
+          try { onChange(await putBlob(f)); } catch (err) {
+            toast(`커버 이미지를 저장소에 올리지 못했습니다 — ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }} />
+      <small style={{ fontSize: 11, maxWidth: 96, textAlign: 'center', wordBreak: 'break-word' }}>{label}</small>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 10 }} onClick={() => imageSource.open()}>🔗 URL</button>
+        {value && (
+          <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 10 }} onClick={() => onChange(undefined)}>REMOVE</button>
+        )}
+      </div>
+      {imageSource.element}
+    </div>
+  );
 }
 
 /** 로고 이미지 (v2.2 사용자 요청) — 텍스트 로고가 좁은 화면에서 잘릴 때 대신 쓰는 이미지. PC/모바일 따로 */
@@ -2948,7 +3032,7 @@ function SettingsInner() {
     const onCapture = (e: MouseEvent) => {
       if (!themeRef.current.dirty) return;
       const t = e.target as HTMLElement | null;
-      const hit = t?.closest?.('.topbar a, .topbar button, .topbar .brand, .m-nav-list button') as HTMLElement | null;
+      const hit = t?.closest?.('.topbar a, .topbar button, .topbar .brand, .m-nav-go') as HTMLElement | null;
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
