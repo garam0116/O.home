@@ -16,6 +16,8 @@ import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { GuestIdBar } from '@/components/ui/GuestId';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { CropImg } from '@/components/ui/CropEditor';
+import { useBlobUrl } from '@/lib/blobStore';
 import { commentTargetMeta } from '@/lib/visFloor';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
@@ -53,6 +55,8 @@ export default function BoardDetailPage() {
   const blocked = useHrefBlock(post && boardHref(bid, boards));
   // loaded 이후에만 본문 렌더 (SSR/하이드레이션 불일치 방지)
   const html = useMemo(() => (post && loaded ? renderBody(post.mode, post.body) : ''), [post, loaded]);
+  // 상단 헤더 그림 = 글쓰기에서 지정한 대표 썸네일 (v2.7) — 훅이라 early return보다 먼저
+  const thumbUrl = useBlobUrl(post?.thumbSrc);
 
   // 막힌 곳이면 여기서 되돌아간다 — 훅을 모두 부른 뒤여야 렌더마다 개수가 같다
   if (blocked) return blocked;
@@ -154,31 +158,36 @@ export default function BoardDetailPage() {
 
   return (
     <section className="page board-detail">
-      <div className="page-head">
-        <PageTitle href={boardHref(board.id, boards)}>{boardTitle}</PageTitle>
-        {/* 글쓴이·작성일은 제목 바로 아래에 이미 있다 — 게시판명 아래 중복 표기는 없앴다 (사용자 요청) */}
-      </div>
-
+      {/* 게시판 이름은 박스 바깥 큰 제목 대신 헤더 안 라벨로 (v2.7 사용자 요청) */}
       <div className="panel board-post">
-        <h2 style={{ fontSize: 19, marginBottom: 4 }}>
-          {post.secret && '🔒 '}{post.title}
-        </h2>
-        <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
-          {post.notice ? '공지 · ' : ''}{post.author} · {fmtListDate(post.date)}
-          {/* EDIT/DELETE — 큰 제목 옆이 아니라 작성자·작성일 옆에 같은 글씨 크기로 (사용자 요청).
-              수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
-          {isAuthor && (
-            <button className="btn btn-dark post-meta-btn" onClick={() => router.push(`/board/${no ?? post.id}/edit`)}>EDIT</button>
+        {/* 썸네일 헤더 (v2.7 사용자 요청) — 대표 썸네일이 박스 맨 위를 가로로 꽉 채우고 아래로 흐려진다.
+            흐림은 색을 덧칠하지 않고 그림 자체를 마스크로 지워서, 뒤의 박스색(라이트·다크·투명도)에 그대로 녹아든다.
+            모바일은 화면 가로 전체(여백 없이). 썸네일이 없으면 라벨과 제목만 */}
+        <div className={`post-hd${thumbUrl ? '' : ' no-img'}`}>
+          {thumbUrl && <div className="post-hd-img"><CropImg src={thumbUrl} crop={post.thumbCrop} /></div>}
+          <div className="post-hd-tx">
+            <div className="post-hd-board"><PageTitle href={boardHref(board.id, boards)}>{boardTitle}</PageTitle></div>
+            <h2 className="post-hd-title">{post.secret && '🔒 '}{post.title}</h2>
+          </div>
+        </div>
+        <div className="post-meta">
+          <p>
+            {post.notice ? '공지 · ' : ''}{post.author} · {fmtListDate(post.date)}
+            {/* EDIT/DELETE — 작성자·작성일 옆에 같은 글씨 크기로 (사용자 요청).
+                수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
+            {isAuthor && (
+              <button className="btn btn-dark post-meta-btn" onClick={() => router.push(`/board/${no ?? post.id}/edit`)}>EDIT</button>
+            )}
+            {canManage && (
+              <button className="btn btn-dark post-meta-btn" onClick={() => setDelAsk(true)}>DELETE</button>
+            )}
+            {/* 작성 방식(HTML/MD)은 표시하지 않는다 (사용자 요청) — 수정 화면은 원래 방식으로 열린다 */}
+          </p>
+          {/* 태그 (v2.0) — EDIT/DELETE 옆이 아니라 아랫줄에 따로 (v2.7 사용자 요청) */}
+          {(post.tags ?? []).length > 0 && (
+            <p className="post-tags">{(post.tags ?? []).map(t => <span key={t}>#{t}</span>)}</p>
           )}
-          {canManage && (
-            <button className="btn btn-dark post-meta-btn" onClick={() => setDelAsk(true)}>DELETE</button>
-          )}
-          {/* 작성 방식(HTML/MD)은 표시하지 않는다 (사용자 요청) — 수정 화면은 원래 방식으로 열린다 */}
-          {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
-          {(post.tags ?? []).map(t => (
-            <span key={t} style={{ marginLeft: 7, color: 'color-mix(in srgb,var(--accent) 65%,var(--faint))' }}>#{t}</span>
-          ))}
-        </p>
+        </div>
 
         {/* 접기 (6.2) — 흐림 커버, 클릭 시 표시 */}
         <div className={`veil ${!post.fold || open ? 'open' : ''}`}>
