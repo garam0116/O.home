@@ -1300,6 +1300,29 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .bgal-tx b{font-size:calc(12.5px*var(--fs,1))}
 }
 .board-post{padding:26px 28px}
+/* 글 상단 썸네일 헤더 (v2.7 사용자 요청) — 대표 썸네일이 박스 맨 위를 가로로 꽉 채우고 아래로만 흐려진다.
+   흐림은 색을 덧칠하지 않고 그림을 마스크로 지우므로, 비치는 색이 곧 박스색(라이트·다크·본문 박스 투명도)이다.
+   게시판 이름(양옆 가는 선)·세리프 제목·작성자 줄은 가운데 정렬. 태그는 EDIT/DELETE 아랫줄 */
+.post-hd{position:relative;isolation:isolate;margin:-26px -28px 0;height:260px;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+.post-hd-img{position:absolute;inset:0;z-index:-1;-webkit-mask-image:linear-gradient(#000 38%,transparent 92%);mask-image:linear-gradient(#000 38%,transparent 92%)}
+.post-hd-tx{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 28px 12px;min-width:0}
+.post-hd.no-img{height:auto;margin:0;border-radius:0;overflow:visible}
+.post-hd.no-img .post-hd-tx{padding:0 0 4px}
+.post-hd-board h1{display:flex;align-items:center;gap:10px;margin:0 0 6px;padding-left:.34em;font-family:var(--serif);font-size:calc(12.5px*var(--fs,1));font-weight:600;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);cursor:pointer;user-select:none;transition:opacity .15s}
+.post-hd-board h1::before,.post-hd-board h1::after{content:"";width:26px;height:1px;background:currentColor;opacity:.7;flex:none}
+.post-hd-board h1:hover{opacity:.75}
+.post-hd-title{margin:0;font-family:var(--serif);font-size:calc(33px*var(--fs,1));font-weight:600;letter-spacing:.02em;line-height:1.3;text-wrap:balance;word-break:keep-all;overflow-wrap:anywhere}
+.post-meta{display:flex;flex-direction:column;align-items:center;gap:5px;margin:4px 0 20px;font-size:calc(11px*var(--fs,1));color:var(--faint);text-align:center}
+.post-meta p{margin:0}
+.post-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:3px 7px;color:color-mix(in srgb,var(--accent) 65%,var(--faint))}
+@media(max-width:620px){
+  /* 모바일은 헤더가 화면 가로 전체 — 위(16px)·양옆(8px) 여백까지 덮고 둥글림 없음 */
+  .board-detail>.board-post{overflow:visible}
+  .post-hd{margin:-16px -8px 0;height:240px;border-radius:0}
+  .post-hd.no-img{margin:0}
+  .post-hd-tx{padding:0 16px 10px}
+  .post-hd-title{font-size:calc(26px*var(--fs,1))}
+}
 .board-comments-body{padding:16px 18px}
 @media(max-width:620px){
   /* 박스 없는 전체화면은 그대로, 뒤에 흰 배경(80%)을 깐다 (사용자 요청) */
