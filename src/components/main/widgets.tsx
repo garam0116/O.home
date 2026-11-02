@@ -279,10 +279,9 @@ export function DdayWidget({ conf }: { conf: WidgetConf }) {
   const dColor = conf.settings.color as string | undefined;
   useEditEvent(conf.id, () => setOpen(true));   // 편집모드 우클릭 → 설정 (v1.9)
   return (
-    <div className="panel widget dday-wgt" style={{ cursor: isAdmin ? 'pointer' : undefined }}
+    <div className="panel widget" style={{ cursor: isAdmin ? 'pointer' : undefined }}
       onClick={e => { if ((e.target as HTMLElement).closest('.modal-ov')) return; if (isAdmin && !editOn) setOpen(true); }}>
       <h4>D-DAY {isAdmin && <span className="more">관리 ›</span>}</h4>
-      <div className="dday-list">
       {items.map(it => {
         const d = ddayLabel(it.date, it.plusOne);
         return (
@@ -293,7 +292,6 @@ export function DdayWidget({ conf }: { conf: WidgetConf }) {
           </div>
         );
       })}
-      </div>
       {items.length === 0 && <p className="hint">등록된 D-day가 없습니다</p>}
 
       <Modal open={open} onClose={() => setOpen(false)} title="심플 디데이 관리"

@@ -777,20 +777,14 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 .widget h4{font-size:calc(11.5px*var(--fs,1));letter-spacing:.12em;color:var(--wg-title);margin-bottom:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
 .widget h4 .more{font-size:calc(10px*var(--fs,1));color:var(--wg-title);cursor:pointer;flex-shrink:0;white-space:nowrap}
 .main-grid .g2{align-items:start}
-/* 심플 디데이: 위젯 높이를 줄이면 목록만 스크롤 — 줄 높이·글자 크기는 그대로, 마지막 줄이 잘리지 않음 */
-.dday-wgt{display:flex;flex-direction:column}
-.dday-wgt h4{flex:none}
-.dday-list{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
-.dday-list::-webkit-scrollbar{display:none}
 .dday-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:calc(12.5px*var(--fs,1))}
 .dday-row:last-child{border:none}
 .dday-row b{font-family:var(--serif);font-size:calc(15px*var(--fs,1));letter-spacing:.05em}
 .dday-row .d-red{color:var(--accent)}
 /* 디데이 사진 카드 — 사진 위에 이름(왼쪽 위) · 디데이(오른쪽 아래) · 시작일 */
-/* 세로 flex + 카드 flex:none — 위젯 높이를 줄여도 카드가 비율(DDAY_CARD_RATIO) 그대로 아래로 이어지고 스크롤된다.
+/* 세로 flex + 카드 flex:none — 카드가 비율(DDAY_CARD_RATIO) 그대로 아래로 이어진다.
    (grid였을 때는 카드의 container-type 때문에 행 높이가 0까지 줄어들 수 있어, 고정 높이에서 카드끼리 겹쳤다) */
-.ddc-wgt{display:flex;flex-direction:column;gap:10px;height:100%;overflow-y:auto;scrollbar-width:none}
-.ddc-wgt::-webkit-scrollbar{display:none}
+.ddc-wgt{display:flex;flex-direction:column;gap:10px}
 .ddc-card{position:relative;border-radius:var(--radius);overflow:hidden;container-type:inline-size;box-shadow:0 2px 8px rgba(0,0,0,.08);flex:none}
 .ddc-bg{position:absolute;inset:0}
 .ddc-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,0) 45%,rgba(0,0,0,.32) 100%);pointer-events:none}
@@ -827,6 +821,8 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 /* 크기 지정(동결/리사이즈)된 프레임: 내부 블록이 프레임을 꽉 채움 — 핸들을 늘리면 위젯도 같이 늘어남 */
 .wgt.sized > *:first-child{width:100%;height:100%}
 .wgt.sized > .widget{margin-bottom:0}
+/* 높이 자동 위젯(디데이 2종): 저장 높이를 쓰지 않고 내용만큼 아래로 길어진다 — 가로만 조절, 캔버스(페이지)가 따라 늘어남 */
+.wgt.sized.auto-h > *:first-child{height:auto}
 body.edit-on .page-main-wrap .wgt{outline:1.5px dashed rgba(201,106,115,.6);outline-offset:3px;cursor:grab;user-select:none}
 /* 드래그 중 커서가 위젯 내부 요소(버튼·링크)를 지나며 모양이 튀지 않게 — 영역 전체 통일
    핸들(.rs·.rr)은 제외 — 자기 커서를 쓴다 */
