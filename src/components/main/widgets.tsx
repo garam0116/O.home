@@ -191,8 +191,11 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   const { boards } = useBoards();
   const [menuSet] = useMenuSettings();
+  const { familyOf } = useFonts();
   const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
   const set = conf.settings as LatestSet;
+  // 지정 안 하면 CSS 기본(타이틀 폰트)을 그대로 둔다
+  const fontOf = (id?: string) => (id ? { fontFamily: familyOf(id) } : undefined);
   const count = latestCountOf(set);
   const nums = postNumbers(posts);
   const seen = new Map(boards.filter(b => canViewHref(menuSet, boardHref(b.id, boards), viewer)).map(b => [b.id, b]));
@@ -203,16 +206,16 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
     .slice(0, count);
   return (
     <div className={`new-wgt${set.titleAlign === 'align' ? ' align' : ''}`} style={{ color: freeTextColor(set) }}>
-      <div className="new-lbl">LATEST</div>
+      <div className="new-lbl" style={fontOf(set.lblFontId)}>LATEST</div>
       <div className="new-list">
       {latest.map(p => {
         const readable = canRead(p);
         return (
           <div key={p.id} className={`new-row${readable ? '' : ' locked'}`}
             onClick={() => { if (readable) router.push(postHref(p, nums)); }}>
-            <span className="new-cat">{seen.get(p.boardId ?? MAIN_BOARD_ID)?.name}</span>
+            <span className="new-cat" style={fontOf(set.catFontId)}>{seen.get(p.boardId ?? MAIN_BOARD_ID)?.name}</span>
             <span className="new-ttl">{readable ? p.title : '비밀글입니다'}</span>
-            <span className="new-dt">{latestDate(p.date, set.dateFmt)}</span>
+            <span className="new-dt" style={fontOf(set.dateFontId)}>{latestDate(p.date, set.dateFmt)}</span>
           </div>
         );
       })}

@@ -170,7 +170,7 @@ function FontRoleRow({ role }: { role: FontRole }) {
         <KSelect minWidth={170} value={cfg.id} onChange={v => setRole(role, { id: v })}
           options={[
             ...(role === 'dropdown' ? [{ value: FOLLOW_MENU, label: <span>메뉴 폰트와 동일</span> }] : []),
-            ...(role === 'pagetitle' ? [{ value: FOLLOW_TITLE, label: <span>타이틀 폰트와 동일</span> }] : []),
+            ...(role === 'pagetitle' || role === 'posttitle' ? [{ value: FOLLOW_TITLE, label: <span>타이틀 폰트와 동일</span> }] : []),
             ...fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> })),
           ]} />
         {/* 굵기 — 폰트 선택·크기와 한 줄이라 버튼 나열 대신 선택창 (줄바꿈 방지) */}
@@ -517,6 +517,7 @@ function DesignPane() {
       <FontRoleRow role="logosub" />
       <FontRoleRow role="menu" />
       <FontRoleRow role="dropdown" />
+      <FontRoleRow role="posttitle" />
       <FontRoleRow role="body" />
 
       <div className="set-row">
