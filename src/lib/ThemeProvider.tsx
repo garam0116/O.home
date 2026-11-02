@@ -9,6 +9,7 @@ import {
   ThemeMode, PointTone, ThemeVars, ThemeState, ThemeStore, ThemePreset,
   DARK_THEME, DEFAULT_THEME_STORE, defaultVarsFor, derivePointTheme, themeToCssVars,
   composeVars, sharedEdits,
+  migrateLegacyBg,
 } from './theme';
 import { newId } from './postStore';
 import { getBlob } from './blobStore';
@@ -51,8 +52,8 @@ const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => {
     ...DEFAULT_THEME_STORE,
     ...(s ?? {}),
     perMode: {
-      light: { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) },
-      dark: { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) },
+      light: migrateLegacyBg('light', { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) }),
+      dark: migrateLegacyBg('dark', { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) }),
       point: { ...DEFAULT_THEME_STORE.perMode.point, ...(s?.perMode?.point ?? {}) },
       custom: { ...DEFAULT_THEME_STORE.perMode.custom, ...(s?.perMode?.custom ?? {}) },
     },
