@@ -23,6 +23,7 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { BackArrow } from '@/components/ui/BackArrow';
 import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { useNoKey, maxNo } from '@/lib/itemNo';
@@ -449,7 +450,10 @@ export default function RelDetailPage() {
         </div>
       )}
 
-      {/* 관리자 액션 (좌상단) */}
+      {/* 왼쪽 위 — 뒤로가기(누구에게나, v2.8) + 관리자 액션.
+          자관 상세는 PC 2단형이어도 1단형으로 두므로(3열이 너무 좁아짐) 목록으로 돌아갈 길을 여기 둔다 */}
+      <div className="rel-tl">
+      <BackArrow fallback={tt.href} />
       {isAdmin && (
         <div className="rel-admin-actions">
           {/* AU 선택 중이면 그 AU의 일러·캐치프레이즈를 편집 (v1.9) */}
@@ -466,6 +470,7 @@ export default function RelDetailPage() {
           </button>
         </div>
       )}
+      </div>
 
       {/* AU 하나만 삭제 (v2.0 사용자 발견) — 자관 삭제와 확실히 구분되게 무엇이 남는지까지 적는다 */}
       <ConfirmModal open={auDelAsk !== null}

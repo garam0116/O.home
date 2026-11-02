@@ -78,3 +78,13 @@ export function isRailPage(pathname: string): boolean {
   if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
   return true;
 }
+
+/** PC 2단형일 때 다른 위젯 없이 메뉴 카드만 띄우는 페이지 (v2.8 사용자 요청) — 레일 없는 페이지 중
+ *  자관 목록(섹션 목록 포함) · 다이어리 · 로드비. 본문은 메뉴 카드 옆 남은 폭을 다 쓴다.
+ *  제외: 자관 상세(좌·가운데·우 3열이라 너무 좁아짐 — 1단형 유지, 대신 왼쪽 위 뒤로가기) · 글쓰기/수정 · 환경설정 */
+export function isMenuOnlyPage(pathname: string): boolean {
+  if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
+  if (pathname === '/rels' || pathname === '/rels/r' || /^\/rels\/r\/[^/]+$/.test(pathname)) return true;
+  for (const base of ['/loadb', '/roadview', '/diary']) if (pathname === base || pathname.startsWith(base + '/')) return true;
+  return false;
+}
