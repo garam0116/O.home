@@ -658,3 +658,20 @@ export function BannerEditor({ conf, onSaved, onClose }: {
     </div>
   );
 }
+
+/* ---------- NEW (최신글) — 표시 개수 (v2.6 사용자 요청) ---------- */
+export const LATEST_COUNT = { def: 5, min: 1, max: 20 } as const;
+export const latestCountOf = (s: Record<string, unknown>) =>
+  Math.min(LATEST_COUNT.max, Math.max(LATEST_COUNT.min, Math.round((s.count as number | undefined) ?? LATEST_COUNT.def)));
+
+export function LatestEditor({ conf }: { conf: WidgetConf }) {
+  const { updateWidget } = useMainStore();
+  return (
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <span className="cp-lb">표시 개수</span>
+      <KStep value={latestCountOf(conf.settings)} min={LATEST_COUNT.min} max={LATEST_COUNT.max} suffix="개"
+        onChange={v => updateWidget(conf.id, { settings: { ...conf.settings, count: v } }, { persist: true })} />
+      <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 게시판 글을 최신순으로 — 기본 {LATEST_COUNT.def}개</small>
+    </div>
+  );
+}
