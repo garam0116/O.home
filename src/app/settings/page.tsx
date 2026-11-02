@@ -38,7 +38,7 @@ import {
   TextSettingEditor, DdayEditor, DdayCardEditor, TodoEditor, BannerEditor, DecoEditor, LatestEditor,
 } from '@/components/main/widgetEditors';
 import { useBgm, BgmTrack, parseVideoId, ytThumb } from '@/lib/bgmStore';
-import { useFonts, fontCssUrl, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
+import { useFonts, fontCssUrl, isFontFaceCode, fontFaceName, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc, getPageText, setPageText } from '@/components/ui/PageText';
 import { resyncCommentMeta } from '@/lib/securityMigrate';
@@ -2613,6 +2613,14 @@ function BgmPane() {
   );
 }
 
+/** CSS URL / @font-face 코드 입력칸 — 눈누 코드는 여러 줄이라 textarea (내용 따라 늘어남) */
+const FONT_SRC_PH = 'CSS 파일 URL 또는 눈누 「웹폰트로 사용」 코드(@font-face { … })를 통째로 붙여넣기';
+const FONT_SRC_STYLE: React.CSSProperties = { flex: 1, minHeight: 0, lineHeight: 1.45, fontSize: 12 };
+
+/** 목록 표시용 — 코드 원문 대신 「@font-face 코드 — 이름」 */
+const fontSrcLabel = (v: string) =>
+  (isFontFaceCode(v) ? `@font-face 코드 — ${fontFaceName(v) ?? 'font-family 없음'}` : v);
+
 /** 폰트 목록 한 줄 — CSS URL 표시 · 수정(이름/family/URL, 업로드 폰트는 이름/한글 페어) · 삭제 */
 function FontRow({ f, first, last }: { f: FontDef; first: boolean; last: boolean }) {
   const { fonts, familyOf, updateFont, removeFont, moveFont, resetFont, setFontPair } = useFonts();
@@ -2649,12 +2657,13 @@ function FontRow({ f, first, last }: { f: FontDef; first: boolean; last: boolean
             </>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 7 }}>
-          {!f.fileId && <KInput placeholder="CSS URL" value={cssUrl} onChange={e => setCssUrl(e.target.value)} />}
+        <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+          {!f.fileId && <KTextarea rows={1} placeholder={FONT_SRC_PH} value={cssUrl}
+            onChange={e => setCssUrl(e.target.value)} style={FONT_SRC_STYLE} />}
           <button className="btn btn-dark" style={{ whiteSpace: 'nowrap', marginLeft: f.fileId ? 'auto' : undefined }}
             onClick={() => {
               if (updateFont(f.id, { name, family: f.fileId ? f.family : family, cssUrl: f.fileId ? '' : cssUrl })) { setEditing(false); toast('폰트가 수정되었습니다'); }
-              else toast('이름과 font-family 값을 입력해 주세요');
+              else toast('이름과 font-family 값(또는 font-family가 든 @font-face 코드)을 입력해 주세요');
             }}>SAVE</button>
           {/* 내장 폰트를 처음 상태로 (v2.0 사용자 발견) — 이름·family·한글 페어를 한꺼번에 되돌린다.
               잘못 들어간 값(엉뚱한 family, 지워진 폰트를 가리키는 페어)을 풀 방법이 없었다 */}
@@ -2682,7 +2691,7 @@ function FontRow({ f, first, last }: { f: FontDef; first: boolean; last: boolean
         <small style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {f.fileId
             ? `업로드 파일 — ${f.fileName ?? '폰트 파일'}${f.pairId ? ` · 한글 페어: ${fonts.find(x => x.id === f.pairId)?.name ?? ''}` : ''}`
-            : `${fontCssUrl(f) ?? (f.locked ? '사이트 기본 폰트 스택 — 별도 URL 없음' : '사이트 CSS에서 로드')}${f.pairId ? ` · 한글 페어: ${fonts.find(x => x.id === f.pairId)?.name ?? ''}` : ''}`}
+            : `${(fontCssUrl(f) && fontSrcLabel(fontCssUrl(f)!)) || (f.locked ? '사이트 기본 폰트 스택 — 별도 URL 없음' : '사이트 CSS에서 로드')}${f.pairId ? ` · 한글 페어: ${fonts.find(x => x.id === f.pairId)?.name ?? ''}` : ''}`}
         </small>
       </div>
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -2741,21 +2750,21 @@ function FontPane() {
       <p className="hint">삭제해도 이미 그 폰트를 쓰고 있는 자관 표시는 깨지지 않습니다 — 선택 목록에서만 빠집니다</p>
 
       <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
-        <label className="k-label" style={{ margin: 0 }}>웹폰트 추가 — 눈누/구글폰트의 CSS 링크(URL)와 font-family 값</label>
+        <label className="k-label" style={{ margin: 0 }}>웹폰트 추가 — 구글폰트 등의 CSS 링크(URL) 또는 눈누의 @font-face 코드</label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <KInput placeholder="표시 이름" value={name} onChange={e => setName(e.target.value)} style={{ maxWidth: 130 }} />
-          <KInput placeholder="font-family 값" value={family}
+          <KInput placeholder="font-family 값 (눈누 코드를 붙여넣으면 비워도 자동)" value={family}
             onChange={e => setFamily(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <KInput placeholder="CSS URL (https://fonts.googleapis.com/... 또는 눈누 링크)" value={cssUrl}
-            onChange={e => setCssUrl(e.target.value)} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <KTextarea rows={1} placeholder={FONT_SRC_PH} value={cssUrl}
+            onChange={e => setCssUrl(e.target.value)} style={FONT_SRC_STYLE} />
           <button className="btn btn-dark" style={{ whiteSpace: 'nowrap' }}
             onClick={() => {
               if (addFont(name, family, cssUrl, webPairOn ? webPair || undefined : undefined)) {
                 setName(''); setFamily(''); setCssUrl(''); setWebPairOn(false); setWebPair('');
                 toast('폰트가 추가되었습니다');
-              } else toast('이름과 font-family 값을 입력해 주세요');
+              } else toast('이름과 font-family 값(또는 font-family가 든 @font-face 코드)을 입력해 주세요');
             }}>＋ ADD</button>
         </div>
         {/* 영문·일어 등 한글 미지원 웹폰트 — 체크하면 한글 페어 지정 (v1.9 사용자 요청) */}

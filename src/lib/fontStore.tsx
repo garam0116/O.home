@@ -14,7 +14,7 @@ export interface FontDef {
   name: string;        // 표시명
   family: string;      // CSS font-family 값
   gfont?: string;      // 구글폰트 패밀리 쿼리 (내장)
-  cssUrl?: string;     // 웹폰트 CSS URL (직접 등록 또는 내장 수정)
+  cssUrl?: string;     // 웹폰트 CSS URL, 또는 눈누식 @font-face 코드 원문 (직접 등록 또는 내장 수정)
   builtin?: boolean;
   locked?: boolean;    // 사이트 기본 폰트 — 삭제 불가 (폴백 스택이라 URL 없음)
   fileId?: string;     // 업로드한 폰트 파일 (IndexedDB — woff2/woff/ttf/otf, v1.9)
@@ -38,10 +38,37 @@ export const BUILTIN_FONTS: FontDef[] = [
   { id: 'songmyung', name: '송명', family: "'Song Myung', serif", gfont: 'Song+Myung', builtin: true },
   { id: 'dohyeon', name: '도현', family: "'Do Hyeon', sans-serif", gfont: 'Do+Hyeon', builtin: true },
   { id: 'blackhan', name: '검은고딕', family: "'Black Han Sans', sans-serif", gfont: 'Black+Han+Sans', builtin: true },
-  // 눈누식 CSS URL 등록 예시 (v1.9 사용자 요청) — 목록에서 URL·family 형식을 그대로 참고
-  { id: 'nanumsqneo', name: '나눔스퀘어 네오 (눈누식 예시)', family: "'NanumSquareNeo', sans-serif",
+  // CSS URL 등록 예시 (v1.9 사용자 요청) — 목록에서 URL·family 형식을 그대로 참고.
+  // 눈누가 아니라 네이버가 올려 둔 CSS 파일 주소다. 눈누 폰트는 「웹폰트로 사용」 코드를 통째로 붙여넣는다
+  { id: 'nanumsqneo', name: '나눔스퀘어 네오 (CSS URL 예시)', family: "'NanumSquareNeo', sans-serif",
     cssUrl: 'https://hangeul.pstatic.net/hangeul_static/css/nanum-square-neo.css', builtin: true },
 ];
+
+/* 눈누식 @font-face 코드 등록 (사용자 요청) — 눈누는 CSS 파일 주소가 아니라 「웹폰트로 사용」
+   코드만 준다. 그 코드를 cssUrl 자리에 **원문 그대로** 저장하고(EDIT에서 그대로 보이게),
+   로드할 때 @font-face 블록만 골라 <style>로 넣는다. */
+
+/** 입력값이 URL이 아니라 @font-face 코드인지 */
+export const isFontFaceCode = (v?: string): boolean => !!v && /@font-face/i.test(v);
+
+/** @font-face 블록만 추린다 — body{…} 같은 다른 규칙이 섞여 사이트 전체에 걸리는 일을 막는다 */
+export function fontFaceBlocks(code: string): string {
+  return (code.replace(/\/\*[\s\S]*?\*\//g, '').match(/@font-face\s*\{[^{}]*\}/gi) ?? []).join('\n');
+}
+
+/** 코드의 첫 font-family 이름 (따옴표 없이) */
+export function fontFaceName(code: string): string | undefined {
+  const m = fontFaceBlocks(code).match(/font-family\s*:\s*(['"]?)([^;'"}]+?)\1\s*[;}]/i);
+  return m?.[2].trim() || undefined;
+}
+
+/** 코드에서 CSS font-family 값을 만든다 — 명조·바탕류면 serif, 아니면 sans-serif 폴백 */
+export function familyFromFontFace(code: string): string | undefined {
+  const n = fontFaceName(code);
+  if (!n) return undefined;
+  const serif = !/sans/i.test(n) && /serif|myeong|myung|batang|mincho|명조|바탕/i.test(n);
+  return `'${n}', ${serif ? 'serif' : 'sans-serif'}`;
+}
 
 /** 폰트가 실제로 로드되는 CSS URL — 내장 구글폰트는 gfont 쿼리에서 파생 */
 export function fontCssUrl(f: FontDef): string | undefined {
@@ -134,11 +161,23 @@ interface FontCtx {
 const Ctx = createContext<FontCtx | null>(null);
 
 function ensureLink(id: string, href: string) {
-  const ex = document.getElementById(id) as HTMLLinkElement | null;
+  let ex = document.getElementById(id) as HTMLLinkElement | null;
+  // 같은 폰트를 코드 등록(<style>)에서 URL로 바꾼 경우 — 옛 요소를 걷어낸다
+  if (ex && ex.tagName !== 'LINK') { ex.remove(); ex = null; }
   if (ex) { if (ex.href !== href) ex.href = href; return; }
   const l = document.createElement('link');
   l.id = id; l.rel = 'stylesheet'; l.href = href;
   document.head.appendChild(l);
+}
+
+/** @font-face 코드 등록 폰트 — <style>에 넣는다 (textContent라 HTML로 해석되지 않음) */
+function ensureStyle(id: string, css: string) {
+  let ex = document.getElementById(id);
+  if (ex && ex.tagName !== 'STYLE') { ex.remove(); ex = null; }
+  if (ex) { if (ex.textContent !== css) ex.textContent = css; return; }
+  const st = document.createElement('style');
+  st.id = id; st.textContent = css;
+  document.head.appendChild(st);
 }
 
 export function FontProvider({ children }: { children: React.ReactNode }) {
@@ -180,7 +219,11 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     const plain = BUILTIN_FONTS.filter(f => f.gfont && !st.overrides[f.id]?.cssUrl);
     const gf = plain.map(f => `family=${f.gfont}`).join('&');
     if (gf) ensureLink('ohome-gfonts', `https://fonts.googleapis.com/css2?${gf}&display=swap`);
-    pool.forEach(f => { if (f.cssUrl) ensureLink(`ohome-font-${f.id}`, f.cssUrl); });
+    pool.forEach(f => {
+      if (!f.cssUrl) return;
+      if (isFontFaceCode(f.cssUrl)) ensureStyle(`ohome-font-${f.id}`, fontFaceBlocks(f.cssUrl));
+      else ensureLink(`ohome-font-${f.id}`, f.cssUrl);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st]);
 
@@ -255,6 +298,8 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     setSt(s => { const next = fn(s); persist(next); return next; });
 
   const addFont = useCallback((name: string, family: string, cssUrl: string, pairId?: string): boolean => {
+    // font-family를 비워 두면 붙여넣은 @font-face 코드에서 채운다
+    if (!family.trim() && isFontFaceCode(cssUrl)) family = familyFromFontFace(cssUrl) ?? '';
     if (!name.trim() || !family.trim()) return false;
     apply(s => ({
       ...s,
@@ -288,6 +333,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateFont = useCallback((id: string, patch: { name: string; family: string; cssUrl: string }): boolean => {
+    if (!patch.family.trim() && isFontFaceCode(patch.cssUrl)) patch = { ...patch, family: familyFromFontFace(patch.cssUrl) ?? '' };
     if (!patch.name.trim() || !patch.family.trim()) return false;
     const p = { name: patch.name.trim(), family: patch.family.trim(), cssUrl: patch.cssUrl.trim() || undefined };
     apply(s => BUILTIN_FONTS.some(f => f.id === id)
