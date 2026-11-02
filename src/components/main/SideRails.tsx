@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMainStore } from '@/lib/mainStore';
 import { useSiteSettings, boardWOf } from '@/lib/siteStore';
-import { isRailPage, railWidgets, railBounds } from '@/lib/widgetZone';
+import { isRailPage, isMenuOnlyPage, railWidgets, railBounds } from '@/lib/widgetZone';
 import { WidgetFrame } from '@/components/main/WidgetFrame';
 import { renderWidget } from '@/components/main/widgets';
 import { MemberBox } from '@/components/main/MemberBox';
@@ -18,10 +18,15 @@ export function RailHost({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { state, editOn, gridOn, sideNav } = useMainStore();
   const onPage = isRailPage(pathname);
-  // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 레일 없는 페이지는 isRailPage가 거르므로 1단형 그대로
-  const side = useMemo(() => (onPage ? railWidgets(state.widgets, sideNav) : []), [onPage, state.widgets, sideNav]);
+  // 메뉴 카드만 띄우는 페이지 (v2.8) — 자관 목록·다이어리·로드비는 2단형이면 다른 위젯 없이 메뉴 카드만
+  const menuOnly = sideNav && !onPage && isMenuOnlyPage(pathname);
+  // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 그 밖의 레일 없는 페이지는 1단형 그대로
+  const side = useMemo(
+    () => (onPage ? railWidgets(state.widgets, sideNav) : menuOnly ? railWidgets(state.widgets, true).filter(w => w.type === 'menu') : []),
+    [onPage, menuOnly, state.widgets, sideNav]);
   const active = side.length > 0;
-  const { left, right } = railBounds(side, !!state.centerBody);
+  // 메뉴 카드만 있는 페이지는 「가운데 정렬」을 따르지 않는다 — 본문이 메뉴 카드 옆 남은 폭을 다 쓰게
+  const { left, right } = railBounds(side, !!state.centerBody && !menuOnly);
   const { ctx, setCtx, openCtx } = useWidgetCtx(side);
 
   // 위젯 아래 끝까지 페이지가 길어지게 — 본문이 짧아도 위젯이 잘리지 않는다

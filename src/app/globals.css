@@ -948,7 +948,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 자관 상세 — 헤더 이미지: 풀폭 블러 + 아래로 페이드아웃 (v1.5) */
 .page-rel-detail{position:relative;max-width:1280px}
 /* 배경 위 레이어링 — absolute로 배치되는 요소(AU·관리자 액션·모달)는 제외 */
-.page-rel-detail > *:not(.rel-backdrop):not(.modal-ov):not(.au-list):not(.rel-admin-actions){position:relative;z-index:1}
+.page-rel-detail > *:not(.rel-backdrop):not(.modal-ov):not(.au-list):not(.rel-tl){position:relative;z-index:1}
 .rel-backdrop{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100vw;height:600px;z-index:0!important;overflow:hidden;pointer-events:none;
   -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 35%,transparent 96%);
   mask-image:linear-gradient(to bottom,#000 0%,#000 35%,transparent 96%);}
@@ -1010,7 +1010,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .au-list{display:flex;gap:8px;align-items:flex-start}
 .page-rel-detail > .au-list{position:absolute;top:20px;right:28px;left:auto;z-index:6}
 /* 관리자 액션 (좌상단) — 자관 수정 등 */
-.page-rel-detail > .rel-admin-actions{position:absolute;top:20px;left:28px;z-index:6;display:flex;gap:8px}
+/* 왼쪽 위: 뒤로가기 + 관리자 버튼 (v2.8) — 뒤로가기는 누구에게나, 관리자 버튼은 그 오른쪽 */
+.page-rel-detail > .rel-tl{position:absolute;top:20px;left:28px;z-index:6;display:flex;gap:10px;align-items:center}
+.rel-admin-actions{display:flex;gap:8px}
 .au-item.add{border-style:dashed;display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:calc(16px*var(--fs,1));background:rgba(255,255,255,.06)}
 .au-item{width:48px;aspect-ratio:1;border-radius:11px;cursor:pointer;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,.25);transition:.15s}
 .au-item:hover{border-color:rgba(255,255,255,.6)}
@@ -1591,7 +1593,7 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
   .rel-body > .rel-side.r{grid-area:r}
   .rel-hero h1{font-size:calc(44px*var(--fs,1))}
   /* AU 목록·관리자 버튼(위쪽 고정)이 있으면 LOG/LOREBOOK 버튼과 겹치지 않게 아래로 */
-  .page-rel-detail > .au-list ~ .rel-hero,.page-rel-detail > .rel-admin-actions ~ .rel-hero{padding-top:84px}
+  .page-rel-detail > .au-list ~ .rel-hero,.page-rel-detail > .rel-tl:has(.rel-admin-actions) ~ .rel-hero{padding-top:84px}
   .rel-hero .quote{display:none}
   .rel-mq{display:block;font-family:var(--serif);font-size:calc(14px*var(--fs,1));letter-spacing:.06em;line-height:1.55;color:#d7dae0;padding:2px 4px}
   .rel-mq::before{content:"\201C";color:var(--q-mark,var(--accent-soft));font-size:calc(20px*var(--fs,1));margin-right:4px}
@@ -1807,6 +1809,9 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   body.side-nav .topbar > :is(.brand,.gnb,.user-wrap,.login-link){display:none}
   body.side-nav .topbar > :is(.btn,.k-toggle.grid-chip.show,.edit-flag.show){background:var(--top-bg);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 }
+/* 로드비 — 2단형이면 본문이 메뉴 카드 옆으로 좁아지므로 댓글 폭을 390→320으로 줄여 그림 자리를 지킨다 (v2.8 사용자 확정).
+   960px 이하는 원래대로 세로 쌓기 */
+@media (min-width:961px){body.side-nav .roadview-item{grid-template-columns:1fr 320px}}
 /* 메뉴 카드 위젯 — 하위 메뉴 펼침·화면 고정이 다른 위젯 위에 오게 */
 .wgt.wgt-menu-card{z-index:40 !important}
 @media (max-width:620px){.wgt.wgt-menu-card{display:none !important}}
@@ -1842,3 +1847,23 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
 .menu-card .user-menu{left:0;right:auto}
 .menu-card.mc-right .user-menu{left:auto;right:0}
 .menu-card .login-link{display:block;width:100%;text-align:center}
+
+/* ---------- 뒤로가기 화살표 (v2.8 사용자 요청 — 자관 상세 왼쪽 위) ----------
+   테두리·배경 없이 1px 선만. 평소엔 마름모(사이트의 ◆ 장식), 올리면(모바일은 누르는 순간) 왼쪽 두 변이
+   화살촉이 되고 오른쪽 두 변은 접히며 축이 그어진다. 색은 버튼 글씨색(--btn-dark-fg)을 따른다 */
+.back-arrow{--s:32px;--d:.42s;--ease:cubic-bezier(.3,.7,.2,1);
+  width:calc(var(--s) + 8px);height:calc(var(--s) + 8px);margin:-4px;padding:0;border:0;background:none;
+  color:var(--btn-dark-fg,#fff);display:inline-grid;place-items:center;cursor:pointer;opacity:.85;transition:opacity .2s;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))}
+.back-arrow:hover,.back-arrow.play{opacity:1}
+.back-arrow:focus-visible{outline:1px solid currentColor;outline-offset:0;border-radius:6px}
+.back-arrow svg{width:var(--s);height:var(--s);overflow:visible}
+.back-arrow svg *{fill:none;stroke:currentColor;stroke-width:1;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round;
+  transform-box:view-box;transition:transform var(--d) var(--ease),opacity var(--d) var(--ease),stroke-dashoffset var(--d) var(--ease)}
+.back-arrow .r1,.back-arrow .r2{transform-origin:18px 12px}
+.back-arrow .shaft{stroke-dasharray:14;stroke-dashoffset:14}
+.back-arrow:is(:hover,:focus-visible,.play) :is(.l1,.l2){transform:translateX(-1px)}
+.back-arrow:is(:hover,:focus-visible,.play) :is(.r1,.r2){transform:scale(0);opacity:0}
+.back-arrow:is(:hover,:focus-visible,.play) .shaft{stroke-dashoffset:0;transition-delay:.08s}
+@media (hover:none){.back-arrow:hover:not(.play) :is(.l1,.l2,.r1,.r2,.shaft){transform:none;opacity:1;transition-delay:0s}.back-arrow:hover:not(.play) .shaft{stroke-dashoffset:14}}
+@media (prefers-reduced-motion:reduce){.back-arrow svg *{transition-duration:.01s!important;transition-delay:0s!important}}

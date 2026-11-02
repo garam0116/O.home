@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
 import { getRawSetting, setSetting, onSettingReload } from './settingStore';
-import { isRailPage, sideOf, centerMiddleWidgets } from './widgetZone';
+import { isRailPage, isMenuOnlyPage, sideOf, centerMiddleWidgets } from './widgetZone';
 
 export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
@@ -312,9 +312,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persist]);
 
-  // 2단형 적용 페이지 (v2.7 사용자 확정) — 메인 + 좌우 위젯 레일 페이지만. 레일 없는 페이지(자관·로드비·다이어리·
-  // 환경설정·글쓰기)는 2단형으로 설정해도 1단형 그대로. 메뉴 카드가 없으면(예전 저장분) 상단바를 유지한다
-  const sideNav = state.pcLayout === 'side' && (pathname === '/' || isRailPage(pathname))
+  // 2단형 적용 페이지 (v2.7 사용자 확정) — 메인 + 좌우 위젯 레일 페이지 + 메뉴 카드만 띄우는 페이지
+  // (자관 목록·다이어리·로드비, v2.8). 자관 상세·환경설정·글쓰기는 2단형으로 설정해도 1단형 그대로.
+  // 메뉴 카드가 없으면(예전 저장분) 상단바를 유지한다
+  const sideNav = state.pcLayout === 'side' && (pathname === '/' || isRailPage(pathname) || isMenuOnlyPage(pathname))
     && state.widgets.some(w => w.type === 'menu' && w.enabled && w.ax != null && w.ay != null);
   useEffect(() => {
     document.body.classList.toggle('side-nav', sideNav);
