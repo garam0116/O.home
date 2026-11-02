@@ -581,10 +581,15 @@ function MainPagePane() {
   const { state, setMobileOff, setMobileOrder, resetMain } = useMainStore();
   const toast = useToast();
   const [resetAsk, setResetAsk] = useState(false);   // 기본 구성 확인 (v1.9)
-  // 모바일 순서 목록: 고정 요소(배너·회원정보창)는 포함되지 않음
+  // 모바일 순서 목록: 고정 슬라이드 배너도 포함 (v2.9 사용자 요청) · 회원정보창은 고정 배너 바로 아래를 따라감
   const orderable = state.mobileOrder
     .map(id => state.widgets.find(w => w.id === id))
-    .filter((w): w is NonNullable<typeof w> => !!w && !w.fixed && w.type !== 'menu');   // 메뉴리스트는 상단바 ≡로 대체
+    .filter((w): w is NonNullable<typeof w> => !!w && w.type !== 'menu' && w.type !== 'member');   // 메뉴리스트는 상단바 ≡로 대체
+  const onReorder = (ids: string[]) => {
+    // 목록에 안 보이는 항목(메뉴 카드 등)은 원래 자리에 그대로 두고 보이는 항목만 새 순서로 채운다
+    const shown = new Set(ids); let k = 0;
+    setMobileOrder(state.mobileOrder.map(id => (shown.has(id) ? ids[k++] : id)));
+  };
 
   return (
     <div className="set-sec">
@@ -610,7 +615,7 @@ function MainPagePane() {
       <DragList
         items={orderable}
         keyOf={w => w.id}
-        onReorder={list => setMobileOrder(list.map(w => w.id))}
+        onReorder={list => onReorder(list.map(w => w.id))}
         render={(w, i) => (
           <div className="set-row" style={{ width: '100%' }}>
             <div className="l" style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
@@ -631,7 +636,7 @@ function MainPagePane() {
       />
       <p className="hint">토글을 끄면 <b>모바일에서만</b> 빠지고 PC 메인에는 그대로 표시됩니다 · 순서는 <b>모바일 세로 나열 순서</b> — PC 배치는 메인에서 편집모드로 자유 조정</p>
       <p className="hint">메인에서 위젯을 완전히 빼거나 더하려면 편집모드에서 — 추가는 상단바 [＋ 위젯], 삭제는 위젯 우클릭 → 위젯 삭제</p>
-      <p className="hint">슬라이드 배너(최상단)·회원정보창은 모바일에서 항상 맨 위에 표시되어 순서 목록에 포함되지 않음</p>
+      <p className="hint">회원정보창은 순서 목록에 없고 모바일에서 항상 기본 슬라이드 배너(삭제 불가) 바로 아래에 표시됩니다</p>
     </div>
   );
 }
