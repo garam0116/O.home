@@ -1,155 +1,30 @@
 import { numbersOf, findByNo } from './itemNo';
-// 캐릭터·자관 데이터 저장소 — localStorage (→ Supabase 이전 예정)
-// 기획서 4.4(캐릭터), 4.5(자관)
+// 자관 데이터 저장소 — 기획서 4.5(자관)
+// (캐릭터 기능은 삭제됐다 — 멤버의 이름·사진은 자관 멤버에 직접 담는다)
 export type Visibility = 'public' | 'member' | 'private'; // 공개범위 3단계
 
-export interface ColorChip { hex: string; label: string }
-
-/** 테마컬러 점 테두리 (v2.0 사용자 요청) — 미지정이면 지금까지의 옅은 테두리 그대로,
- *  'none'이면 없음, hex면 그 색으로 1px */
-export const chipBorder = (bd?: string): string =>
-  (bd === 'none' ? 'none' : `inset 0 0 0 1px ${bd ?? 'rgba(0,0,0,.1)'}`);
-
-export interface CharTab {
-  id: string;
-  icon: string;          // 아이콘 문자 (업로드 아이콘은 후속)
-  title: string;
-  subtitle?: string;     // 제목 아래 작은 글씨 (선택)
-  html: string;          // HTML 에디터 내용 (스크립트 불허 — 렌더 시 sanitize)
-}
-
-export interface Character {
-  id: string;
-  /** 번호 (v2.4) — 별명이 없을 때의 주소 /chars/{번호}. 올린 순서대로, 서버 카운터에서 받는다 */
-  no?: number;
-  name: string;          // 대표 이름 (전용 폰트 적용 대상)
-  sub: string;           // 한글명 · 소속 한 줄
-  color: string;         // 대표 테마색 (말풍선·리스트 점)
-  // 상세 페이지 테마 (v1.9 사용자 확정) — custom이면 대표 테마색으로 홈 팔레트 임시 전환 (4.18 방식)
-  themeMode?: 'default' | 'custom';
-  colors: ColorChip[];   // 테마 컬러 나열
-  /** 테마컬러 점 테두리 (v2.0 사용자 요청) — 'none' = 없음 · hex = 그 색으로 1px.
-   *  미지정이면 지금까지와 같은 옅은 테두리(안 정한 홈은 모습이 안 바뀐다) */
-  colorBd?: string;
-  colorTipMode?: 'hex' | 'both' | 'label'; // 색 점 툴팁 표기: hex / 이름+hex / 이름만
-  specs: { label: string; value: string }[];
-  tabs: CharTab[];       // 기본 정보 외 추가 탭
-  basicHtml: string;     // 기본 정보 탭의 소개 본문 (HTML)
-  visibility: Visibility;
-  /** 페이지 주소 별명 (v2.0 사용자 요청) — /chars/{별명}. 만들 때 정하는 주소(id)와 달리
-   *  **나중에 수정 화면에서 바꿀 수 있다.** 참조(자관 멤버·권한 등)는 언제나 id로 저장되므로
-   *  바꿔도 아무것도 끊어지지 않고, 옛 주소(id)로도 계속 열린다. */
-  slug?: string;
-  /** 어느 캐릭터 목록 것인지 (v2.0 사용자 요청) — 없으면 기본 목록.
-   *  **자관·역극이 캐릭터를 찾을 때는 소속을 보지 않는다** — 목록 화면에서만 갈린다 */
-  secId?: string;
-  thumbClass: string;    // 데모 플레이스홀더 클래스
-  thumbId?: string;      // 리스트 썸네일 (IndexedDB, 3:4 크롭)
-  thumbCrop?: import("@/components/ui/CropEditor").CropValue;
-  /** 상세 페이지 중앙 아트의 위치 (v2.0) — 리스트 썸네일과 보이는 크기·비율이 달라
-   *  같은 크롭을 쓰면 원하는 부분이 안 나온다. 따로 잡으면 상세에서는 이 값을 쓴다. */
-  artCrop?: import("@/components/ui/CropEditor").CropValue;
-  arts?: string[];       // 아트 목록 (IndexedDB — 첫 장이 대표 풀 아트이자 썸네일 원본)
-  artId?: string;        // (구) 단일 풀 아트
-  artUrl?: string;       // (구) 풀 아트 URL
-  fontId?: string;       // 전용 폰트 — 이름·타이틀 (5.1)
-  /** 상세 페이지 큰 이름의 글씨 크기 px (v2.0) — 기본 38.
-   *  이름 길이가 제각각이라 자동으로 줄이면 어중간해진다. 캐릭터마다 직접 정한다. */
-  nameSize?: number;
-  /** 상세 큰 이름 굵게 (v2.0 사용자 요청) — 기본 켜짐. 폰트에 따라 볼드가 안 어울릴 때 끈다 */
-  nameBold?: boolean;
-  bodyFontId?: string;   // 본문 폰트 — 프로필 정보·소개 텍스트
-  own: boolean;          // true = 운영자 자캐 (리스트 노출), false = 상대 캐릭터
-  // 회원-캐릭터 연결 (3차, v1.9) — 상대 캐릭터에 회원 권한 부여:
-  // play = 역극에서 이 캐릭터로 발화 가능, edit = 캐릭터 편집까지 가능 (play 포함)
-  grants?: CharGrant[];
-  // AU별 캐릭터 프로필 (v1.9) — 키 `${relId}:${auId}`. 자관에 AU를 추가하면 멤버 캐릭터
-  // 상세 우상단에 AU 리스트가 뜨고, 선택 시 프로필 전체가 이 값으로 전환.
-  // 편집은 /chars/[id]/edit?au= — AU 전용 편집 페이지에서 아예 새 프로필처럼 작성 (사용자 확정)
-  auProfiles?: Record<string, AuCharProfile>;
-}
-
-/** AU 캐릭터 프로필 (v1.9 전면 확장) — 이름·키·성별부터 전부 AU별로 달라질 수 있음.
- *  지정된 필드만 base를 대체 (구버전 basicHtml/arts만 있는 데이터도 그대로 동작) */
-export interface AuCharProfile {
-  basicHtml?: string;
-  arts?: string[];
-  name?: string;
-  sub?: string;
-  color?: string;
-  themeMode?: 'default' | 'custom';
-  colors?: ColorChip[];
-  colorTipMode?: 'hex' | 'both' | 'label';
-  specs?: { label: string; value: string }[];
-  tabs?: CharTab[];
-  thumbId?: string;
-  thumbCrop?: import("@/components/ui/CropEditor").CropValue;
-  artCrop?: import("@/components/ui/CropEditor").CropValue;   // 상세 중앙 아트 위치 (v2.0)
-  fontId?: string;
-  nameSize?: number;     // 상세 큰 이름 크기 px (v2.0)
-  nameBold?: boolean;    // 상세 큰 이름 굵게 (v2.0 사용자 요청 — 폰트에 따라 볼드가 안 어울린다)
-  bodyFontId?: string;
-}
-
-/** AU 프로필을 합성한 표시용 캐릭터 — AU에서 지정한 필드만 대체 (상세·편집 프리필 공용) */
-export function charWithAu(c: Character, auKey?: string | null): Character {
-  const p = auKey ? c.auProfiles?.[auKey] : undefined;
-  if (!p) return c;
-  return {
-    ...c,
-    ...(p.name !== undefined ? { name: p.name } : {}),
-    ...(p.sub !== undefined ? { sub: p.sub } : {}),
-    ...(p.color !== undefined ? { color: p.color } : {}),
-    ...(p.themeMode !== undefined ? { themeMode: p.themeMode } : {}),
-    ...(p.colors !== undefined ? { colors: p.colors } : {}),
-    ...(p.colorTipMode !== undefined ? { colorTipMode: p.colorTipMode } : {}),
-    ...(p.specs !== undefined ? { specs: p.specs } : {}),
-    ...(p.tabs !== undefined ? { tabs: p.tabs } : {}),
-    ...(p.basicHtml !== undefined ? { basicHtml: p.basicHtml } : {}),
-    // 이미지는 **물려받지 않는다** (v2.0 사용자 요청) — AU 프로필에 안 넣었으면 비워 둔다.
-    // 글씨(이름·소개·스펙)는 AU에서 안 고쳤으면 base를 쓰는 게 자연스럽지만, 그림은 다르다:
-    // 학원 AU를 만들어 놓고 그림을 아직 안 넣었는데 원본 그림이 그대로 떠 있으면
-    // 그 AU의 그림인 줄 알게 된다. 자관 전신이 이미 같은 규칙이다(「AU는 자기 전신만」).
-    arts: p.arts ?? [],
-    artId: p.arts?.[0],
-    thumbId: p.thumbId,
-    thumbCrop: p.thumbCrop,
-    ...(p.fontId !== undefined ? { fontId: p.fontId } : {}),
-    ...(p.bodyFontId !== undefined ? { bodyFontId: p.bodyFontId } : {}),
-    // nameSize는 여태 병합에 빠져 있었다 — AU에 저장은 되는데 표시가 base 크기를 따랐다 (v2.0 수정)
-    ...(p.nameSize !== undefined ? { nameSize: p.nameSize } : {}),
-    ...(p.nameBold !== undefined ? { nameBold: p.nameBold } : {}),
-  };
-}
-
-export interface CharGrant { userId: string; level: 'play' | 'edit' }
-
-/** 회원의 캐릭터 권한 — edit는 play를 포함 */
-export function charGrant(c: Character, userId?: string): 'play' | 'edit' | null {
-  if (!userId) return null;
-  const g = c.grants?.find(x => x.userId === userId);
-  return g?.level ?? null;
-}
-
 export interface RelMember {
+  /** 멤버 키 — 전신·AU 값(fulls·mset)·좌우 지정(pairRight)·앞뒤(fullFront)가 이 값으로 멤버를 가리킨다.
+   *  캐릭터 기능이 있던 때 캐릭터 id를 담던 자리라 이름이 charId로 남아 있다(예전 저장분 호환) */
   charId: string;
+  /** 인물 이름 — 자관 멤버에 직접 입력 (캐릭터 기능 삭제 후) */
+  name?: string;
+  /** 인물 사진 — 멤버 카드 얼굴칸(1:1). 위치는 faceCrop */
+  photoId?: string;
   quote: string;                 // 캐릭터별 한마디
   keywords: string[];            // 키워드 뱃지
   desc: string;                  // 소개글
-  palette: ColorChip[];          // 컬러 팔레트 아이콘
-  linkedNote?: string;           // "회원 ○○ 연결됨" 등
   fullImgId?: string;            // 전신 이미지 (v1.9 — 자관 수정에서 등록, 중앙 전신 모드)
   fullScale?: number;            // 전신 크기 % (비율 유지, 미리보기 휠로 조절 — 기본 90)
   fullOffX?: number;             // 전신 가로 위치 오프셋 % (미리보기 드래그 — 기본 0, v1.9)
   fullOffY?: number;             // 전신 세로 위치 오프셋 % (기본 0 = 하단 밀착)
-  /** 멤버 카드 얼굴칸(1:1) 크롭 (v2.0) — 캐릭터의 리스트 썸네일은 3:4라
-   *  정사각 칸에 그대로 쓰면 어긋난다. 자관에서 따로 잡아 저장한다. */
+  /** 멤버 카드 얼굴칸(1:1) 크롭 (v2.0) — 사진(photoId)에서 보일 위치 */
   faceCrop?: import('@/components/ui/CropEditor').CropValue;
   /** 멤버 카드 이름 굵게 (v2.0 사용자 요청) — 기본 켜짐 */
   nameBold?: boolean;
   /** 멤버 카드 이름 크기 px (v2.0) — 기본 17. 카드 폭이 좁아 이름마다 알맞은 크기가 다르다 */
   nameSize?: number;
-  /** 자관 안에서 쓸 이 캐릭터의 이름 폰트 — 미지정이면 캐릭터 프로필 폰트(char.fontId) */
+  /** 자관 안에서 쓸 이 멤버의 이름 폰트 */
   nameFontId?: string;
   quoteColor?: string;           // 히어로 대사 글씨색 (페어, v1.9 — 기본 #d7dae0)
   quoteMarkColor?: string;       // 히어로 대사 따옴표색 (기본 포인트 소프트)
@@ -173,7 +48,7 @@ export interface RelAuMember {
   fullOffY?: number;
   nameSize?: number;
   nameBold?: boolean;
-  /** 자관 안에서 쓸 이 캐릭터의 이름 폰트 — 미지정이면 캐릭터 프로필 폰트(char.fontId) */
+  /** 자관 안에서 쓸 이 멤버의 이름 폰트 */
   nameFontId?: string;
   quoteColor?: string;
   quoteMarkColor?: string;
@@ -296,7 +171,7 @@ export interface RelAu {
   mset?: Record<string, RelAuMember>;
   quotes?: string[];
   arts?: string[];        // AU별 중앙/그룹 일러 (base는 Relation.arts)
-  fulls?: Record<string, string>;  // AU별 전신 이미지 (charId → blob id, 없으면 멤버 공통 전신)
+  fulls?: Record<string, string>;  // AU별 전신 이미지 (멤버 charId → blob id, 없으면 멤버 공통 전신)
   headerImgId?: string | null;     // AU별 헤더 이미지 (v1.9) — base를 물려받지 않음, 이 AU 것만
   headerCrop?: import("@/components/ui/CropEditor").CropValue;
   // AU별 페이지 테마 (v1.9 사용자 확정) — 미지정이면 base(원본) 테마 따라가기
@@ -352,13 +227,13 @@ export interface Relation {
   lorebookUrl?: string;
   members: RelMember[];          // 2인 = 좌/우, 3인+ = 다인 리스트
   visibility: Visibility;
-  /** 어느 자관 목록 것인지 — 없으면 기본 목록. 캐릭터·로그·역극이 자관을 찾을 때는 소속을 보지 않는다 */
+  /** 어느 자관 목록 것인지 — 없으면 기본 목록. 로그가 자관을 찾을 때는 소속을 보지 않는다 */
   secId?: string;
   thumbClass: string;
   illustMode: 'duo' | 'one';     // 2인: 전신 2장 / 일러 1장 (v1.8)
   aus: RelAu[];                  // AU 리스트 (첫 항목 = 원본 base)
-  fullFront?: string;            // 전신 모드에서 앞에 보일 캐릭터 id (v1.9 — 미리보기에서 클릭 선택)
-  pairRight?: string;            // 페어에서 오른쪽 자리에 둘 캐릭터 id (v2.0 — 없으면 등록 순서대로)
+  fullFront?: string;            // 전신 모드에서 앞에 보일 멤버 charId (v1.9 — 미리보기에서 클릭 선택)
+  pairRight?: string;            // 페어에서 오른쪽 자리에 둘 멤버 charId (v2.0 — 없으면 등록 순서대로)
   /** 상세 중앙 일러가 어디를 보여 줄지 (v2.0 사용자 요청) — 리스트 썸네일(thumbCrop)과 별개.
     *  **이미지 참조를 키로** 두어 여러 장을 각각 잡을 수 있고, AU의 일러도 같은 자리에 담긴다
     *  (참조가 다르므로 섞이지 않는다). 원본은 건드리지 않는다. */
@@ -397,11 +272,7 @@ export function relDdayDate(dateStr?: string): string | undefined {
   return `${date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase()} ${String(day).padStart(2, '0')}, ${year}`;
 }
 
-export const CHAR_SEED: Character[] = [];
-
 export const REL_SEED: Relation[] = [];
-
-export const findChar = (chars: Character[], id: string) => chars.find(c => c.id === id);
 
 /* ---------- 페이지 주소 별명 (v2.0 사용자 요청) ---------- */
 /** 주소로 항목 찾기 — id로도, 별명으로도 열린다 (별명을 바꿔도 옛 주소가 살아 있게) */
@@ -410,14 +281,11 @@ export const findByKey = <T extends { id: string; slug?: string }>(list: T[], ke
 /** 주소 값 — 별명 → 번호(v2.4) → id. 번호가 아직 저장되지 않은 예전 항목만 id가 나오고,
  *  그 주소로 들어와도 상세 페이지가 번호 주소로 바꿔 준다 */
 const pathKey = (x: { id: string; slug?: string; no?: number }) => x.slug?.trim() || (x.no ? String(x.no) : x.id);
-/** 이 캐릭터의 주소 — 별명을 정했으면 그것, 아니면 번호 */
-export const charPath = (c: { id: string; slug?: string; no?: number }) => `/chars/${pathKey(c)}`;
 /** 이 자관의 주소 — 별명을 정했으면 그것, 아니면 번호 */
 export const relPath = (r: { id: string; slug?: string; no?: number }) => `/rels/${pathKey(r)}`;
 
 /* ---------- AU 주소 (v2.4 사용자 요청 — 주소에 ?·임의 문자열 없이) ----------
    자관 AU 편집     /rels/{자관}/au/{AU 번호}/edit
-   캐릭터의 AU 보기 /chars/{캐릭터}/au/{자관}/{AU 번호}  (· /edit)
    AU 번호는 자관 안에서 만든 순서대로 — 기본(base)은 번호 없이 원래 주소다. */
 export function auNos(rel: Relation): Map<string, number> {
   return numbersOf(rel.aus.filter(a => a.id !== 'base'));
@@ -429,21 +297,3 @@ export function auIdOf(rel: Relation, key: string): string | undefined {
 }
 /** AU 번호 (주소에 쓸 값) */
 export const auKeyOf = (rel: Relation, auId: string) => String(auNos(rel).get(auId) ?? auId);
-/** 캐릭터 AU 키(`자관id:AUid`) → 주소 뒷부분 `/au/{자관}/{AU 번호}` */
-export function auPathOf(rels: Relation[], auKey: string | null | undefined): string {
-  if (!auKey) return '';
-  const [relId, auId] = auKey.split(':');
-  const rel = rels.find(r => r.id === relId);
-  if (!rel) return '';
-  return `/au/${pathKey(rel)}/${auKeyOf(rel, auId)}`;
-}
-/** 주소의 자관·AU 값 → 캐릭터 AU 키(`자관id:AUid`) */
-export function auKeyFromPath(rels: Relation[], relKey?: string, auKey?: string): string | null {
-  if (!relKey || !auKey) return null;
-  const rk = decodeURIComponent(relKey);
-  const nums = numbersOf(rels);
-  const rel = rels.find(r => (r.slug ?? '').trim() === rk) ?? findByNo(rels, rk, nums);
-  if (!rel) return null;
-  const auId = auIdOf(rel, decodeURIComponent(auKey));
-  return auId ? `${rel.id}:${auId}` : null;
-}

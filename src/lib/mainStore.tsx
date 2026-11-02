@@ -11,7 +11,7 @@ export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
   | 'member'                            // 회원정보창 — 추가·삭제 가능 (v2.1 사용자 요청)
   | 'menu' | 'memo' | 'diary' | 'latest'
-  | 'dday' | 'ddaycard' | 'todo' | 'freetext' | 'deco' | 'memoboard'
+  | 'dday' | 'ddaycard' | 'todo' | 'freetext' | 'deco'
   | 'search';   // search = 게시판 통합 검색창 · 'image'는 deco(장식 이미지+링크)로 일원화 (v1.9)
 
 export interface WidgetConf {
@@ -53,7 +53,6 @@ export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = 
   todo: { title: 'TO-DO', desc: '관리자 투두 (방문자는 열람만)' },
   freetext: { title: '자유 텍스트', desc: '패널 없이 문구만' },
   deco: { title: '이미지', desc: '패널 없이 이미지만' },
-  memoboard: { title: 'STICKY', desc: '스티커 메모 미니보드 — 클릭 시 메모장 (4.6)' },
   search: { title: 'SEARCH', desc: '전체 글 검색창 — 결과는 게시판 목록(갤러리형 1) 모양으로' },
 };
 
@@ -90,12 +89,12 @@ const DEFAULT_STATE: MainState = {
 
 const STORAGE_KEY = 'ohome.main.v1';
 /** 없어진 위젯 종류 — 예전 저장분에 남아 있어도 불러올 때 버린다 */
-const REMOVED_TYPES = ['image', 'upcoming', 'apply'];
+const REMOVED_TYPES = ['image', 'upcoming', 'apply', 'memoboard'];
 /** 편집모드를 지원하는 페이지 (v1.9 — 카드 그리드 드래그 정렬 포함)
  *  /trpg 로그 백업이 빠져 있던 것은 실수 — 드래그 정렬·목록 숨김 확인 모두 이 토글이 있어야 켜진다
  *  (v2.0 사용자 발견 — 목록 숨김 기능을 만들다 보니 편집모드 자체가 이 페이지에서 켜지지 않는 걸 발견) */
-const EDIT_PAGES = ['/', '/chars', '/rels', '/gallery', '/tchars', '/trpg'];
-const EDIT_PAGE_NAMES = '메인 · 캐릭터 · 자관 · 갤러리 · TRPG 캐릭터 · TRPG 로그';
+const EDIT_PAGES = ['/', '/rels', '/gallery', '/trpg'];
+const EDIT_PAGE_NAMES = '메인 · 자관 · 갤러리 · TRPG 로그';
 
 interface MainCtx {
   state: MainState;
@@ -137,7 +136,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as MainState;
         // 새 위젯 타입이 추가돼도 기본값과 병합 · 제거된 위젯 종류는 걸러냄
-        // ('image'는 deco로 일원화 v1.9 · 'upcoming'·'apply'는 스케줄러·커미션 기능 삭제로 함께 제거)
+        // ('image'는 deco로 일원화 v1.9 · 'upcoming'·'apply'는 스케줄러·커미션, 'memoboard'는 메모장 기능 삭제로 함께 제거)
         // 구 enabled:false(전체 숨김)는 삭제로 이관 — 토글은 이제 모바일 표시만 제어 (v1.9 사용자 확정)
         const removed = new Set(parsed.removedIds ?? []);
         const kept: WidgetConf[] = [];

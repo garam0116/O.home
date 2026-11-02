@@ -8,7 +8,7 @@ import { sectionHref, MAIN_SEC, secStamp, useSectionTitle } from '@/lib/sectionS
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
 import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, showAsHtml, decodeLogText, logNo, saveLogBody } from '@/lib/galleryStore';
-import { Relation, REL_SEED, Character, CHAR_SEED, charGrant, relPath } from '@/lib/charStore';
+import { Relation, REL_SEED, relPath } from '@/lib/relStore';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { getBlob, putBlob, useBlobUrl } from '@/lib/blobStore';
 import { useImageSource, resolveImageRef, type ImageSource } from '@/components/ui/ImageSource';
@@ -54,7 +54,6 @@ export default function TrpgDetailPage() {
   // 이 목록에 없는 id는 "권한이 없어 애초에 안 받아졌다"는 뜻 — 서버가 알아서 걸러 준다
   const [bodies, setBodies] = useLocalList<TrpgLogBody>('ohome.trpgbody.v1', TRPG_BODY_SEED);
   const [rels] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
-  const [allChars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [delAsk, setDelAsk] = useState(false);
   const [bodyText, setBodyText] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -69,14 +68,8 @@ export default function TrpgDetailPage() {
   const tt = useSectionTitle('trpg', l?.secId, 'TRPG LOG');
   const bd = bodies.find(x => x.id === id);   // 분리 저장된 본문 — 권한이 없으면 애초에 안 온다 (undefined)
 
-  // 접근권한 (4.3) — 관리자 / 공개범위 충족 / 비밀번호 입력자 /
-  // 연동 자관의 상대방(멤버 캐릭터에 권한이 부여된 회원)은 무조건 열람 (3차 회원-캐릭터 연결, v1.9)
-  const logRel = rels.find(r => r.id === l?.relId);
-  const isRelPartner = !!user && !!logRel && logRel.members.some(m => {
-    const ch = allChars.find(c => c.id === m.charId);
-    return ch ? !!charGrant(ch, user.id) : false;
-  });
-  const baseAllowed = !!l && (isAdmin || isRelPartner
+  // 접근권한 (4.3) — 관리자 / 공개범위 충족 / 비밀번호 입력자
+  const baseAllowed = !!l && (isAdmin
     || l.visibility === 'public' || (l.visibility === 'member' && !!user));
 
   // 비밀번호 열람 (4.3) — 세션 동안 유지

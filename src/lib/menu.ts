@@ -10,27 +10,20 @@ export interface MenuItem {
 
 /** 배치 가능한 기능(모듈) 전체 — href → 기본 이름. 메뉴 트리에 넣어야 노출됨 (3장 메뉴 선택제) */
 export const FEATURES: { href: string; label: string }[] = [
-  { href: '/chars', label: '캐릭터' },
   { href: '/rels', label: '자관' },
-  { href: '/rp', label: '역극' },
   { href: '/board', label: '리스트' },
   { href: '/gallery', label: '갤러리' },
   { href: '/loadb', label: '로드비' },
-  { href: '/tchars', label: '캐릭터' },   // TRPG 캐릭터 — 자놀 캐릭터와는 href로 구분
   { href: '/trpg', label: '로그 백업' },
   { href: '/diary', label: '다이어리' },
   { href: '/threads', label: '감상타래' },
-  { href: '/memo', label: '메모장' },
-  { href: '/intro', label: '소개' },
 ];
 
 export const DEFAULT_MENU: MenuItem[] = [
   {
     label: '자놀',
     children: [
-      { label: '캐릭터', href: '/chars' },
       { label: '자관', href: '/rels' },
-      { label: '역극', href: '/rp' },
     ],
   },
   {
@@ -44,7 +37,6 @@ export const DEFAULT_MENU: MenuItem[] = [
   {
     label: 'TRPG',
     children: [
-      { label: '캐릭터', href: '/tchars' },
       { label: '로그 백업', href: '/trpg' },
     ],
   },
@@ -53,7 +45,6 @@ export const DEFAULT_MENU: MenuItem[] = [
     children: [
       { label: '다이어리', href: '/diary' },
       { label: '감상타래', href: '/threads' },
-      { label: '메모장', href: '/memo' },
     ],
   },
 ];

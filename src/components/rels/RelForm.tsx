@@ -1,9 +1,9 @@
 ﻿'use client';
 // 자관 등록/수정 공용 폼 (4.5) — 유형(페어/다인) · 이름/본문 폰트 · 캐치프레이즈 · 공개범위 ·
-// 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭) · 등록 시 내 캐릭터 연동
+// 아트 다중 등록(첫 장 = 대표 · 리스트 썸네일 4:3 크롭)
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Character, Relation, Visibility, RelMember, RelSideSlot, auMember, auStyle, fullShadow } from '@/lib/charStore';
+import { Relation, Visibility, RelMember, RelSideSlot, auMember, auStyle, fullShadow } from '@/lib/relStore';
 import { ColorField } from '@/components/ui/ColorField';
 import { isValidSlug, slugify } from '@/lib/link';
 import { newId } from '@/lib/postStore';
@@ -64,9 +64,8 @@ export interface RelFormValue {
   nameBolds?: Record<string, boolean>;                          // 멤버 카드 이름 볼드 (v2.0 — 기본 켜짐)
   nameFonts?: Record<string, string>;                           // 자관 안 멤버 이름 폰트
   quoteColors?: Record<string, { fg?: string; mark?: string }>; // 히어로 대사 글씨/따옴표색 (페어, v1.9)
-  fullFront?: string;                          // 앞에 보일 캐릭터 id
+  fullFront?: string;                          // 앞에 보일 멤버 charId
   auName?: string;           // AU별 자관명 (v2.0 사용자 요청 — AU 편집일 때만)
-  pickedCharIds: string[];   // 등록 시 연동할 내 캐릭터 (수정 모드에선 빈 배열)
 }
 
 interface FullDraft { ref?: string; file?: File; url?: string }
@@ -180,10 +179,9 @@ function RelDraftPreview({ draft, crop }: { draft?: RelImageDraft; crop?: CropVa
   return <CropImg src={src} crop={crop ?? draft?.crop} />;
 }
 
-export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSave, onCancel }: {
+export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCancel }: {
   initial: Relation | null;          // null = 신규 등록
   auId?: string;                     // AU 편집 모드 (v1.9) — 아트·캐치프레이즈·전신이 이 AU의 것
-  myChars: Character[];
   memberNames?: Record<string, string>;  // 멤버 charId → 이름 (전신 섹션 표기)
   existingIds?: string[];            // 페이지 주소 중복 검사용 (v1.9 — 신규 등록)
   onSave: (v: RelFormValue) => void;
@@ -204,7 +202,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   // AU 편집이면 그 AU에 정한 폰트부터 (v2.0 사용자 제보 — AU 폰트가 분리되지 않던 것)
   const [fontId, setFontId] = useState((auObj?.fontId ?? initial?.fontId) ?? 'serif');
   const [bodyFontId, setBodyFontId] = useState((auObj?.bodyFontId ?? initial?.bodyFontId) ?? 'default');
-  const [picked, setPicked] = useState<string[]>([]);
   const [arts, setArts] = useState<ArtItem[]>(() => {
     const refs = auObj ? (auObj.arts ?? []) : (initial?.arts ?? (initial?.thumbId ? [initial.thumbId] : []));
     return refs.map(r => ({ id: newId(), ref: r }));
@@ -280,7 +277,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const [pageBgG1, setPageBgG1] = useState(st?.pageBgG1 ?? '#2b3038');
   const [pageBgG2, setPageBgG2] = useState(st?.pageBgG2 ?? '#121418');
   const [pageBgAngle, setPageBgAngle] = useState(st?.pageBgAngle ?? 180);
-  const [charQuery, setCharQuery] = useState('');
   // 전신 이미지 (v1.9 — 페어 · 수정 모드) — AU 편집이면 그 AU의 전신
   const pairMembers = !isNew && (initial!.kind ? initial!.kind === 'pair' : initial!.members.length === 2)
     ? initial!.members.slice(0, 2) : [];
@@ -314,27 +310,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
   const [auName, setAuName] = useState(auObj?.name ?? '');
   // 전신 앞뒤도 AU별 (v2.0) — AU에서 바꾼 앞뒤가 원본·다른 AU를 건드리지 않게
   const [fullFront, setFullFront] = useState<string | undefined>(auObj?.fullFront ?? initial?.fullFront);
-
-  // 내 캐릭터 연동 목록 — 선택된 캐릭터는 항상 표시, 나머지는 검색 필터 후 총 6명까지
-  const q = charQuery.trim().toLowerCase();
-  const pickedChars = myChars.filter(c => picked.includes(c.id));
-  const restChars = myChars.filter(c =>
-    !picked.includes(c.id) && (!q || c.name.toLowerCase().includes(q) || c.sub.toLowerCase().includes(q)));
-  const shownChars = [...pickedChars, ...restChars].slice(0, Math.max(6, pickedChars.length));
-  const hiddenCount = pickedChars.length + restChars.length - shownChars.length;
-
-  const maxPick = kind === 'pair' ? 2 : 6;
-
-  const togglePick = (id: string, v: boolean) => {
-    setPicked(list => {
-      if (!v) return list.filter(x => x !== id);
-      if (list.length >= maxPick) {
-        toast(kind === 'pair' ? '페어는 최대 2명까지 연동할 수 있습니다' : '다인관은 최대 6명까지입니다 (4.5)');
-        return list;
-      }
-      return [...list, id];
-    });
-  };
 
   const artSource = useImageSource(url => {
     if (!arts.length) { setThumbCrop(undefined); setCropOpen(true); }
@@ -456,19 +431,18 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
       nameSizes: pairMembers.length ? nameSizes : undefined,
       quoteColors: pairMembers.length ? quoteColors : undefined,
       fullFront,
-      pickedCharIds: picked,
     });
   };
 
   return (
     <div className="write-grid">
-      {/* 좌: 유형 · 내 캐릭터 연동(등록 시) · 아트 */}
+      {/* 좌: 유형 · 아트 */}
       <div className="panel" style={{ padding: 24, display: 'grid', gap: 14, alignContent: 'start' }}>
         <div>
           <label className="k-label">유형</label>
           {isNew ? (
             <div className="mini-seg">
-              <button className={kind === 'pair' ? 'on' : ''} onClick={() => { setKind('pair'); setPicked(p => p.slice(0, 2)); }}>
+              <button className={kind === 'pair' ? 'on' : ''} onClick={() => setKind('pair')}>
                 페어 (2인)
               </button>
               <button className={kind === 'multi' ? 'on' : ''} onClick={() => setKind('multi')}>
@@ -485,37 +459,6 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
               : '멤버 리스트형 레이아웃 · 최대 6인 (4.5)'}
           </p>
         </div>
-
-        {isNew && (
-          <div>
-            <label className="k-label">내 캐릭터 연동 <span style={{ fontWeight: 400, color: 'var(--faint)' }}>— {picked.length}/{maxPick}명 선택</span></label>
-            {myChars.length > 6 && (
-              <KInput placeholder="캐릭터 검색" value={charQuery} onChange={e => setCharQuery(e.target.value)}
-                style={{ marginBottom: 8 }} />
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {shownChars.map(c => (
-                <div key={c.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-                    border: `1.5px solid ${picked.includes(c.id) ? 'var(--accent)' : 'var(--line)'}`,
-                    borderRadius: 8, transition: '.15s',
-                  }}>
-                  <KCheck checked={picked.includes(c.id)} onChange={v => togglePick(c.id, v)}
-                    label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                      <i style={{ width: 11, height: 11, borderRadius: '50%', background: c.color, fontStyle: 'normal' }} />
-                      <b style={{ fontSize: 12.5 }}>{c.name}</b>
-                      <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{c.sub}</small>
-                    </span>} />
-                </div>
-              ))}
-              {myChars.length === 0 && <p className="hint">등록된 캐릭터가 없습니다 — 캐릭터를 먼저 등록해 주세요</p>}
-              {myChars.length > 0 && shownChars.length === 0 && <p className="hint">검색 결과가 없습니다</p>}
-            </div>
-            {hiddenCount > 0 && <p className="hint" style={{ marginTop: 6 }}>외 {hiddenCount}명 — 검색으로 찾아 주세요</p>}
-            <p className="hint">상대(타인) 캐릭터는 자관 상세에서 [＋ 멤버 추가]로 등록합니다</p>
-          </div>
-        )}
 
         {/* 아트 다중 등록 — 첫 장 = 대표 · 리스트 썸네일(4:3 크롭) */}
         <label className="k-label" style={{ margin: 0 }}>
@@ -647,7 +590,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
           </div>
         )}
 
-        {/* 전신 이미지 (v1.9) — 페어 좌/우 캐릭터, 미리보기에서 드래그=크기 · 클릭=앞으로 */}
+        {/* 전신 이미지 (v1.9) — 페어 좌/우 멤버, 미리보기에서 드래그=크기 · 클릭=앞으로 */}
         {pairMembers.length > 0 && (
           <>
             <label className="k-label" style={{ margin: 0 }}>
@@ -737,7 +680,7 @@ export function RelForm({ initial, auId, myChars, memberNames, existingIds, onSa
                   min={10} max={32} step={1} suffix="px" />
               </div>
             ))}
-            {/* 히어로 대사 색 (페어, v1.9 사용자 요청) — 좌/우 캐릭터 대사 글씨색·따옴표색 */}
+            {/* 히어로 대사 색 (페어, v1.9 사용자 요청) — 좌/우 멤버 대사 글씨색·따옴표색 */}
             <label className="k-label" style={{ margin: '10px 0 0' }}>대사 색 — 상단 좌/우 한마디</label>
             {pairMembers.map((m, i) => (
               <div key={m.charId} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

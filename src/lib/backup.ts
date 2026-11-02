@@ -18,10 +18,10 @@ export const MEMBER_KEYS = [
 ];
 
 const SITE_KEYS = [
-  'ohome.theme.v2', 'ohome.theme.v1', 'ohome.themeCss.v1', 'ohome.themePresets.v1', 'ohome.intro.v1', 'ohome.links.v1',
+  'ohome.theme.v2', 'ohome.theme.v1', 'ohome.themeCss.v1', 'ohome.themePresets.v1', 'ohome.links.v1',
   'ohome.fonts.v2', 'ohome.fonts.v1', 'ohome.menuset.v1', 'ohome.site.v1', 'ohome.pagetext.v1',
   'ohome.bgm.v1', 'ohome.bgm.fold', 'ohome.boardset.v1', 'ohome.boards.v1',
-  'ohome.memoset.v1', 'ohome.threadset.v1',
+  'ohome.threadset.v1',
 ];
 
 export interface ResetGroup { key: string; label: string; desc?: string; keys: string[] }
@@ -29,17 +29,13 @@ export interface ResetGroup { key: string; label: string; desc?: string; keys: s
 /** 콘텐츠(메뉴별) — 초기화 체크박스 */
 export const RESET_CONTENT: ResetGroup[] = [
   { key: 'board', label: '게시판 글', keys: ['ohome.board.v1'] },
-  { key: 'chars', label: '캐릭터', keys: ['ohome.chars.v1'] },
   { key: 'rels', label: '자관', keys: ['ohome.rels.v1'] },
   { key: 'backup', label: '갤러리(그림 백업)', keys: ['ohome.backup.v1'] },
   { key: 'road', label: '로드뷰', keys: ['ohome.road.v1', 'ohome.roadnext.v1'] },
   // 본문은 목록과 분리 저장이라(v2.0) 같이 지워야 로그만 지워지고 본문이 유령처럼 남지 않는다
   { key: 'trpg', label: 'TRPG 로그', keys: ['ohome.trpg.v1', 'ohome.trpgbody.v1'] },
-  { key: 'tchars', label: 'TRPG 캐릭터', keys: ['ohome.tchars.v1'] },
-  { key: 'rp', label: '역극', keys: ['ohome.rp.v1'] },
   { key: 'threads', label: '감상타래', keys: ['ohome.threads.v1'] },
   { key: 'diary', label: '다이어리', keys: ['ohome.diary.v1'] },
-  { key: 'memo', label: '메모장', keys: ['ohome.memo.v1'] },
 ];
 
 export const RESET_EXTRA: ResetGroup[] = [

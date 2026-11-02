@@ -3,7 +3,7 @@
 // 권한 규칙: firebase/firestore.rules · firebase/storage.rules
 //
 // Supabase 판과 같은 모양으로 맞춘 부분:
-//  · 컬렉션 이름 동일 (posts, characters, …)
+//  · 컬렉션 이름 동일 (posts, relations, …)
 //  · 문서 = 항목 하나, 필드는 { data, authorId, visibility, sort }
 //  · 관리자 판정은 meta/owner 문서 — 첫 로그인 계정이 소유자로 등록된다(규칙이 1회만 허용)
 import {
@@ -33,7 +33,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   // 콘솔에서 데이터베이스를 (default)가 아닌 이름으로 만든 경우를 위해 ID를 받는다
   const dbId = (cfg.databaseId ?? '').trim();
   const named = !!dbId && dbId !== '(default)';
-  // ignoreUndefinedProperties — 화면 데이터에는 값이 없는 필드가 undefined로 남는데(grants 등),
+  // ignoreUndefinedProperties — 화면 데이터에는 값이 없는 필드가 undefined로 남는데,
   // JSON 저장에서는 자동으로 빠지지만 Firestore는 거부한다. 같은 동작이 되도록 건너뛰게 한다.
   const db = (() => {
     const opts = { ignoreUndefinedProperties: true };
@@ -422,9 +422,9 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       for (const part of parts) {
         const batch = writeBatch(db);
         part.forEach(({ item, sort }) => {
-          const { authorId, visibility, editorIds } = metaOf(item, uid, visFloorOf(coll, item));
+          const { authorId, visibility } = metaOf(item, uid, visFloorOf(coll, item));
           batch.set(doc(db, coll, item.id), {
-            data: item, authorId, visibility, editorIds, sort, updatedAt: Date.now(),
+            data: item, authorId, visibility, sort, updatedAt: Date.now(),
           });
         });
         await batch.commit();
@@ -444,17 +444,15 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       }
     },
 
-    /* 공개범위·편집 권한 목록만 다시 계산해 덮어쓰기 (v2.0) — data·sort는 손대지 않는다.
-       editorIds도 함께 쓴다 (포크 제보 — 업데이트 전에 준 편집 권한이 문서에 평평한 목록으로
-       없어서, 최신 규칙을 넣어도 그 회원의 저장이 계속 거부됐다) */
+    /* 공개범위만 다시 계산해 덮어쓰기 (v2.0) — data·sort는 손대지 않는다. */
     async refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number> {
       let n = 0;
       for (let i = 0; i < items.length; i += 400) {
         const part = items.slice(i, i + 400);
         const batch = writeBatch(db);
         part.forEach(it => {
-          const { visibility, editorIds } = metaOf(it, uid, visFloorOf(coll, it));
-          batch.update(doc(db, coll, it.id), { visibility, editorIds, updatedAt: Date.now() });
+          const { visibility } = metaOf(it, uid, visFloorOf(coll, it));
+          batch.update(doc(db, coll, it.id), { visibility, updatedAt: Date.now() });
         });
         await batch.commit();
         n += part.length;

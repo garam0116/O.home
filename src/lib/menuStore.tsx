@@ -42,12 +42,10 @@ export interface MenuSettings {
 }
 
 /** 이미지 저장 방지 영역 (v1.9) — 게시판은 갤러리·로드비 포함 */
-export type ImgProtectArea = 'board' | 'tchar' | 'chars' | 'rels';
+export type ImgProtectArea = 'board' | 'rels';
 
 export const IMG_PROTECT_AREAS: { key: ImgProtectArea; label: string; paths: string[] }[] = [
   { key: 'board', label: '게시판 (갤러리·로드비 포함)', paths: ['/board', '/gallery', '/loadb'] },
-  { key: 'tchar', label: 'TRPG 캐릭터', paths: ['/tchars'] },
-  { key: 'chars', label: '자캐 (캐릭터)', paths: ['/chars'] },
   { key: 'rels', label: '자관', paths: ['/rels'] },
 ];
 

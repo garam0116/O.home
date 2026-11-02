@@ -1,5 +1,5 @@
 // 다이어리 (4.14) — 무드 기능은 사용하지 않아 삭제 (v2.1 사용자 요청)
-import type { Visibility } from './charStore';
+import type { Visibility } from './relStore';
 
 /* ---------- 일기 ---------- */
 export interface DiaryPost {

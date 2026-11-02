@@ -2,7 +2,7 @@
 // 일기 작성/수정 공용 폼 (4.14) — 제목 · 날짜 · 내용(MD) · 이미지 · 공개범위
 import React, { useState } from 'react';
 import { DiaryPost } from '@/lib/diaryStore';
-import { Visibility } from '@/lib/charStore';
+import { Visibility } from '@/lib/relStore';
 import { newId } from '@/lib/postStore';
 import { KInput, KTextarea, KSelect, KDate } from '@/components/ui/Kit';
 import { DragList } from '@/components/ui/DragList';

@@ -19,7 +19,7 @@ import { FileDrop } from '@/components/ui/FileDrop';
 import { useBlobUrl } from '@/lib/blobStore';
 import { putThumbnail } from '@/lib/thumbnail';
 
-/** 에디터가 다루지 못해 정리될 만한 태그·속성이 있는가 — 전환 경고 판단 (인트로와 같은 기준) */
+/** 에디터가 다루지 못해 정리될 만한 태그·속성이 있는가 — 전환 경고 판단 */
 const hasRichHtml = (html: string) =>
   /<(table|thead|tbody|tr|td|th|div|span|section|article|video|audio|details|summary|font|center)\b/i.test(html)
   || /\s(style|class|id)\s*=/i.test(html);

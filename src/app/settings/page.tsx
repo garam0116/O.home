@@ -19,7 +19,6 @@ import {
   boardHref, boardKeys, findBoardByKey,
 } from '@/lib/boardStore';
 import { useThreadSettings, ThreadWork, THREAD_SEED, ThreadCat, threadBadgeStyle, threadCats, threadCatsPatch } from '@/lib/threadStore';
-import { useMemoSettings } from '@/lib/memoStore';
 import {
   useMenuSettings, MenuSettings, MenuPerm, MenuVis,
   MenuGroupNode, MenuLeaf, defaultTree, newGroupId, menuLabelFor, extraBoardHref, boardEntries,
@@ -33,7 +32,6 @@ import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf } from '@/lib/siteStor
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
-import { Character, CHAR_SEED, Relation, REL_SEED } from '@/lib/charStore';
 import { useLocalList } from '@/lib/postStore';
 import {
   TextSettingEditor, DdayEditor, DdayCardEditor, TodoEditor, BannerEditor, DecoEditor,
@@ -58,13 +56,13 @@ import { SCHEMA_SQL } from '@/lib/schemaSql';
 const UNARCHIVABLE = '디자인';
 
 const CATEGORIES = [
-  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', 'TRPG', '감상타래', '메모장',
+  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', 'TRPG', '감상타래',
   '폰트', 'BGM', '회원/보안', '데이터 백업',
 ] as const;
 /** 탭 주소 (v2.4 사용자 요청 — 주소에 ?·한글 인코딩 없이) — /settings/menu 처럼 */
 const TAB_SLUG: Record<(typeof CATEGORIES)[number], string> = {
   '디자인': 'design', '메인 페이지': 'main', '위젯': 'widgets', '메뉴 관리': 'menu', '게시판 관리': 'board',
-  'TRPG': 'trpg', '감상타래': 'threads', '메모장': 'memo',
+  'TRPG': 'trpg', '감상타래': 'threads',
   '폰트': 'fonts', 'BGM': 'bgm', '회원/보안': 'members', '데이터 백업': 'backup',
 };
 const tabOfSlug = (v: string | null | undefined) =>
@@ -407,17 +405,6 @@ function DesignPane() {
         </div>
       </div>
 
-      {/* 캐릭터 탭 리스트 (v1.9 사용자 요청) — 좌측 아이콘 탭 4색 */}
-      <div className="set-row">
-        <div className="l"><b>캐릭터 탭 리스트</b><small>캐릭터 상세 좌측 아이콘 탭</small></div>
-        <div className="cp-grid2">
-          <CP label="배경" k="tabBg" />
-          <CP label="글씨" k="tabFg" />
-          <CP label="선택 배경" k="tabOnBg" />
-          <CP label="선택 글씨" k="tabOnFg" />
-        </div>
-      </div>
-
       {/* 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링</small></div>
@@ -449,15 +436,6 @@ function DesignPane() {
         <div className="l"><b>이미지 편집 배경</b><small>썸네일·헤더 위치 지정 화면의 판 — 투명 이미지에서 보임</small></div>
         <div className="cp-group">
           <CP label="배경" k="cropBg" />
-        </div>
-      </div>
-
-      {/* 스티커 메모 보드 (v1.9 사용자 요청) — 라이트 모드에서 배치 판이 안 보이던 문제 */}
-      <div className="set-row">
-        <div className="l"><b>스티커 메모 보드</b><small>메모장 배치 판과 메인 미니보드 위젯의 배경</small></div>
-        <div className="cp-group">
-          <CP label="배경" k="memoBoard" />
-          <CP label="테두리" k="memoBoardBd" />
         </div>
       </div>
 
@@ -1383,25 +1361,6 @@ function DataPane() {
     toast(`이미지 ${n}개를 지웠습니다`);
   };
 
-  /* 어디에도 안 걸린 상대 캐릭터 정리 (v2.0 사용자 요청).
-     자관을 지워도 그 자관에서 만든 상대 캐릭터는 남는다. **일부러 그렇게 둔다** — 실수로 자관을
-     지웠을 때 캐릭터까지 사라지면 되돌릴 방법이 없기 때문(사용자 판단). 대신 정말 아무 자관에도
-     안 걸린 것만 골라 여기서 지운다. 내 캐릭터(own)는 자관과 무관하게 존재하므로 건드리지 않는다. */
-  const [chars, setChars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
-  const [rels] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
-  const [charAsk, setCharAsk] = useState(false);
-  const orphanChars = useMemo(() => {
-    const used = new Set<string>();
-    rels.forEach(r => r.members.forEach(m => used.add(m.charId)));
-    return chars.filter(c => !c.own && !used.has(c.id));
-  }, [chars, rels]);
-
-  const cleanChars = () => {
-    const gone = new Set(orphanChars.map(c => c.id));
-    setChars(chars.filter(c => !gone.has(c.id)));
-    toast(`상대 캐릭터 ${gone.size}명을 지웠습니다`);
-  };
-
   // 이 브라우저에 저장돼 있던 사이트 설정을 서버로 올린다 (연결 직후 1회면 충분)
   const doPush = async () => {
     setPushing(true);
@@ -1514,7 +1473,7 @@ function DataPane() {
   return (
     <div className="set-sec">
       <h3>데이터 백업</h3>
-      <div className="d">글·캐릭터·자관·역극 등 모든 데이터(JSON)와 이미지 전부를 zip 하나로 — 다른 브라우저/PC 이전용</div>
+      <div className="d">글·자관·로그 등 모든 데이터(JSON)와 이미지 전부를 zip 하나로 — 다른 브라우저/PC 이전용</div>
 
       {/* 로컬로 먼저 꾸민 뒤 서버를 붙인 경우에만 — 서버에 없는 설정이 남아 있을 때만 나타난다 (v2.0) */}
       {serverOn && unsynced.length > 0 && (
@@ -1544,25 +1503,9 @@ function DataPane() {
           </div>
         </div>
       )}
-      {/* 어디에도 안 걸린 상대 캐릭터 정리 (v2.0 사용자 요청) — 자관을 지워도 캐릭터는 일부러 남긴다.
-          실수로 지웠을 때 되돌릴 수 있게. 정말 안 쓰는 것만 여기서 골라 지운다 */}
-      <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        <div className="l"><b>등록되지 않은 상대 캐릭터 정리</b>
-          <small>자관을 지워도 상대 캐릭터는 남습니다(실수로 지웠을 때를 위해) — 어느 자관에도 없는 캐릭터만 골라 지웁니다</small></div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span className="hint">
-            {orphanChars.length > 0 ? `${orphanChars.length}명` : '정리할 것 없음'}
-          </span>
-          {orphanChars.length > 0 && (
-            <button className="btn btn-accent" style={{ padding: '9px 18px' }}
-              onClick={() => setCharAsk(true)}>{orphanChars.length}명 지우기</button>
-          )}
-        </div>
-      </div>
-
       {/* 백업 두 갈래 (v1.9 사용자 확정) — 회원 계정 포함 여부 선택 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        <div className="l"><b>백업 내보내기</b><small>글·캐릭터·설정 + 이미지 → zip · 회원 계정(가입자·가입코드) 포함 여부 선택</small></div>
+        <div className="l"><b>백업 내보내기</b><small>글·자관·설정 + 이미지 → zip · 회원 계정(가입자·가입코드) 포함 여부 선택</small></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn btn-accent" style={{ padding: '9px 18px', opacity: busy ? 0.5 : 1 }}
             disabled={busy} onClick={() => doExport(false)}>↓ 데이터만</button>
@@ -1702,20 +1645,11 @@ function DataPane() {
       </Modal>
 
       <ConfirmModal open={cleanAsk} title={`쓰지 않는 이미지 ${orphans?.length ?? 0}개를 지울까요?`}
-        body={`저장소에서 ${orphanMB.toFixed(1)}MB를 비웁니다. 지금 글·캐릭터·설정 어디에서도 참조하지 않는 파일만 골랐지만, 지운 파일은 복구할 수 없습니다. 걱정되면 먼저 백업을 받아 두세요.`}
+        body={`저장소에서 ${orphanMB.toFixed(1)}MB를 비웁니다. 지금 글·자관·설정 어디에서도 참조하지 않는 파일만 골랐지만, 지운 파일은 복구할 수 없습니다. 걱정되면 먼저 백업을 받아 두세요.`}
         onClose={() => setCleanAsk(false)}
         buttons={[
           { label: '지우기', kind: 'accent', onClick: () => { setCleanAsk(false); void cleanOrphans(); } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setCleanAsk(false) },
-        ]} />
-
-      {/* 지울 캐릭터 이름을 그대로 보여 준다 (v2.0) — 개수만으로는 무엇이 사라지는지 알 수 없다 */}
-      <ConfirmModal open={charAsk} title={`상대 캐릭터 ${orphanChars.length}명을 지울까요?`}
-        body={`${orphanChars.slice(0, 12).map(c => c.name).join(', ')}${orphanChars.length > 12 ? ` 외 ${orphanChars.length - 12}명` : ''} — 어느 자관에도 등록돼 있지 않은 캐릭터입니다. 지우면 복구할 수 없습니다.`}
-        onClose={() => setCharAsk(false)}
-        buttons={[
-          { label: '지우기', kind: 'accent', onClick: () => { setCharAsk(false); cleanChars(); } },
-          { label: 'CANCEL', kind: 'ghost', onClick: () => setCharAsk(false) },
         ]} />
 
       <ConfirmModal open={resetAsk} title="선택한 항목을 초기화할까요?"
@@ -1879,9 +1813,6 @@ function MenuPane() {
   }, []);
   const [resetAsk, setResetAsk] = useState(false);   // 기본 구성 리셋 확인 모달
   const [mtab, setMtab] = useState<'basic' | 'perm'>('basic');   // 기본(구성) / 권한 탭 (v1.9)
-  // 역극 비로그인 안내 문구 (v1.9 — pagetext 'rp-gate-desc')
-  const [rpGate, setRpGate] = useState('');
-  useEffect(() => { setRpGate(getPageText('rp-gate-desc', '역극은 로그인한 참여자에게만 표시됩니다')); }, []);
   const leaveWith = (action: 'save' | 'discard') => {
     if (action === 'save') patch({ tree, removedBoards: removed });
     else revert();
@@ -1978,14 +1909,6 @@ function MenuPane() {
 
   // 메뉴별 권한 부속 — 권한 탭용 (v1.9)
   const extraPerm = (href: string) => {
-    // 역극 — 비로그인 안내 문구 (관리자는 그 화면을 볼 수 없어 여기서 편집)
-    if (href === '/rp') {
-      return (
-        <KInput value={rpGate}
-          onChange={e => { setRpGate(e.target.value); setPageText('rp-gate-desc', e.target.value); }}
-          placeholder="비로그인 안내 문구" style={{ width: 210, fontSize: 12 }} />
-      );
-    }
     // 게시판 글쓰기·댓글 권한 (게시판별)
     if (href === '/board' || href.startsWith('/board/b/')) {
       // 메뉴 주소에는 별명(또는 이름에서 만든 값)이 적혀 있다 — id·별명 어느 쪽으로도 찾는다 (v2.4)
@@ -2325,7 +2248,7 @@ function MenuPane() {
         <h3 style={{ margin: 0 }}>커스텀 링크</h3>
       </div>
       <div className="d">
-        자관·캐릭터처럼 목록에서 골라야 갈 수 있던 페이지를 메뉴에서 바로 — 주소를 적어 두면 됩니다.
+        자관처럼 목록에서 골라야 갈 수 있던 페이지를 메뉴에서 바로 — 주소를 적어 두면 됩니다.
         <br />
         <b>내 홈 주소</b>는 붙여 넣으면 사이트 안 이동으로 바뀌고(예: <code>…/rels/latte</code> → <code>/rels/latte</code>),
         <b>다른 사이트 주소</b>는 그대로 남아 새 창으로 열립니다.
@@ -2412,25 +2335,6 @@ function TrpgPane() {
         <KInput value={lockDesc}
           onChange={e => { setLockDesc(e.target.value); setPageText('trpg-lock-desc', e.target.value); }}
           placeholder="비밀번호를 입력하면 열람할 수 있습니다" style={{ width: 300 }} />
-      </div>
-    </div>
-  );
-}
-
-/** 메모장 탭 (4.6) — 작성 권한 + 작성자 표시 */
-function MemoPane() {
-  const [settings, patch] = useMemoSettings();
-  return (
-    <div className="set-sec">
-      <h3>스티커 메모장</h3>
-      <div className="d">포스트잇 보드 옵션 — 배치·순서는 저장되어 모두에게 동일</div>
-      <div className="set-row">
-        <div className="l"><b>회원 작성 허용</b><small>끄면 관리자만 메모를 붙일 수 있습니다</small></div>
-        <KToggle checked={settings.allowMember} onChange={v => patch({ allowMember: v })} />
-      </div>
-      <div className="set-row">
-        <div className="l"><b>작성자 표시</b><small>포스트잇 상단에 작성자 닉네임 표시</small></div>
-        <KToggle checked={settings.showAuthor} onChange={v => patch({ showAuthor: v })} />
       </div>
     </div>
   );
@@ -2795,7 +2699,7 @@ function FontPane() {
   return (
     <div className="set-sec">
       <h3>폰트 라이브러리</h3>
-      <div className="d">캐릭터 프로필·자관 이름·시나리오 타이틀 등에서 이 목록 중 선택해 사용 — 원하는 폰트만 남기고 삭제 가능 · ↑↓로 목록 순서 변경</div>
+      <div className="d">자관 이름·시나리오 타이틀 등에서 이 목록 중 선택해 사용 — 원하는 폰트만 남기고 삭제 가능 · ↑↓로 목록 순서 변경</div>
 
       {fonts.map((f, i) => <FontRow key={f.id} f={f} first={i === 0} last={i === fonts.length - 1} />)}
       {hiddenCount > 0 && (
@@ -2805,7 +2709,7 @@ function FontPane() {
           </button>
         </div>
       )}
-      <p className="hint">삭제해도 이미 그 폰트를 쓰고 있는 캐릭터·자관 표시는 깨지지 않습니다 — 선택 목록에서만 빠집니다</p>
+      <p className="hint">삭제해도 이미 그 폰트를 쓰고 있는 자관 표시는 깨지지 않습니다 — 선택 목록에서만 빠집니다</p>
 
       <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
         <label className="k-label" style={{ margin: 0 }}>웹폰트 추가 — 눈누/구글폰트의 CSS 링크(URL)와 font-family 값</label>
@@ -2993,8 +2897,6 @@ function SettingsInner() {
             <TrpgPane />
           ) : tab === '감상타래' ? (
             <ThreadPane />
-          ) : tab === '메모장' ? (
-            <MemoPane />
           ) : tab === 'BGM' ? (
             <BgmPane />
           ) : tab === '폰트' ? (

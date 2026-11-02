@@ -1,6 +1,6 @@
 ﻿'use client';
 // 자관 상세 (4.5) — 2인: 헤더 블러 + 대형 타이틀 + 좌우 카드 + 중앙 일러(전신/일러 토글) + AU
-// 다인(3인+): 멤버 리스트형 · 관리자: 멤버 추가(내/상대 캐릭터)
+// 다인(3인+): 멤버 리스트형 · 관리자: 멤버 추가(이름·사진 직접 입력)
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
@@ -8,17 +8,15 @@ import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/ThemeProvider';
 import { useLocalList, newId } from '@/lib/postStore';
 import {
-  Relation, REL_SEED, Character, CHAR_SEED, RelMember, RelSideSlot, findChar, Visibility, CharGrant,
+  Relation, REL_SEED, RelMember, RelSideSlot,
   auMember, auStyle, fullShadow,
-  RelAu, charWithAu,
-  findByKey, charPath, relDday, relDdayDate, auPathOf, auKeyOf, relPath,
-} from '@/lib/charStore';
+  RelAu,
+  findByKey, relDday, relDdayDate, auKeyOf, relPath,
+} from '@/lib/relStore';
 import { putBlob } from '@/lib/blobStore';
-import { GrantsEditor } from '@/components/chars/GrantsEditor';
 import { useFonts } from '@/lib/fontStore';
-import { Tip, KInput, KSelect, KRadio, KCheck } from '@/components/ui/Kit';
+import { KInput } from '@/components/ui/Kit';
 import { Modal, ConfirmModal, useConfirmDelete } from '@/components/ui/Modal';
-import { ColorField } from '@/components/ui/ColorField';
 import { withAlpha } from '@/lib/color';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
 import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/CropEditor';
@@ -54,29 +52,6 @@ function FaceCropModal({ fileRef, crop, onClose, onApply }: {
   return <CropEditor open src={url} aspect="1:1" initial={crop} onClose={onClose} onApply={onApply} />;
 }
 
-/** 캐릭터 대표 이미지 — 등록돼 있으면 실제 이미지, 없을 때만 기존 플레이스홀더 */
-function CharFace({ c, className, style }: {
-  c?: Character; className?: string; style?: React.CSSProperties;
-}) {
-  const rep = c?.thumbId ?? c?.arts?.[0];
-  if (!rep) return <div className={`${className ?? ''} ph ${c?.thumbClass ?? ''}`} style={style} />;
-  return (
-    <div className={className} style={{ position: 'relative', overflow: 'hidden', ...style }}>
-      <CroppedBlobImg fileRef={rep} crop={c?.thumbCrop} />
-    </div>
-  );
-}
-
-/** hex → "r,g,b" (말풍선 --cc 용) */
-function rgbTriple(hex: string): string {
-  const m = hex.replace('#', '');
-  const f = m.length === 3 ? m.split('').map(c => c + c).join('') : m;
-  return `${parseInt(f.slice(0, 2), 16)},${parseInt(f.slice(2, 4), 16)},${parseInt(f.slice(4, 6), 16)}`;
-}
-
-/** 프로필에 덧붙일 메모 — 「회원 ○○ 연결됨」처럼 알려 줄 게 있을 때만.
- *  예전엔 상대 캐릭터를 등록하면 「상대 캐릭터」라고 적어 뒀는데, 상대 캐릭터 자리에 있는 게
- *  상대 캐릭터인 건 굳이 적을 일이 아니라 뺐다 (v2.0 사용자 요청 — 이미 저장된 것도 안 보이게) */
 /** 중앙 일러 위치 편집기 (v2.0) — 실제 표시 영역의 비율 그대로 열어야 보이는 대로 맞출 수 있다 */
 function RelArtCropModal({ fileRef, ratio, crop, onClose, onApply }: {
   fileRef: string; ratio: number; crop?: CropValue; onClose: () => void; onApply: (c: CropValue) => void;
@@ -89,11 +64,8 @@ function RelArtCropModal({ fileRef, ratio, crop, onClose, onApply }: {
   );
 }
 
-const noteOf = (m: RelMember) => (m.linkedNote === '상대 캐릭터' ? '' : m.linkedNote ?? '');
-
-function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side, onMoveSide, onFaceCrop }: {
-  member: RelMember; char?: Character; isAdmin: boolean; onGo: () => void; onRemove: () => void;
-  auUnregistered?: boolean;   // AU 선택 중인데 이 캐릭터의 AU 프로필이 미등록 (v1.9)
+function MiniProf({ member, isAdmin, onEdit, onRemove, side, onMoveSide, onFaceCrop }: {
+  member: RelMember; isAdmin: boolean; onEdit: () => void; onRemove: () => void;
   side?: 'l' | 'r';           // 페어에서 지금 어느 자리인지 (좌우 옮기기 메뉴용, v2.0)
   onMoveSide?: () => void;
   onFaceCrop?: (ref: string) => void;   // 얼굴칸(1:1) 크롭 다시 잡기 (v2.0)
@@ -114,91 +86,42 @@ function MiniProf({ member, char, isAdmin, onGo, onRemove, auUnregistered, side,
       window.removeEventListener('keydown', key);
     };
   }, [ctx]);
-  // 대표 이미지 = 프로필 사진 · 나머지 아트 = 아래 썸네일 줄 (없으면 줄 자체를 만들지 않는다)
-  const arts = char?.arts ?? [];
-  const rep = char?.thumbId ?? arts[0];
-  const rest = arts.filter(a => a !== rep);
-  const gallery = (rep ? [rep, ...rest] : rest).filter(Boolean);
-  if (!char) return null;
-  if (auUnregistered) {
-    return (
-      <div className="panel mini-prof" onClick={onGo} style={{ cursor: 'pointer', textAlign: 'center', padding: '44px 20px' }}>
-        <b style={{ fontSize: 15, letterSpacing: '.08em' }}>{char.name}</b>
-        <p className="hint" style={{ marginTop: 10 }}>이 AU의 프로필이 아직 등록되지 않았습니다<br />카드를 누르면 캐릭터 페이지에서 등록할 수 있습니다</p>
-      </div>
-    );
-  }
+  const rep = member.photoId;
   return (
-    <div className="panel mini-prof" onClick={onGo} style={{ cursor: 'pointer' }}
+    <div className="panel mini-prof"
       onContextMenu={e => { if (!isAdmin) return; e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY }); }}>
       <div className="hd">
         {rep ? (
           <div className="face" data-tip="클릭하면 원본 보기"
             style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in' }}
             onClick={e => { e.stopPropagation(); setLb(0); }}>
-            {/* 얼굴칸은 1:1 — 캐릭터의 3:4 썸네일 크롭을 그대로 쓰면 어긋나므로
-                자관에서 따로 잡아 둔 값이 있으면 그것을 쓴다 (우클릭 > 썸네일 위치) */}
-            <CroppedBlobImg fileRef={rep} crop={member.faceCrop ?? char.thumbCrop} />
+            <CroppedBlobImg fileRef={rep} crop={member.faceCrop} />
           </div>
         ) : (
-          <div className={`face ph ${char.thumbClass}`} />
+          <div className="face ph" />
         )}
         <div>
-          {/* 이름 폰트·굵기는 모든 자관에서 하나로 통일 (사용자 요청) — 캐릭터 프로필 폰트나
-              멤버별 폰트·볼드 설정을 따라가면 카드마다 글꼴이 달라진다. 크기만 멤버별로 */}
+          {/* 이름 폰트·굵기는 모든 자관에서 하나로 통일 (사용자 요청) — 크기만 멤버별로 */}
           <b style={{ fontSize: member.nameSize ?? undefined }}>
-            {char.name}
+            {member.name}
           </b>
-          {char.sub && <small>{char.sub}</small>}
-          {noteOf(member) && <small>{noteOf(member)}</small>}
+          {/* 캐릭터 기능이 있던 때 넣은 멤버는 이름이 비어 있다 — 관리자에게만 채우라고 알려 준다 */}
+          {!member.name && isAdmin && <small>이름 미입력 — 우클릭 › 이름·사진 수정</small>}
         </div>
       </div>
-      <div className="specs">
-        {char.specs.map(s => <div key={s.label}><b>{s.label}</b> {s.value}</div>)}
-      </div>
-      {/* 캐릭터의 지금 색 팔레트를 그대로 읽는다 (v2.0 사용자 발견).
-          예전엔 멤버를 추가할 때 복사해 둔 member.palette 스냅샷을 보여 줘서, 캐릭터 쪽에서 색을
-          지우거나 더 넣어도 자관 페이지는 추가 당시 상태에 멈춰 있었다("지웠는데 안 사라져",
-          "더 등록해도 추가로 안 떠"의 원인). 옛 저장분은 캐릭터에 색이 하나도 없을 때만 fallback */}
-      <div className="palette-row" data-tip="캐릭터 테마색 팔레트">
-        {/* `?? `(nullish)로 판단 — 빈 배열은 "색을 다 지웠다"는 뜻이라 그대로 비워야 한다.
-            length로 보면 전부 지웠을 때 옛 스냅샷이 되살아난다 (v2.0 사용자 재신고) */}
-        {/* 색 점 테두리 — 캐릭터의 colorBd 설정을 여기서도 (v2.0 사용자 요청: 카드 배경과
-            구분 안 되는 색이면 자관 상세에서도 테두리가 필요하다). 마름모(clip-path)라
-            box-shadow가 잘리므로, 바깥 마름모를 테두리색으로 깔고 안쪽 마름모에 색을 얹는다 */}
-        {(char.colors ?? member.palette).map(p => {
-          const bd = char.colorBd === 'none' ? null : (char.colorBd ?? 'rgba(0,0,0,.14)');
-          return (
-            <Tip key={p.hex + p.label} tip={p.label}>
-              <span className="gem" style={{ background: bd ?? p.hex }}>
-                {bd && <i style={{ background: p.hex }} />}
-              </span>
-            </Tip>
-          );
-        })}
-      </div>
-      <div className="kw-row">
-        {member.keywords.map(k => <span key={k} className="pill">{k}</span>)}
-      </div>
-      {member.desc && <div className="rel-desc">{member.desc}</div>}
-      {/* 대표를 뺀 나머지 아트 — 없으면 줄 자체를 만들지 않는다 (빈 칸이 자리를 먹지 않게) */}
-      {rest.length > 0 && (
-        <div className="card-thumbs">
-          {rest.map((r, i) => (
-            <div key={r} className="t" data-tip="클릭하면 원본 보기"
-              style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in' }}
-              onClick={e => { e.stopPropagation(); setLb((rep ? 1 : 0) + i); }}>
-              <BlobImg fileRef={r} ph="" label="" />
-            </div>
-          ))}
+      {member.keywords.length > 0 && (
+        <div className="kw-row">
+          {member.keywords.map(k => <span key={k} className="pill">{k}</span>)}
         </div>
       )}
-      {lb !== null && <Lightbox srcs={gallery} index={lb} onClose={() => setLb(null)} />}
+      {member.desc && <div className="rel-desc">{member.desc}</div>}
+      {lb !== null && rep && <Lightbox srcs={[rep]} index={lb} onClose={() => setLb(null)} />}
 
       {/* 우클릭 메뉴 — 관리자만 (멤버 제거) */}
       {ctx && createPortal(
         <div className="ctx-menu on" style={{ left: ctx.x, top: ctx.y }} onClick={e => e.stopPropagation()}>
-          <div className="ctx-ttl">{char.name}</div>
+          <div className="ctx-ttl">{member.name || '멤버'}</div>
+          <button onClick={() => { setCtx(null); onEdit(); }}>이름·사진 수정</button>
           {onFaceCrop && rep && (
             <button onClick={() => { setCtx(null); onFaceCrop(rep); }}>썸네일 위치 조정</button>
           )}
@@ -223,7 +146,7 @@ function EmptyCard({ isAdmin, onAdd }: { isAdmin: boolean; onAdd: () => void }) 
       border: '2px dashed var(--line)', background: 'rgba(252,252,253,.6)', cursor: isAdmin ? 'pointer' : undefined,
     }} onClick={() => { if (isAdmin) onAdd(); }}>
       <div style={{ textAlign: 'center', color: 'var(--faint)', fontSize: 12.5, padding: 20 }}>
-        {isAdmin ? <><b style={{ fontSize: 20, display: 'block', marginBottom: 6 }}>＋</b>멤버 추가<br /><small>내 캐릭터 또는 상대 캐릭터</small></> : '멤버 미정'}
+        {isAdmin ? <><b style={{ fontSize: 20, display: 'block', marginBottom: 6 }}>＋</b>멤버 추가<br /><small>인물 이름 · 사진</small></> : '멤버 미정'}
       </div>
     </div>
   );
@@ -249,23 +172,19 @@ export default function RelDetailPage() {
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
   // 주소는 별명 또는 번호 (v2.4) — 예전 id 주소로 들어오면 바꿔 둔다
   const id = useNoKey(rels, rawKey, k => `/rels/${k}`, { slug: true });
-  const [chars, setChars, charsLoaded] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   // 소속 자관 목록 — 큰 글씨·삭제 후 돌아갈 곳
   const tt = useSectionTitle('rels', findByKey(rels, id)?.secId, 'RELATIONS');
   const [auId, setAuId] = useState('base');
   const [oneMode, setOneMode] = useState<boolean | null>(null);
   // 멤버 얼굴칸(1:1) 크롭 편집 (v2.0)
   const [faceEdit, setFaceEdit] = useState<{ charId: string; ref: string; crop?: CropValue } | null>(null);
-  // 관리자 추가 모달
+  // 관리자 멤버 추가·수정 모달 — 인물 이름·사진을 직접 넣는다 (editId가 있으면 그 멤버 수정)
   const [memberOpen, setMemberOpen] = useState(false);
-  const [mMode, setMMode] = useState<'exist' | 'new'>('exist');
-  const [mCharId, setMCharId] = useState('');
-  const [mQuery, setMQuery] = useState('');   // 기존 캐릭터 검색어
-  const [mQuote, setMQuote] = useState('');
+  const [mEditId, setMEditId] = useState<string | null>(null);
   const [mName, setMName] = useState('');
-  const [mSub, setMSub] = useState('');
-  const [mColor, setMColor] = useState('#8a7f70');
-  const [mGrants, setMGrants] = useState<CharGrant[]>([]); // 새 상대 캐릭터 회원 권한 (v1.9)
+  const [mQuote, setMQuote] = useState('');
+  const [mPhoto, setMPhoto] = useState<{ ref?: string; file?: File; url?: string }>({});
+  const [mSaving, setMSaving] = useState(false);
   const [artIdx, setArtIdx] = useState(0);
   /* 중앙 일러 우클릭 → 상세에 보일 위치 조정 (v2.0 사용자 요청).
      리스트 썸네일 좌표만 잡을 수 있고 상세는 못 잡던 것 — 여러 장이면 보고 있는 장을 잡는다.
@@ -321,17 +240,6 @@ export default function RelDetailPage() {
     return () => setPageBg(null);
   }, [bgG1, bgG2, bgAngle, setPageBg]);
 
-  // 삭제된 캐릭터를 가리키는 멤버 자동 정리 — 카드도 안 뜨고 [＋ 멤버 추가]도
-  // 안 나오는 유령 슬롯이 남지 않게 (캐릭터 삭제 기능 도입에 따른 정합성 보정)
-  useEffect(() => {
-    if (!loaded || !charsLoaded || !rel) return;
-    const alive = rel.members.filter(m => chars.some(c => c.id === m.charId));
-    if (alive.length !== rel.members.length) {
-      setRels(rels.map(r => (r.id === rel.id ? { ...r, members: alive } : r)));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, charsLoaded, rel?.id, rel?.members.length, chars.length]);
-
   const isDuo = rel ? (rel.kind ? rel.kind === 'pair' : rel.members.length === 2) : false;
   const au = rel?.aus.find(a => a.id === auId) ?? rel?.aus[0];
   // AU별 프로필 데이터 (v1.9) — base(원본)는 Relation 최상위, 그 외 AU는 aus 항목에 저장
@@ -364,19 +272,6 @@ export default function RelDetailPage() {
   const hasFull = !!rel?.members.some(m => fullRefOf(m.charId));
   const single = hasFull ? (oneMode ?? rel?.illustMode === 'one') : true;
 
-  // 멤버 캐릭터 — AU 선택 시 그 캐릭터의 AU 프로필(이름·사진 등)로 합성해 표시 (v1.9)
-  const auCharKey = rel && !isBaseAu && au ? `${rel.id}:${au.id}` : null;
-  const charOf = (cid: string) => {
-    const c = findChar(chars, cid);
-    return c && auCharKey ? charWithAu(c, auCharKey) : c;
-  };
-  // AU 선택 중 그 캐릭터의 AU 프로필 미등록 여부 + 캐릭터 페이지 링크(au 유지) (v1.9)
-  const auUnregOf = (cid: string) => !!auCharKey && !findChar(chars, cid)?.auProfiles?.[auCharKey];
-  // 캐릭터 별명 주소 우선 (v2.0) — 없으면 id 그대로
-  const charHref = (cid: string) => {
-    const base = charPath(charOf(cid) ?? { id: cid });
-    return `${base}${auPathOf(rels, auCharKey)}`;   // AU는 /chars/{…}/au/{자관}/{번호} (v2.4)
-  };
   const sideSlotOf = (side: 'l' | 'r') =>
     (!isBaseAu && au?.sideSlots?.[side]) || rel?.sideSlots?.[side];
 
@@ -397,62 +292,63 @@ export default function RelDetailPage() {
     else updateRel({ aus: rel.aus.map(a => (a.id === au!.id ? { ...a, ...p } : a)) });
   };
 
-  /* ---------- 멤버 추가 (내 캐릭터 or 새 상대 캐릭터) ---------- */
-  const candidates = chars.filter(c => !rel.members.some(m => m.charId === c.id));
-  const addMember = () => {
-    let cid = mCharId;
-    if (mMode === 'new') {
-      if (!mName.trim()) { toast('상대 캐릭터 이름을 입력해 주세요'); return; }
-      // 상대 캐릭터 간단 등록 (own:false — 내 캐릭터 리스트에는 표시되지 않음, 4.4)
-      const nc: Character = {
-        id: newId(), name: mName.trim(), sub: mSub.trim(), color: mColor,
-        // 입력한 색은 대표 테마색(color)으로만 쓴다 — 예전엔 팔레트(colors)에도 「테마색」이라는
-        // 이름으로 한 칸 자동 등록해서, 포인트 컬러로 넣은 값이 팔레트에 멋대로 들어가 있었다
-        // (v2.0 사용자 요청). 팔레트는 캐릭터 수정에서 직접 넣는다
-        colors: [], specs: [], tabs: [],
-        basicHtml: '', visibility: 'public', thumbClass: '', own: false,
-        grants: mGrants.length ? mGrants : undefined, // 회원 권한 — 역극 플레이/편집 (v1.9)
-      };
-      setChars([...chars, nc]);
-      cid = nc.id;
+  /* ---------- 멤버 추가·수정 (인물 이름 + 사진) ---------- */
+  const openMember = (m?: RelMember) => {
+    setMEditId(m?.charId ?? null);
+    setMName(m?.name ?? '');
+    setMQuote(m?.quote ?? '');
+    setMPhoto(m?.photoId ? { ref: m.photoId } : {});
+    setMemberOpen(true);
+  };
+  const saveMember = async () => {
+    if (!mName.trim()) { toast('인물 이름을 입력해 주세요'); return; }
+    setMSaving(true);
+    try {
+      const photoId = mPhoto.file ? await putBlob(mPhoto.file) : mPhoto.ref;
+      if (mEditId) {
+        updateRel({
+          members: rel.members.map(m => (m.charId === mEditId
+            ? {
+              ...m, name: mName.trim(), quote: mQuote.trim(), photoId,
+              // 사진을 바꾸면 예전 사진에 맞춰 잡아 둔 얼굴칸 위치는 풀어 준다
+              faceCrop: photoId === m.photoId ? m.faceCrop : undefined,
+            }
+            : m)),
+        });
+        toast('멤버 정보가 수정되었습니다');
+      } else {
+        updateRel({
+          members: [...rel.members, {
+            charId: newId(), name: mName.trim(), photoId,
+            quote: mQuote.trim(), keywords: [], desc: '',
+          }],
+        });
+        toast('멤버가 추가되었습니다');
+      }
+      setMemberOpen(false);
+    } catch {
+      toast('사진을 저장하지 못했습니다');
+    } finally {
+      setMSaving(false);
     }
-    if (!cid) { toast('추가할 캐릭터를 선택해 주세요'); return; }
-    const ch = chars.find(c => c.id === cid);
-    updateRel({
-      members: [...rel.members, {
-        charId: cid, quote: mQuote.trim(), keywords: [], desc: '',
-        // 팔레트는 캐릭터 쪽을 그대로 읽어 쓴다 — 여기서 복사해 두면 나중에 캐릭터 색을 바꿔도
-        // 자관 페이지가 따라오지 않는다. 입력한 색을 「테마색」이라는 이름으로 팔레트에 자동
-        // 등록하던 것도 없앴다 (v2.0 사용자 요청 — 포인트 컬러로 넣은 값이 테마색으로 들어가 버림)
-        palette: [],
-        // linkedNote는 「회원 ○○ 연결됨」처럼 알려 줄 게 있을 때만 — 상대 캐릭터라고 적어 두던 건 없앴다 (v2.0)
-      }],
-    });
-    setMemberOpen(false);
-    setMCharId(''); setMQuery(''); setMQuote(''); setMName(''); setMSub('');
-    toast('멤버가 추가되었습니다');
   };
 
   const removeMember = (cid: string) => {
-    const c = charOf(cid);
-    const name = c?.name ?? '멤버';
+    const name = rel.members.find(m => m.charId === cid)?.name || '멤버';
     del.ask(`멤버 「${name}」를 제거하시겠습니까?`,
       () => updateRel({
         members: rel.members.filter(m => m.charId !== cid),
-        // 오른쪽 지정이 걸려 있던 캐릭터가 빠지면 지정도 함께 푼다
+        // 오른쪽 지정이 걸려 있던 멤버가 빠지면 지정도 함께 푼다
         pairRight: rel.pairRight === cid ? undefined : rel.pairRight,
       }),
-      c?.own
-        // 내 캐릭터 — 이 자관에 등록한 정보만 지운다 (사용자 확정)
-        ? '이 자관에 등록한 정보(한마디·키워드·소개·전신·색)만 지웁니다. 캐릭터 자체와 다른 자관의 정보는 그대로입니다.'
-        : '자관에서만 빠지며 캐릭터 자체는 삭제되지 않습니다.');
+      '이 자관에 등록한 정보(이름·사진·한마디·전신)가 함께 지워집니다.');
   };
 
-  /* 페어 좌우 배치 (v2.0 사용자 요청) — 예전에는 등록 순서가 곧 자리라, 처음 넣은 캐릭터는
-     오른쪽 카드에서 추가해도 무조건 왼쪽에 들어갔다. pairRight로 오른쪽에 둘 캐릭터를 지정한다. */
+  /* 페어 좌우 배치 (v2.0 사용자 요청) — 예전에는 등록 순서가 곧 자리라, 처음 넣은 멤버는
+     오른쪽 카드에서 추가해도 무조건 왼쪽에 들어갔다. pairRight로 오른쪽에 둘 멤버를 지정한다. */
   // 한마디·대사 색·전신 위치는 AU마다 다를 수 있다 (v2.0) — 이 AU 값이 있으면 그것으로 갈아 끼운다
   const asAu = (m: RelMember | null) => (m && !isBaseAu ? auMember(m, au) : m);
-  // 캐릭터 이름은 자관 어디서나 같은 폰트로 (사용자 요청 — 캐릭터 프로필 폰트를 따라가지 않는다)
+  // 멤버 이름은 자관 어디서나 같은 폰트로 (사용자 요청)
   const NAME_FONT = 'var(--serif)';
   // 색·배경도 AU마다 따로 (v2.0 사용자 요청) — AU에 정해 둔 게 없으면 자관 기본이 그대로 나온다
   const auSt = auStyle(rel, au);
@@ -477,16 +373,16 @@ export default function RelDetailPage() {
   };
 
   /** 이 멤버를 반대쪽 자리로 (좌 ↔ 우).
-   *  오른쪽을 왼쪽으로 옮길 때는 **반대쪽 캐릭터를 오른쪽으로 지정**한다 (v2.0 사용자 제보) —
-   *  예전에는 지정을 지우기만 해서, 등록 순서상 원래 오른쪽이던 캐릭터(보통 두 번째로 넣은
-   *  상대 캐릭터)는 지워도 그대로 오른쪽이라 아무 일도 일어나지 않았다. */
+   *  오른쪽을 왼쪽으로 옮길 때는 **반대쪽 멤버를 오른쪽으로 지정**한다 (v2.0 사용자 제보) —
+   *  예전에는 지정을 지우기만 해서, 등록 순서상 원래 오른쪽이던 멤버는
+   *  지워도 그대로 오른쪽이라 아무 일도 일어나지 않았다. */
   const moveSide = (cid: string) => {
     const nowRight = pairSlots[1]?.charId === cid;
     const other = rel.members.find(m => m.charId !== cid)?.charId;
     updateRel({ pairRight: nowRight ? other : cid });
   };
 
-  /** 얼굴칸(1:1) 크롭 다시 잡기 — 캐릭터의 3:4 썸네일과 별개로 이 자관에만 저장 (v2.0) */
+  /** 얼굴칸(1:1) 크롭 다시 잡기 (v2.0) */
   const saveFaceCrop = (cid: string, c: CropValue) => {
     /* AU를 보는 중이면 **그 AU에만** 저장 (v2.0 사용자 제보 — 원본에서 위치를 바꾸면 AU도
        같이 바뀌었다). 표시는 auMember가 mset 값을 우선하므로, 정하지 않은 AU는 원본을 따른다 */
@@ -587,7 +483,7 @@ export default function RelDetailPage() {
         ]} />
 
       <ConfirmModal open={delAsk} title="자관을 삭제하시겠습니까?"
-        body={`「${rel.name}」 자관 전체가 삭제됩니다 — AU ${rel.aus.length}개가 모두 함께 사라지며 복구할 수 없습니다. 연동된 캐릭터 자체는 삭제되지 않습니다.`}
+        body={`「${rel.name}」 자관 전체가 삭제됩니다 — AU ${rel.aus.length}개가 모두 함께 사라지며 복구할 수 없습니다.`}
         onClose={() => setDelAsk(false)}
         buttons={[
           { label: 'DELETE', kind: 'accent', onClick: () => {
@@ -627,19 +523,18 @@ export default function RelDetailPage() {
 
       {isDuo ? (
         <div className="rel-body" style={{ fontFamily: familyOf(auBodyFont) }}>
-          {/* 모바일 전용 인용구 — 왼쪽 캐릭터는 카드 위, 오른쪽 캐릭터는 카드 아래 (PC는 히어로 쪽) */}
+          {/* 모바일 전용 인용구 — 왼쪽 멤버는 카드 위, 오른쪽 멤버는 카드 아래 (PC는 히어로 쪽) */}
           {quoteEl(0, 'rel-mq l')}
           {quoteEl(1, 'rel-mq r')}
           <div className="rel-side l">
           {pairSlots[0]
-            ? <MiniProf member={pairSlots[0]} char={charOf(pairSlots[0].charId)} isAdmin={isAdmin}
-                auUnregistered={auUnregOf(pairSlots[0].charId)}
+            ? <MiniProf member={pairSlots[0]} isAdmin={isAdmin}
                 side="l" onMoveSide={() => moveSide(pairSlots[0]!.charId)}
                 onFaceCrop={ref => setFaceEdit({ charId: pairSlots[0]!.charId, ref, crop: pairSlots[0]!.faceCrop })}
-                onGo={() => router.push(charHref(pairSlots[0]!.charId))}
+                onEdit={() => openMember(rel.members.find(m => m.charId === pairSlots[0]!.charId))}
                 onRemove={() => removeMember(pairSlots[0]!.charId)} />
             : sideSlotOf('l') ? <SideSlotCard slot={sideSlotOf('l')!} />
-              : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+              : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
           </div>
           <div className={`rel-center ${single ? 'one-mode' : ''}`}
             style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line-dark)' }}>
@@ -697,60 +592,39 @@ export default function RelDetailPage() {
           </div>
           <div className="rel-side r">
           {pairSlots[1]
-            ? <MiniProf member={pairSlots[1]} char={charOf(pairSlots[1].charId)} isAdmin={isAdmin}
-                auUnregistered={auUnregOf(pairSlots[1].charId)}
+            ? <MiniProf member={pairSlots[1]} isAdmin={isAdmin}
                 side="r" onMoveSide={() => moveSide(pairSlots[1]!.charId)}
                 onFaceCrop={ref => setFaceEdit({ charId: pairSlots[1]!.charId, ref, crop: pairSlots[1]!.faceCrop })}
-                onGo={() => router.push(charHref(pairSlots[1]!.charId))}
+                onEdit={() => openMember(rel.members.find(m => m.charId === pairSlots[1]!.charId))}
                 onRemove={() => removeMember(pairSlots[1]!.charId)} />
             : sideSlotOf('r') ? <SideSlotCard slot={sideSlotOf('r')!} />
-              : <EmptyCard isAdmin={isAdmin} onAdd={() => setMemberOpen(true)} />}
+              : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
           </div>
         </div>
       ) : (
         /* 다인 자관 — 프로토타입 multi-body: 좌 멤버 리스트(430px) + 우 그룹 일러 */
         <div className="multi-body" style={{ fontFamily: familyOf(auBodyFont) }}>
           <div className="panel flush" style={{ padding: '6px 0' }}>
-            {rel.members.map(m => {
-              const c = charOf(m.charId);
-              if (!c) return null;
-              const unreg = auUnregOf(m.charId);
-              return (
-                <div key={m.charId} className="mrow" style={{ ['--cc' as string]: rgbTriple(c.color) }}
-                  onClick={() => router.push(charHref(m.charId))}>
-                  <div className={`face ph ${c.thumbClass}`}>
-                    {!unreg && (c.arts?.[0] ?? c.thumbId) && (
-                      <CroppedBlobImg fileRef={c.arts?.[0] ?? c.thumbId} crop={c.thumbCrop} ph={c.thumbClass} />
-                    )}
-                  </div>
-                  <div className="nm">
-                    {unreg ? (
-                      /* AU 프로필 미등록 (v1.9) — 원본 프로필 대신 등록 안내 */
-                      <>
-                        <b style={{ fontFamily: NAME_FONT }}>{findChar(chars, m.charId)?.name}</b>
-                        <small>이 AU의 프로필 미등록 — 눌러서 등록</small>
-                      </>
-                    ) : (
-                      <>
-                        <b style={{ fontFamily: NAME_FONT }}>{c.name}</b><i>{c.sub}</i>
-                        <small>{c.specs.slice(0, 3).map(s => s.value).join(' · ')}</small>
-                        {(m.quote || noteOf(m) || m.keywords[0]) && (
-                          <span className="ext">{m.quote || noteOf(m) || m.keywords[0]}</span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <div className="gem-mini">
-                    {(c.colors ?? []).slice(0, 3).map(p => <i key={p.hex + p.label} style={{ background: p.hex }} />)}
-                  </div>
-                  {isAdmin && (
-                    <span className="rm" onClick={e => { e.stopPropagation(); removeMember(m.charId); }}>제거</span>
+            {rel.members.map(m => (
+              <div key={m.charId} className="mrow"
+                style={{ cursor: isAdmin ? 'pointer' : 'default' }}
+                onClick={() => { if (isAdmin) openMember(m); }}>
+                <div className="face ph">
+                  {m.photoId && <CroppedBlobImg fileRef={m.photoId} crop={m.faceCrop} ph="" />}
+                </div>
+                <div className="nm">
+                  <b style={{ fontFamily: NAME_FONT }}>{m.name || (isAdmin ? '이름 미입력' : '')}</b>
+                  {(m.quote || m.keywords[0]) && (
+                    <span className="ext">{m.quote || m.keywords[0]}</span>
                   )}
                 </div>
-              );
-            })}
+                {isAdmin && (
+                  <span className="rm" onClick={e => { e.stopPropagation(); removeMember(m.charId); }}>제거</span>
+                )}
+              </div>
+            ))}
             {isAdmin && rel.members.length < 6 && (
-              <div className="mrow add" onClick={() => setMemberOpen(true)}>＋ ADD MEMBER (최대 6인)</div>
+              <div className="mrow add" onClick={() => openMember()}>＋ ADD MEMBER (최대 6인)</div>
             )}
           </div>
 
@@ -788,63 +662,42 @@ export default function RelDetailPage() {
         </section>
       ))}
 
-      {/* ---------- 멤버 추가 모달 ---------- */}
-      <Modal open={memberOpen} onClose={() => setMemberOpen(false)} small title="멤버 추가"
-        dirty={!!(mCharId || mName || mQuote)}
-        desc="내 캐릭터를 연동하거나, 상대(타인) 캐릭터를 간단 등록 — 상대 캐릭터는 내 캐릭터 리스트에 표시되지 않음"
+      {/* ---------- 멤버 추가·수정 모달 — 인물 이름 + 사진 ---------- */}
+      <Modal open={memberOpen} onClose={() => setMemberOpen(false)} small title={mEditId ? '멤버 수정' : '멤버 추가'}
+        dirty={!!(mName || mQuote || mPhoto.file)}
+        desc="인물 이름과 사진을 넣습니다 — 사진은 카드의 얼굴칸(1:1)에 들어가며, 위치는 카드 우클릭 > 썸네일 위치 조정"
         actions={<>
           <button className="btn btn-ghost" onClick={() => setMemberOpen(false)}>CANCEL</button>
-          <button className="btn btn-dark" onClick={addMember}>ADD</button>
+          <button className="btn btn-dark" disabled={mSaving} onClick={saveMember}>{mEditId ? 'SAVE' : 'ADD'}</button>
         </>}>
         <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <KRadio name="mm" value="exist" current={mMode} onChange={v => setMMode(v as 'exist')} label="기존 캐릭터" />
-            <KRadio name="mm" value="new" current={mMode} onChange={v => setMMode(v as 'new')} label="새 상대 캐릭터" />
-          </div>
-          {mMode === 'exist' ? (
-            <div>
-              {/* 검색형 선택 — 인풋으로 거르고 아래 리스트에서 클릭 */}
-              <KInput placeholder="캐릭터 검색" value={mQuery} onChange={e => setMQuery(e.target.value)} />
-              <div style={{ marginTop: 6, maxHeight: 190, overflowY: 'auto', border: '1.5px solid var(--line)', borderRadius: 9 }}>
-                {candidates
-                  .filter(c => {
-                    const s = mQuery.trim().toLowerCase();
-                    return !s || c.name.toLowerCase().includes(s) || (c.sub ?? '').toLowerCase().includes(s);
-                  })
-                  .map(c => (
-                    <div key={c.id} onClick={() => setMCharId(mCharId === c.id ? '' : c.id)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 11px', cursor: 'pointer',
-                        background: mCharId === c.id ? 'rgba(127,127,127,.12)' : undefined,
-                        borderBottom: '1px dashed var(--line)', transition: '.13s',
-                      }}>
-                      <i style={{ width: 9, height: 9, borderRadius: '50%', background: c.color, fontStyle: 'normal', flexShrink: 0 }} />
-                      <b style={{ fontSize: 12.5 }}>{c.name}</b>
-                      <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{c.sub}{!c.own && ' · 상대'}</small>
-                      {mCharId === c.id && <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontWeight: 700 }}>✓</span>}
-                    </div>
-                  ))}
-                {candidates.length === 0 && <p className="hint" style={{ padding: 10 }}>추가할 수 있는 캐릭터가 없습니다</p>}
-              </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label style={{
+              width: 76, height: 76, borderRadius: 10, overflow: 'hidden', position: 'relative', flexShrink: 0,
+              border: '1.5px dashed var(--line)', cursor: 'pointer', display: 'grid', placeItems: 'center',
+            }} data-tip="눌러서 사진 선택">
+              <input type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) setMPhoto({ file: f, url: URL.createObjectURL(f) });
+                  e.target.value = '';
+                }} />
+              {mPhoto.url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={mPhoto.url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                : mPhoto.ref
+                  ? <BlobImg fileRef={mPhoto.ref} ph="" label="" />
+                  : <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>PHOTO</span>}
+            </label>
+            <div style={{ display: 'grid', gap: 8, flex: 1, minWidth: 0 }}>
+              <KInput placeholder="인물 이름" value={mName} onChange={e => setMName(e.target.value)} />
+              {(mPhoto.ref || mPhoto.file) && (
+                <button className="btn btn-ghost" style={{ height: 26, padding: '0 10px', fontSize: 10.5, justifySelf: 'start' }}
+                  onClick={() => setMPhoto({})}>사진 빼기</button>
+              )}
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <KInput placeholder="이름" value={mName} onChange={e => setMName(e.target.value)} />
-                <KInput placeholder="한 줄 소개 (선택)" value={mSub} onChange={e => setMSub(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
-                <span className="cp-lb">테마색</span>
-                <ColorField value={mColor} onChange={setMColor} />
-              </div>
-              {/* 회원 권한 — 역극 플레이 / 편집까지 (3차 회원-캐릭터 연결, v1.9) */}
-              <div>
-                <label className="k-label" style={{ marginBottom: 7 }}>회원 권한 (선택)</label>
-                <GrantsEditor value={mGrants} onChange={setMGrants} />
-              </div>
-            </>
-          )}
-          <KInput placeholder="캐릭터 한마디 (선택 — 타이틀 옆 인용구)" value={mQuote} onChange={e => setMQuote(e.target.value)} />
+          </div>
+          <KInput placeholder="한마디 (선택 — 타이틀 옆 인용구)" value={mQuote} onChange={e => setMQuote(e.target.value)} />
         </div>
       </Modal>
 
@@ -943,7 +796,7 @@ export default function RelDetailPage() {
           onApply={c => { saveArtCrop(artCropOpen.ref, c); setArtCropOpen(null); }} />
       )}
 
-      {/* 멤버 얼굴칸(1:1) 크롭 — 캐릭터의 3:4 썸네일과 별개로 이 자관에만 저장 (v2.0) */}
+      {/* 멤버 얼굴칸(1:1) 크롭 (v2.0) */}
       {faceEdit && (
         <FaceCropModal fileRef={faceEdit.ref} crop={faceEdit.crop}
           onClose={() => setFaceEdit(null)}

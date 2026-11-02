@@ -2,7 +2,7 @@
 // 감상타래 (4.17) — 작품 단위 타래 데이터 + 분류·기본 보기 설정 (localStorage → Supabase 이전 예정)
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import type { CropValue } from '@/components/ui/CropEditor';
-import type { Visibility } from './charStore';
+import type { Visibility } from './relStore';
 import { getRawSetting, setSetting } from './settingStore';
 import { MAIN_SEC } from './sectionStore';
 

@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { useSectionParam, filterSection, sectionSetter, secStamp } from '@/lib/sectionStore';
 import { useLocalList, newId } from '@/lib/postStore';
 import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, decodeLogText, logNo, saveLogBody } from '@/lib/galleryStore';
-import { Relation, REL_SEED } from '@/lib/charStore';
+import { Relation, REL_SEED } from '@/lib/relStore';
 import { SearchBar, KInput, KTextarea, KRadio, KSelect, KDate, Pager } from '@/components/ui/Kit';
 import { Modal } from '@/components/ui/Modal';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
@@ -107,7 +107,7 @@ function TrpgPageInner() {
   // 정렬 기준은 저장된 순서 — 편집모드에서 드래그로 바꾼 순서가 그대로 목록에 반영된다 (v2.0).
   // 새 로그는 앞에 넣으므로 기본은 지금까지처럼 최신순이고, № 번호는 표시용으로만 남는다.
 
-  // 편집모드 카드 드래그 정렬 (v2.0 — 캐릭터 목록과 같은 방식)
+  // 편집모드 카드 드래그 정렬 (v2.0)
   // 드래그 정렬 — 다른 페이지들과 같은 방식으로 (v2.0 사용자 요청: "다른 페이지들 드래그앤드롭
   // 참고해서 똑같이 구현").
   // · 티켓형(세로 한 줄 목록)은 다른 목록형 페이지와 완전히 같은 DragList — 손잡이를 들어 올려
@@ -394,8 +394,7 @@ function TrpgPageInner() {
               options={[{ value: 'none', label: '자관 연동 없음' }, ...rels.map(r => ({ value: r.id, label: r.name }))]} />
             <KDate value={nDate} onChange={setNDate} style={{ flex: 1 }} />
           </div>
-          {/* 접근권한 + 열람 비밀번호 (선택) — 권한이 없어도 비밀번호를 아는 사람은 열람 가능.
-              연동 자관의 상대방(회원-캐릭터 연결)은 항상 열람 가능 — 연결 기능은 3차 */}
+          {/* 접근권한 + 열람 비밀번호 (선택) — 권한이 없어도 비밀번호를 아는 사람은 열람 가능 */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <KSelect minWidth={140} value={nVis} onChange={v => setNVis(v as 'public')}
               options={[
