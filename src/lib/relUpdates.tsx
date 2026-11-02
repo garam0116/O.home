@@ -29,7 +29,6 @@ const SOURCES = {
   threads: { key: 'ohome.threads.v1',  sec: 'threads' },
   diary:   { key: 'ohome.diary.v1',    sec: 'diary' },
   loadb:   { key: 'ohome.road.v1',     sec: 'roadview' },
-  comm:    { key: 'ohome.comm.v1',     sec: 'comm' },
 } as const satisfies Record<string, { key: string; sec: SectionKind | null }>;
 
 type SrcKind = keyof typeof SOURCES;

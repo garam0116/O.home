@@ -2,7 +2,7 @@
 /**
  * 항목 번호 (v2.4 사용자 요청) — 홈의 모든 글·항목은 **올린 순서대로 고정된 번호 주소**를 갖는다.
  *
- *   /board/1 · /gallery/3 · /comm/2 · /trpg/5 · /chars/4 (별명이 있으면 /chars/eden) …
+ *   /board/1 · /gallery/3 · /diary/2 · /trpg/5 · /chars/4 (별명이 있으면 /chars/eden) …
  *
  * · 번호는 종류마다 따로 이어진다(게시판은 모든 게시판을 통틀어 하나, 갤러리는 모든 갤러리를 통틀어 하나).
  *   그래서 게시판·갤러리 목록을 옮겨도 주소가 바뀌지 않는다.
@@ -20,8 +20,6 @@ import { backend, isServerMode } from './backend';
 export const NUMBERED: Record<string, string> = {
   'ohome.board.v1': 'posts',
   'ohome.backup.v1': 'gallery',
-  'ohome.comm.v1': 'commissions',
-  'ohome.commapply.v1': 'applicants',
   'ohome.diary.v1': 'diary',
   'ohome.threads.v1': 'threads',
   'ohome.trpg.v1': 'trpg_logs',

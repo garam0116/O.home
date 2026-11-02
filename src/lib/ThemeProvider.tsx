@@ -17,7 +17,7 @@ import { getRawSetting, setSetting } from './settingStore';
 export interface PageBg { g1: string; g2: string; angle: number }
 
 interface ThemeCtx {
-  /** 페이지 임시 테마 (자관·커미션 페이지 테마컬러) — 벗어나면 null로 원복, 저장되지 않음 */
+  /** 페이지 임시 테마 (캐릭터·자관 페이지 테마컬러) — 벗어나면 null로 원복, 저장되지 않음 */
   setPageTheme: (color: string | null, tone?: PointTone) => void;
   /** 페이지 배경만 따로 (v2.0 사용자 요청 — 자관별 배경 그라데이션).
    *  테마컬러(setPageTheme)가 팔레트 전체를 바꾸는 것과 달리 배경 두 색·각도만 덮어쓴다. */

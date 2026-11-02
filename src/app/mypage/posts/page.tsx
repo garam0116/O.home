@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
-  useLocalList, BOARD_SEED, GUEST_SEED, Post, GuestEntry, fmtDate,
+  useLocalList, BOARD_SEED, Post, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
@@ -20,7 +20,6 @@ export default function MyPostsPage() {
   const { user } = useAuth();
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   const [roads] = useLocalList<RoadItem>('ohome.road.v1', ROAD_SEED);
-  const [guestEntries] = useLocalList<GuestEntry>('ohome.guest.v1', GUEST_SEED);
   // 댓글은 글과 따로 저장된다 (v2.0)
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
   const { boards } = useBoards();
@@ -34,7 +33,7 @@ export default function MyPostsPage() {
     );
   }
 
-  const items = collectMyItems(user.id, posts, roads, guestEntries, boards, cmtRows);
+  const items = collectMyItems(user.id, posts, roads, boards, cmtRows);
   const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE));
   const pageList = items.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 

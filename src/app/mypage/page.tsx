@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
-  useLocalList, BOARD_SEED, GUEST_SEED, Post, GuestEntry, fmtDate,
+  useLocalList, BOARD_SEED, Post, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
 import { Character, CHAR_SEED, charPath } from '@/lib/charStore';
@@ -29,7 +29,6 @@ export default function MyPage() {
   const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   const [roads] = useLocalList<RoadItem>('ohome.road.v1', ROAD_SEED);
-  const [guestEntries] = useLocalList<GuestEntry>('ohome.guest.v1', GUEST_SEED);
   // 댓글은 글과 따로 저장된다 (v2.0)
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
   const { boards } = useBoards();
@@ -117,7 +116,7 @@ export default function MyPage() {
   const myChars = chars.filter(c => c.grants?.some(g => g.userId === user.id));
 
   // 내가 쓴 글/댓글 (일반 회원) — 6개까지만, 나머지는 전체 리스트에서 (v1.9)
-  const myItems: MyItem[] = collectMyItems(user.id, posts, roads, guestEntries, boards, cmtRows);
+  const myItems: MyItem[] = collectMyItems(user.id, posts, roads, boards, cmtRows);
 
   return (
     <section className="page">

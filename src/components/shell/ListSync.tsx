@@ -16,13 +16,11 @@ import { explainDbError } from '@/lib/dbError';
 const LABEL: Record<string, string> = {
   comments: '댓글',
   posts: '글',
-  guestbook: '방명록',
   roadview: '로드비',
   characters: '캐릭터',
   relations: '자관',
   trpg_logs: 'TRPG 로그',
   trpg_log_bodies: 'TRPG 로그 본문',
-  applicants: '커미션 신청',
 };
 
 export function ListSync() {

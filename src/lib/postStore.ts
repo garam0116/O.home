@@ -1,5 +1,5 @@
 'use client';
-// 게시판·방명록 타입 + 공용 목록 저장소 훅
+// 게시판 타입 + 공용 목록 저장소 훅
 // v2.0: 서버(Supabase) 연결이 있으면 DB, 없으면 localStorage — 화면 코드는 동일하다.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { PostMode } from './sanitize';
@@ -36,9 +36,9 @@ export interface Comment {
 export const COMMENT_KEY = 'ohome.comments.v1';
 
 export interface CommentRow extends Comment {
-  targetId: string;                 // 달린 대상(글·로드뷰 항목·감상타래·방명록)의 id
-  /** 대상 종류 — 같은 컬렉션을 나눠 쓴다 (thread·guest: v2.0 사용자 요청) */
-  target: 'post' | 'road' | 'thread' | 'guest';
+  targetId: string;                 // 달린 대상(글·로드뷰 항목·감상타래)의 id
+  /** 대상 종류 — 같은 컬렉션을 나눠 쓴다 (thread: v2.0 사용자 요청) */
+  target: 'post' | 'road' | 'thread';
 }
 
 export const COMMENT_SEED: CommentRow[] = [];
@@ -77,17 +77,6 @@ export interface Post {
   thumbCrop?: { x: number; y: number; scale: number };  // 대표 썸네일 크롭 (16:9)
   /** 글 번호 (v2.4 사용자 요청) — 주소 `/board/{번호}`. 올린 순서대로, 모든 게시판 통틀어 하나로 이어진다 */
   no?: number;
-}
-
-export interface GuestEntry {
-  id: string;
-  author: string;
-  authorId?: string;      // 로그인 회원이면
-  guestPw?: string;       // 게스트 작성 시 본인 수정·삭제용 (mock — 실서비스는 서버 해시)
-  body: string;
-  secret: boolean;
-  date: string;
-  reply?: { author: string; text: string; date: string } | null; // 관리자 답글
 }
 
 export const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -292,8 +281,6 @@ export function useLocalList<T extends { id?: string }>(key: string, seed: T[]):
 
 /* ---------- 시드 (데모) ---------- */
 export const BOARD_SEED: Post[] = [];
-
-export const GUEST_SEED: GuestEntry[] = [];
 
 export const fmtDate = (iso: string) => {
   const d = new Date(iso);

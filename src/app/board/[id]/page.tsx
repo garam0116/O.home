@@ -75,7 +75,7 @@ export default function BoardDetailPage() {
 
   const board = boards.find(b => b.id === (post.boardId ?? MAIN_BOARD_ID)) ?? boards[0];
   const boardTitle = board.id === MAIN_BOARD_ID ? 'BOARD' : board.name;
-  // 댓글 권한 (5.2) — 방문자 허용 시 게스트 작성(닉네임+비밀번호, 방명록 4.7 규칙)
+  // 댓글 권한 (5.2) — 방문자 허용 시 게스트 작성(닉네임)
   const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
   const guestMode = !user && board.permComment === 'guest';
   const canComment = allow(board.permComment) && (!!user || guestMode);

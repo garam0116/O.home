@@ -21,7 +21,7 @@ const SITE_KEYS = [
   'ohome.theme.v2', 'ohome.theme.v1', 'ohome.themeCss.v1', 'ohome.themePresets.v1', 'ohome.intro.v1', 'ohome.links.v1',
   'ohome.fonts.v2', 'ohome.fonts.v1', 'ohome.menuset.v1', 'ohome.site.v1', 'ohome.pagetext.v1',
   'ohome.bgm.v1', 'ohome.bgm.fold', 'ohome.boardset.v1', 'ohome.boards.v1',
-  'ohome.commset.v1', 'ohome.memoset.v1', 'ohome.threadset.v1',
+  'ohome.memoset.v1', 'ohome.threadset.v1',
 ];
 
 export interface ResetGroup { key: string; label: string; desc?: string; keys: string[] }
@@ -29,7 +29,6 @@ export interface ResetGroup { key: string; label: string; desc?: string; keys: s
 /** 콘텐츠(메뉴별) — 초기화 체크박스 */
 export const RESET_CONTENT: ResetGroup[] = [
   { key: 'board', label: '게시판 글', keys: ['ohome.board.v1'] },
-  { key: 'guest', label: '방명록', keys: ['ohome.guest.v1'] },
   { key: 'chars', label: '캐릭터', keys: ['ohome.chars.v1'] },
   { key: 'rels', label: '자관', keys: ['ohome.rels.v1'] },
   { key: 'backup', label: '갤러리(그림 백업)', keys: ['ohome.backup.v1'] },
@@ -41,13 +40,11 @@ export const RESET_CONTENT: ResetGroup[] = [
   { key: 'threads', label: '감상타래', keys: ['ohome.threads.v1'] },
   { key: 'diary', label: '다이어리', keys: ['ohome.diary.v1'] },
   { key: 'memo', label: '메모장', keys: ['ohome.memo.v1'] },
-  { key: 'comm', label: '커미션·신청자', keys: ['ohome.comm.v1', 'ohome.commapply.v1'] },
-  { key: 'sched', label: '스케줄러 일정', keys: ['ohome.sched.v1'] },
 ];
 
 export const RESET_EXTRA: ResetGroup[] = [
   { key: 'main', label: '메인 위젯 구성', desc: '위젯 종류·배치·크기', keys: ['ohome.main.v1'] },
-  { key: 'site', label: '사이트 설정', desc: '테마·폰트·메뉴·로고·게시판/커미션 설정', keys: SITE_KEYS },
+  { key: 'site', label: '사이트 설정', desc: '테마·폰트·메뉴·로고·게시판 설정', keys: SITE_KEYS },
   { key: 'images', label: '업로드 이미지 전체', desc: '모든 그림·썸네일 저장소', keys: [] },
   // 로그인 계정 자체는 서비스(Firebase Authentication / Supabase Auth) 소관이라 홈에서 지울 수 없다
   {

@@ -101,7 +101,6 @@ export interface Backend {
 /** 콘텐츠 컬렉션 이름 (localStorage 키 → 컬렉션/테이블) — 두 백엔드가 같은 이름을 쓴다 */
 export const COLLECTION_OF: Record<string, string> = {
   'ohome.board.v1': 'posts',
-  'ohome.guest.v1': 'guestbook',
   'ohome.chars.v1': 'characters',
   'ohome.rels.v1': 'relations',
   'ohome.backup.v1': 'gallery',
@@ -116,8 +115,6 @@ export const COLLECTION_OF: Record<string, string> = {
   'ohome.threads.v1': 'threads',
   'ohome.diary.v1': 'diary',
   'ohome.memo.v1': 'memos',
-  'ohome.comm.v1': 'commissions',
-  'ohome.commapply.v1': 'applicants',
   // 댓글 — 글 안이 아니라 자기 문서로 (v2.0). 글 안에 두면 댓글을 달 때마다 글을 UPDATE 해야 해서
   // 「글 수정은 작성자·관리자만」 규칙에 걸려 일반 회원이 관리자 글에 댓글을 달 수 없었다
   'ohome.comments.v1': 'comments',
