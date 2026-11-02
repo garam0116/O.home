@@ -37,11 +37,13 @@ export function railBounds(side: WidgetConf[]): { left: number; right: number } 
   return { left, right: Math.max(left, right) };
 }
 
-/** 좌우 위젯을 고정 표시하는 페이지 — 메인(자체 캔버스)·자관 상세(전체 화면)·환경설정(자체 넓은 레이아웃) 제외 */
+/** 좌우 위젯을 고정 표시하는 페이지 — 제외: 메인(자체 캔버스) · 환경설정(자체 넓은 레이아웃) ·
+ *  자관 전체(목록·상세·작성) · 글쓰기/수정 화면(본문 폭이 넓어야 함) (v2.4 사용자 확정) */
 export function isRailPage(pathname: string): boolean {
   if (pathname === '/') return false;
   if (pathname === '/settings' || pathname.startsWith('/settings/')) return false;
-  // /rels/[id] · /rels/[id]/edit · /rels/[id]/au/... — /rels/r/... 와 /rels/new 는 목록·작성 화면이라 표시
-  if (/^\/rels\/(?!r(?:\/|$)|new(?:\/|$))[^/]+/.test(pathname)) return false;
+  if (pathname === '/rels' || pathname.startsWith('/rels/')) return false;
+  // 글쓰기·수정 — /board/write · /board/b/x/write · /threads/new · /diary/1/edit · /rels/1/au/2/edit 등
+  if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
   return true;
 }
