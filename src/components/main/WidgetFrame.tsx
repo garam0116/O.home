@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { WidgetConf, useMainStore } from '@/lib/mainStore';
 import { ConfirmModal } from '@/components/ui/Modal';
-import { sideOf, LEFT_EDGE, RIGHT_EDGE, SIDE_MIN_W, CENTER_MIN_W } from '@/lib/widgetZone';
+import { sideOf, clampMenuX, LEFT_EDGE, RIGHT_EDGE, SIDE_MIN_W, CENTER_MIN_W } from '@/lib/widgetZone';
 
 export function WidgetFrame({ conf, mobileOrder, children, className, style, onCtx, rail }: {
   conf: WidgetConf;
@@ -21,7 +21,9 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
   const useSize = true;
   // 높이 자동 위젯 (사용자 요청) — 디데이는 항목이 늘면 위젯이 아래로 길어지고 페이지가 스크롤된다.
   // 저장 높이(h)는 무시하고 가로(w)만 적용 · 리사이즈 핸들도 가로만 바꾼다
-  const autoH = conf.type === 'dday' || conf.type === 'ddaycard';
+  // 메뉴 카드(PC 2단형, v2.7)도 메뉴 개수만큼 높이가 정해진다
+  const isMenu = conf.type === 'menu';
+  const autoH = conf.type === 'dday' || conf.type === 'ddaycard' || isMenu;
   const ref = useRef<HTMLDivElement>(null);
   // Shift+드래그 중앙 정렬에서 폭이 20px 배수가 아니라 딱 가운데가 안 될 때의 안내 (v1.9 사용자 요청)
   const [centerAsk, setCenterAsk] = useState<{ w: number; canvasW: number; grow: number; shrink: number } | null>(null);
@@ -67,6 +69,8 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
       const side = sideOf(conf);
       const w0 = myW();
       const clampX = (x: number, snap: boolean) => {
+        // 메뉴 카드는 어느 페이지에서든 가운데 열 금지 (v2.7 사용자 확정) — 메인에서는 왼쪽↔오른쪽 열을 건너갈 수 있다
+        if (isMenu && !rail) return clampMenuX(x, w0, snap);
         if (!rail) return x;
         if (side === 1) { const lim = LEFT_EDGE - w0 / 2 - 1; return Math.min(x, snap ? Math.floor(lim / 10) * 10 : Math.floor(lim)); }
         if (side === 3) { const lim = RIGHT_EDGE - w0 / 2 + 1; return Math.max(x, snap ? Math.ceil(lim / 10) * 10 : Math.ceil(lim)); }
@@ -75,7 +79,7 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
       const mv = (ev: PointerEvent) => {
         const nx = bx + (ev.clientX - sx), ny = by + (ev.clientY - sy);
         const snap = gridOn && !conf.freeMove;   // freeMove(그리드 무시)는 그리드가 켜져 있어도 자유 배치
-        if (ev.shiftKey && canvasW > 0 && !rail) {
+        if (ev.shiftKey && canvasW > 0 && !rail && !isMenu) {
           centered = true;
           const cx = (canvasW - myW()) / 2;
           updateWidget(conf.id, {
@@ -160,9 +164,11 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
     const absT = abs ? conf.ay! : (gr ? r.top - gr.top : 0);
     // 좌우 열 위젯은 120px까지 줄일 수 있다 — 다른 페이지의 본문 폭을 넓히는 용도 (v2.4)
     const side = sideOf(conf);
-    const minW = side === 2 ? CENTER_MIN_W : SIDE_MIN_W;
+    // 메뉴 카드(v2.7): 오른쪽 열에서 좁히면 중심이 가운데로 들어가므로 그만큼 최소 폭을 올린다
+    const minW = isMenu && side === 3 && abs ? Math.max(SIDE_MIN_W, 2 * (RIGHT_EDGE - conf.ax!) + 1)
+      : side === 2 ? CENTER_MIN_W : SIDE_MIN_W;
     // 레일(다른 페이지)에서는 넓혀도 중심이 원래 열에 남게 — 왼쪽 열 위젯만 해당(오른쪽은 넓힐수록 중심이 오른쪽)
-    const maxW = rail && side === 1 && abs ? 2 * (LEFT_EDGE - conf.ax!) - 1 : Infinity;
+    const maxW = (rail || isMenu) && side === 1 && abs ? 2 * (LEFT_EDGE - conf.ax!) - 1 : Infinity;
     const mv = (ev: PointerEvent) => {
       const dw = ev.clientX - sx, dh = ev.clientY - sy;
       let w = r.width + dw, h = r.height + dh;
@@ -182,7 +188,7 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
     <div
       ref={ref}
       data-wid={conf.id}
-      className={`wgt ${useSize && conf.w != null ? 'sized' : ''} ${autoH ? 'auto-h' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${className ?? ''}`}
+      className={`wgt ${useSize && conf.w != null ? 'sized' : ''} ${autoH ? 'auto-h' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${isMenu ? 'wgt-menu-card' : ''} ${className ?? ''}`}
       style={{
         ...style,
         order: mobileOrder,

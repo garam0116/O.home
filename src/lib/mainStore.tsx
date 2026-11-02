@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
 import { getRawSetting, setSetting, onSettingReload } from './settingStore';
-import { isRailPage } from './widgetZone';
+import { isRailPage, sideOf } from './widgetZone';
 
 export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
@@ -34,6 +34,9 @@ export interface WidgetConf {
 }
 
 export type LayoutMode = 'fixed' | 'fluid'; // 고정 캔버스(기본) / 반응형 (v1.9)
+/** PC 레이아웃 (v2.7 사용자 요청) — top = 1단형(상단 메뉴) · side = 2단형(왼쪽/오른쪽 열 메뉴 카드).
+ *  2단형도 메인·좌우 위젯 레일 페이지에서만 적용되고, 레일 없는 페이지와 모바일은 늘 1단형 */
+export type PcLayout = 'top' | 'side';
 
 interface MainState {
   layoutMode: LayoutMode;
@@ -41,12 +44,13 @@ interface MainState {
   mobileOrder: string[];                // 모바일 세로 나열 순서 (위젯 id)
   settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
+  pcLayout?: PcLayout;                  // 없으면 top (v2.7)
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
   banner: { title: '슬라이드 배너', desc: '고정 요소 — 최상단' },
   member: { title: '회원정보창', desc: '로그인/프로필' },
-  menu: { title: '메뉴리스트', desc: '모바일 전용 — PC에서는 상단 메뉴가 대신함' },
+  menu: { title: '메뉴 카드', desc: 'PC 2단형 레이아웃 전용 — 좌우 열에서만 이동, 삭제 불가 (모바일은 상단바 ≡)' },
   memo: { title: 'MEMO', desc: '관리자 메모 (클릭 시 관리 모달)' },
   diary: { title: 'DIARY', desc: '최근 일기 (비공개 미노출)' },
   latest: { title: 'LATEST', desc: '모든 게시판 최신글 목록 (게시판 · 제목 · 날짜)' },
@@ -90,6 +94,35 @@ const DEFAULT_STATE: MainState = {
 };
 
 const STORAGE_KEY = 'ohome.main.v1';
+
+/** 메뉴 카드 예상 높이 — 처음 자리를 잡을 때 아래 위젯을 얼마나 내릴지 (로고·프로필 + 대메뉴 한 줄당 36px) */
+export const menuCardHeight = (topCount: number) => 150 + 36 * Math.max(1, topCount);
+
+/**
+ * 2단형으로 바꿀 때 메뉴 카드 자리 잡기 (v2.7) — 카드가 없거나 지운 적이 있으면 되살리고,
+ * 처음이면 왼쪽 열 맨 위(0,0)에 두고 그 열의 다른 위젯을 카드 높이만큼 아래로 내린다.
+ * 한 번 자리를 잡은 뒤에는(settings.placed) 사용자가 옮긴 위치를 그대로 둔다.
+ */
+function placeMenuCard(s: MainState, estH: number): MainState {
+  let widgets = s.widgets;
+  let menu = widgets.find(w => w.type === 'menu');
+  if (!menu) {
+    menu = { id: 'menu', type: 'menu', col: 1, enabled: true, tx: 0, ty: 0, ax: 0, ay: 0, w: 230, settings: {} };
+    widgets = [...widgets, menu];
+  }
+  const removedIds = (s.removedIds ?? []).filter(id => id !== menu!.id);
+  if (menu.settings?.placed && menu.ax != null && menu.ay != null) return { ...s, widgets, removedIds };
+  const others = widgets.filter(w => w.id !== menu!.id && w.enabled && w.ax != null && w.ay != null && sideOf(w) === 1);
+  const top = others.length ? Math.min(...others.map(w => w.ay!)) : Infinity;
+  const need = estH + 10;
+  const delta = top < need ? need - top : 0;
+  widgets = widgets.map(w => {
+    if (w.id === menu!.id) return { ...w, enabled: true, col: 1, ax: 0, ay: 0, w: 230, tx: 0, ty: 0, settings: { ...w.settings, placed: true } };
+    if (delta && others.includes(w)) return { ...w, ay: w.ay! + delta };
+    return w;
+  });
+  return { ...s, widgets, removedIds };
+}
 /** 없어진 위젯 종류 — 예전 저장분에 남아 있어도 불러올 때 버린다 */
 const REMOVED_TYPES = ['image', 'upcoming', 'apply', 'memoboard'];
 /** 편집모드를 지원하는 페이지 (v1.9 — 카드 그리드 드래그 정렬 포함)
@@ -113,6 +146,10 @@ interface MainCtx {
   addWidget: (type: WidgetType, col: 1 | 2 | 3) => string;   // 새 위젯 id 반환 (v1.9)
   removeWidget: (id: string) => void;
   setLayoutMode: (m: LayoutMode) => void;
+  /** PC 1단형/2단형 (v2.7) — estH: 메뉴 카드를 처음 놓을 때 쓰는 예상 높이 */
+  setPcLayout: (m: PcLayout, estH: number) => void;
+  /** 지금 페이지가 2단형으로 그려지는지 (PC 기준 — 모바일은 CSS가 1단형으로 되돌림) */
+  sideNav: boolean;
   setMobileOff: (id: string, v: boolean) => void;  // 모바일에서 제외 토글 (v1.9 — PC 제거는 우클릭 삭제)
   setMobileOrder: (ids: string[]) => void;
   setSettingsOrder: (ids: string[]) => void;   // 환경설정 위젯 탭 목록 순서만 바꿈 — 메인 배치·모바일 순서와 무관
@@ -264,6 +301,21 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
     setState(s => { const n = { ...s, layoutMode: m }; persist(n); return n; });
   }, [persist]);
 
+  const setPcLayout = useCallback((m: PcLayout, estH: number) => {
+    setState(s => {
+      const n = m === 'side' ? placeMenuCard({ ...s, pcLayout: 'side' }, estH) : { ...s, pcLayout: 'top' as const };
+      persist(n); return n;
+    });
+  }, [persist]);
+
+  // 2단형 적용 페이지 (v2.7 사용자 확정) — 메인 + 좌우 위젯 레일 페이지만. 레일 없는 페이지(자관·로드비·다이어리·
+  // 환경설정·글쓰기)는 2단형으로 설정해도 1단형 그대로. 메뉴 카드가 없으면(예전 저장분) 상단바를 유지한다
+  const sideNav = state.pcLayout === 'side' && (pathname === '/' || isRailPage(pathname))
+    && state.widgets.some(w => w.type === 'menu' && w.enabled && w.ax != null && w.ay != null);
+  useEffect(() => {
+    document.body.classList.toggle('side-nav', sideNav);
+  }, [sideNav]);
+
   // 토글은 모바일 표시만 제어 (v1.9 사용자 확정) — PC 메인에서 빼려면 편집모드 우클릭 삭제
   const setMobileOff = useCallback((id: string, v: boolean) => {
     setState(s => {
@@ -283,16 +335,20 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   const saveNow = useCallback(() => persist(state), [persist, state]);
 
   // 메인 페이지 기본 구성으로 되돌리기 (v1.9 사용자 요청) — 위젯 구성·배치·크기·모바일 순서 전부 초기화
+  // PC 레이아웃(1단형/2단형)은 위젯 구성이 아니라 유지한다 — 2단형이면 메뉴 카드 자리를 다시 잡는다 (v2.7)
   const resetMain = useCallback(() => {
-    const fresh: MainState = JSON.parse(JSON.stringify(DEFAULT_STATE));
-    setState(fresh);
-    persist(fresh);
+    setState(s => {
+      const base: MainState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      const fresh = s.pcLayout === 'side' ? placeMenuCard({ ...base, pcLayout: 'side' }, menuCardHeight(4)) : base;
+      persist(fresh);
+      return fresh;
+    });
   }, [persist]);
 
   return (
     <Ctx.Provider value={{
       state, editOn, editAvailable: canEditAt(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
-      updateWidget, addWidget, removeWidget, setLayoutMode, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
+      updateWidget, addWidget, removeWidget, setLayoutMode, setPcLayout, sideNav, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
     }}>
       {children}
 

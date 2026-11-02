@@ -4,37 +4,21 @@
 // 편집모드 중 페이지 이동 시도 → 종료 확인 모달 (v1.8)
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePathname, useRouter } from 'next/navigation';
-import { boardEntries, useMenuSettings, buildMenu } from '@/lib/menuStore';
-import { useBoards } from '@/lib/boardStore';
-import { useSections, sectionMenuEntries } from '@/lib/sectionStore';
-import { useCustomLinks, linkEntries } from '@/lib/linkStore';
+import { usePathname } from 'next/navigation';
 import { useSiteSettings } from '@/lib/siteStore';
-import { useAuth } from '@/lib/auth';
 import { useMainStore } from '@/lib/mainStore';
 import { useBlobUrl } from '@/lib/blobStore';
-import { refreshPage } from '@/lib/pageRefresh';
 import { KToggle } from '@/components/ui/Kit';
 import { isRailPage } from '@/lib/widgetZone';
+import { useSiteMenu, useSiteNav, UserArea, useBrandFit, type SiteMenuItem } from './siteNav';
 
 export function TopBar() {
-  const { user, isAdmin, logout } = useAuth();
-  const { editOn, editAvailable, gridOn, setGridOn, toggleEdit, requestExit, guardNav } = useMainStore();
-  const router = useRouter();
+  const { editOn, gridOn, setGridOn, requestExit } = useMainStore();
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);       // 모바일 메뉴 패널 (≡) — 메뉴리스트 위젯 대체
-  const [menuSet, , menuLoaded] = useMenuSettings(); // 메뉴 관리 (5.2) — 노출·순서·이름
-  const { boards, loaded: boardsLoaded } = useBoards(); // 다중 게시판 (5.2) — 게시판 그룹에 동적 반영
-  const { map: secMap } = useSections();
-  const { links } = useCustomLinks();                    // 커스텀 링크 (v2.0 사용자 요청)                 // 여러 개로 만든 섹션 (v2.0) — 갤러리·다이어리 등
-  // 저장 설정 로드 전에는 메뉴·로고를 그리지 않음 — 새로고침 시 기본 구성이 깜빡이는 것 방지 (v1.9)
-  const ready = menuLoaded && boardsLoaded;
-  const menu = ready
-    ? buildMenu(menuSet, [...boardEntries(boards), ...sectionMenuEntries(secMap), ...linkEntries(links)], { loggedIn: !!user, isAdmin, id: user?.id })
-    : [];
+  // 메뉴 관리(5.2)·다중 게시판·섹션·커스텀 링크 — 메뉴 카드(PC 2단형)와 공용 (v2.7)
+  const { menu } = useSiteMenu();
   const [site, , siteLoaded] = useSiteSettings();    // 로고 텍스트/서브/정렬 (5.2)
-  const avatarSrc = useBlobUrl(user?.avatarUrl);     // 프로필 이미지 (마이페이지, v1.9)
   // 로고 이미지 (v2.2 사용자 요청) — 모바일용만 있으면 PC는 텍스트, 모바일은 이미지
   const logoPcRaw = useBlobUrl(site.logoImage);
   const logoMRaw = useBlobUrl(site.logoImageM);
@@ -42,31 +26,9 @@ export function TopBar() {
   const logoM = logoPcRaw && logoMRaw && logoMRaw !== logoPcRaw ? logoMRaw : undefined;
   const brandRef = useRef<HTMLAnchorElement>(null);
   const brandFit = useBrandFit(brandRef, `${site.title}|${site.subtitle}|${logoPc ?? ''}|${siteLoaded}`);
-  const userRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (!userRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [menuOpen]);
-
-  // 편집모드 중에는 이동 전에 종료 확인 (v1.8)
-  // 지금 보고 있는 메뉴를 다시 누르면 그 페이지를 새로 불러옴 — 다시 접속하는 느낌 (v1.9 사용자 요청)
-  const nav = (href: string) => {
-    // 커스텀 링크에 다른 사이트 풀주소를 걸 수 있다 (v2.0) — 외부는 새 창으로
-    if (/^https?:\/\//.test(href)) { window.open(href, '_blank'); return; }
-    if (guardNav(href)) return;
-    // 같은 메뉴 재클릭 — 브라우저 새로고침 대신 페이지만 처음 상태로 다시 그림 (BGM이 끊기지 않게, v1.9).
-    // **쿼리까지 비교해야 한다** (v2.0 사용자 문의로 발견) — 경로만 보면 /board?b=2 에서 /board 를
-    // 눌렀을 때 '같은 메뉴'로 착각해 이동이 통째로 막힌다. 여러 개로 만든 게시판·갤러리·다이어리가
-    // 전부 같은 경로에 쿼리로 갈리므로, 기본 항목으로 돌아갈 수가 없었다.
-    const cur = pathname + window.location.search;
-    if (href === cur) { refreshPage(); return; }
-    router.push(href);
-  };
+  // 편집모드 중에는 이동 전에 종료 확인 (v1.8) · 같은 메뉴 재클릭 = 페이지만 다시 그림 (v1.9)
+  const nav = useSiteNav();
 
   // 상위 메뉴 개수 무제한 (v1.9) — 바 폭을 넘치는 항목은 「⋯」 드롭다운으로 자동 이동 (priority+)
   const gnbRef = useRef<HTMLElement>(null);
@@ -106,7 +68,7 @@ export function TopBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuKey]);
   // 모바일 메뉴 패널 — 페이지가 바뀌면 닫고, 열려 있는 동안 뒤 화면 스크롤 잠금
-  useEffect(() => { setNavOpen(false); setMenuOpen(false); }, [pathname]);
+  useEffect(() => { setNavOpen(false); }, [pathname]);
   useEffect(() => {
     if (!navOpen) return;
     const html = document.documentElement;
@@ -220,41 +182,11 @@ export function TopBar() {
       </span>
 
       {/* 사용자 영역 — 비로그인: 로그인 버튼 / 로그인: 프로필 드롭다운 (3장 주석, 4.0) */}
-      {user ? (
-        <div className="user-wrap" ref={userRef}>
-          <div className="user-chip" onClick={() => { setNavOpen(false); setMenuOpen(o => !o); }}>
-            {/* 기본 아바타는 이니셜 없이 단색/그라데이션 (v1.9) */}
-            <div className="avatar" style={!avatarSrc && user.avatarColor ? { background: user.avatarColor } : undefined}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {avatarSrc && <img src={avatarSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-            </div>
-            {/* 모바일에서는 사진만 — 닉네임·▾는 숨겨 로고 자리를 남김 */}
-            <span className="user-name">{user.nickname} <span style={{ fontSize: 9, color: '#8d939d' }}>▾</span></span>
-          </div>
-          <div className={`user-menu ${menuOpen ? 'open' : ''}`}>
-            <button onClick={() => { setMenuOpen(false); nav('/mypage'); }}>정보수정</button>
-            {isAdmin && (
-              <>
-                {/* 편집모드 항목은 지원 페이지에서만 노출 (편집 중이면 끄기 위해 항상 표시) */}
-                {(editAvailable || editOn) && (
-                  <button className="um-edit" onClick={() => { setMenuOpen(false); toggleEdit(); }}>
-                    편집모드 {editOn ? '끄기' : '켜기'}
-                  </button>
-                )}
-                <button onClick={() => { setMenuOpen(false); nav('/settings'); }}>환경설정</button>
-                <button onClick={() => { setMenuOpen(false); nav('/admin/posts'); }}>전체 게시글 관리</button>
-              </>
-            )}
-            <button onClick={() => { setMenuOpen(false); logout(); }}>로그아웃</button>
-          </div>
-        </div>
-      ) : (
-        <button className="login-link" onClick={() => nav('/login')}>로그인</button>
-      )}
+      <UserArea nav={nav} onOpen={() => setNavOpen(false)} />
 
       {/* 모바일 메뉴 버튼 — 아이콘: Lucide 「menu」 (ISC 라이선스) */}
       <button className="m-nav-btn" aria-label="메뉴 열기" aria-expanded={navOpen}
-        onClick={() => { setMenuOpen(false); setNavOpen(o => !o); }}>
+        onClick={() => setNavOpen(o => !o)}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" />
@@ -269,7 +201,7 @@ export function TopBar() {
   );
 }
 
-type MenuItem = ReturnType<typeof buildMenu>[number];
+type MenuItem = SiteMenuItem;
 
 /** 모바일 메뉴 패널 — 오른쪽에서 열림. 하위 메뉴는 펼침/접힘, 현재 페이지가 속한 그룹은 처음부터 펼침 */
 function MobileNav({ menu, pathname, onNav, onClose }: {
@@ -306,36 +238,4 @@ function MobileNav({ menu, pathname, onNav, onClose }: {
       </nav>
     </div>
   );
-}
-
-/**
- * 텍스트 로고 자동 맞춤 (v2.2 사용자 제보 — 모바일에서 「INTOXICATION」처럼 긴 로고가 오른쪽으로 넘쳐
- * 화면이 옆으로 밀리고 잘렸다). 로고 칸이 받은 폭보다 글자가 넓으면 그 비율만큼 --brand-fit을 낮춰
- * 글자 크기·자간(em 단위라 함께 줄어듦)을 줄인다. 넉넉하면 1 그대로라 PC 모습은 바뀌지 않는다.
- */
-function useBrandFit(ref: React.RefObject<HTMLElement | null>, key: string) {
-  const [fit, setFit] = useState(1);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let raf = 0;
-    const measure = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        el.style.setProperty('--brand-fit', '1');   // 원래 크기에서 잰다
-        const need = el.scrollWidth, have = el.clientWidth;
-        const next = need > have + 1 && have > 0 ? Math.max(0.45, Math.floor((have / need) * 1000) / 1000) : 1;
-        el.style.setProperty('--brand-fit', String(next));
-        setFit(f => (f === next ? f : next));
-      });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    if (el.parentElement) ro.observe(el.parentElement);
-    document.fonts?.ready.then(measure).catch(() => {});
-    window.addEventListener('resize', measure);
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [ref, key]);
-  return fit;
 }

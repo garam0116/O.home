@@ -23,9 +23,20 @@ export function sideOf(w: WidgetConf): 1 | 2 | 3 {
   return c < LEFT_EDGE ? 1 : c > RIGHT_EDGE ? 3 : 2;
 }
 
-/** 다른 페이지에도 고정 표시되는 위젯 — 절대 좌표가 있는 좌우 열 위젯 */
-export function railWidgets(widgets: WidgetConf[]): WidgetConf[] {
-  return widgets.filter(w => w.enabled && w.type !== 'menu' && w.ax != null && w.ay != null && sideOf(w) !== 2);
+/** 다른 페이지에도 고정 표시되는 위젯 — 절대 좌표가 있는 좌우 열 위젯.
+ *  withMenu: PC 2단형이면 메뉴 카드도 같은 자리에 함께 띄운다 (v2.7) — 1단형에서는 상단바가 메뉴라 뺀다 */
+export function railWidgets(widgets: WidgetConf[], withMenu = false): WidgetConf[] {
+  return widgets.filter(w => w.enabled && (withMenu || w.type !== 'menu') && w.ax != null && w.ay != null && sideOf(w) !== 2);
+}
+
+/** 메뉴 카드가 가운데 열로 못 들어가게 (v2.7 사용자 확정) — 중심이 가운데 구간에 오면 가까운 쪽 열 끝에 붙인다 */
+export function clampMenuX(x: number, w: number, snap: boolean): number {
+  const c = x + w / 2;
+  if (c < LEFT_EDGE || c > RIGHT_EDGE) return x;
+  const leftLim = LEFT_EDGE - w / 2 - 1, rightLim = RIGHT_EDGE - w / 2 + 1;
+  const toLeft = c < (LEFT_EDGE + RIGHT_EDGE) / 2;
+  if (toLeft) return snap ? Math.floor(leftLim / 10) * 10 : Math.floor(leftLim);
+  return snap ? Math.ceil(rightLim / 10) * 10 : Math.ceil(rightLim);
 }
 
 /** 본문이 들어갈 구간 (캔버스 좌표) — 왼쪽 위젯들의 오른쪽 끝 ~ 오른쪽 위젯들의 왼쪽 끝 */

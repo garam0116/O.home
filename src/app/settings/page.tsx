@@ -10,7 +10,8 @@ import { hexToHsl } from '@/lib/color';
 import { ColorField } from '@/components/ui/ColorField';
 import { KStep, KToggle, KInput, LiveInput, KTextarea, KSelect, KCheck, Pager } from '@/components/ui/Kit';
 import { DragList } from '@/components/ui/DragList';
-import { useMainStore, WidgetConf, WIDGET_META, MULTI_TYPES, widgetLabel } from '@/lib/mainStore';
+import { useMainStore, WidgetConf, WIDGET_META, MULTI_TYPES, widgetLabel, menuCardHeight } from '@/lib/mainStore';
+import { useSiteMenu } from '@/components/shell/siteNav';
 import { useConfirmDelete, ConfirmModal, Modal } from '@/components/ui/Modal';
 import { exportBackup, importBackup, resetGroups, RESET_CONTENT, RESET_EXTRA } from '@/lib/backup';
 import { newId } from '@/lib/postStore';
@@ -597,6 +598,8 @@ function MainPagePane() {
           { label: 'RESET', kind: 'accent', onClick: () => { resetMain(); setResetAsk(false); toast('기본 구성으로 바꿨습니다 — SAVE를 눌러야 저장됩니다'); } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setResetAsk(false) },
         ]} />
+      <PcLayoutRow />
+
       <div className="d">모바일 표시 여부 + 모바일 세로 나열 순서 — ⠿ 드래그로 순서 변경</div>
 
       {/* 메인 레이아웃은 고정 캔버스 하나 — 반응형 옵션 제거 (v1.9, PC/모바일 두 가지만) */}
@@ -625,6 +628,29 @@ function MainPagePane() {
       <p className="hint">토글을 끄면 <b>모바일에서만</b> 빠지고 PC 메인에는 그대로 표시됩니다 · 순서는 <b>모바일 세로 나열 순서</b> — PC 배치는 메인에서 편집모드로 자유 조정</p>
       <p className="hint">메인에서 위젯을 완전히 빼거나 더하려면 편집모드에서 — 추가는 상단바 [＋ 위젯], 삭제는 위젯 우클릭 → 위젯 삭제</p>
       <p className="hint">슬라이드 배너(최상단)·회원정보창은 모바일에서 항상 맨 위에 표시되어 순서 목록에 포함되지 않음</p>
+    </div>
+  );
+}
+
+/**
+ * PC 레이아웃 (v2.7 사용자 요청) — 1단형(상단 메뉴) / 2단형(메뉴 카드).
+ * 2단형은 메인과 좌우 위젯이 뜨는 페이지에서만 적용되고, 레일 없는 페이지(자관·로드비·다이어리·환경설정·글쓰기)와
+ * 모바일은 늘 지금 화면 그대로. 처음 2단형으로 바꾸면 메뉴 카드를 왼쪽 열 맨 위에 두고 그 열 위젯을 아래로 내린다.
+ * 메인 페이지 탭 SAVE 흐름(ohome.main.v1)을 그대로 따른다.
+ */
+function PcLayoutRow() {
+  const { state, setPcLayout } = useMainStore();
+  const { menu } = useSiteMenu();
+  const cur = state.pcLayout ?? 'top';
+  const pick = (m: 'top' | 'side') => { if (m !== cur) setPcLayout(m, menuCardHeight(menu.length)); };
+  return (
+    <div className="set-row">
+      <div className="l"><b>PC 레이아웃</b>
+        <small>2단형 = 메뉴를 상단바 대신 메뉴 카드로 · 메뉴 카드는 편집모드에서 좌우 열 안으로만 이동 · 자관·로드비·다이어리·환경설정·글쓰기 화면과 모바일은 1단형 그대로</small></div>
+      <div className="seg in-panel seg-1line">
+        <button className={cur === 'top' ? 'on' : ''} onClick={() => pick('top')}>1단형</button>
+        <button className={cur === 'side' ? 'on' : ''} onClick={() => pick('side')}>2단형</button>
+      </div>
     </div>
   );
 }
