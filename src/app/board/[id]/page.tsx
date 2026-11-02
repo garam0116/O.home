@@ -20,12 +20,6 @@ import { commentTargetMeta } from '@/lib/visFloor';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
 
-/** 이전 글/다음 글 날짜 — 해가 같아도 늘 연도까지 (2026.10.22) */
-const fmtFullDate = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-};
-
 export default function BoardDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -127,11 +121,9 @@ export default function BoardDetailPage() {
     <div className={`post-nav-row${p && canRead(p) ? ' link' : ''}`}
       onClick={() => { if (p && canRead(p)) router.push(postHref(p, nums)); }}>
       <span className="pn-label">{label}</span>
+      {/* 제목만 표시 — 날짜는 넣지 않는다 (사용자 요청) */}
       {p ? (
-        <>
-          <span className="pn-title">{canRead(p) ? <>{p.secret && '🔒 '}{p.title}</> : '🔒 비밀글입니다'}</span>
-          <span className="pn-date">— {fmtFullDate(p.date)}</span>
-        </>
+        <span className="pn-title">{canRead(p) ? <>{p.secret && '🔒 '}{p.title}</> : '🔒 비밀글입니다'}</span>
       ) : <span className="pn-none">없음</span>}
     </div>
   );

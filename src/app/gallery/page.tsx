@@ -92,7 +92,7 @@ function BackupPageInner() {
           <SearchBar onSearch={setQ} />
           {/* 글쓰기 권한 (v2.0 사용자 요청) — 메뉴 관리에서 갤러리별로 · 멤버 선택으로 좁힐 수 있다 */}
           {canGalleryWrite(menuSet, sec.id, { loggedIn: !!user, isAdmin, id: user?.id }) && (
-            <button className="btn btn-dark" onClick={() => router.push(secSubHref('gallery', sec.id, 'write'))}>✎ WRITE</button>
+            <button className="btn btn-dark" onClick={() => router.push(secSubHref('gallery', sec.id, 'write'))}>WRITE</button>
           )}
         </div>
       </div>
