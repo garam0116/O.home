@@ -39,13 +39,31 @@ export function clampMenuX(x: number, w: number, snap: boolean): number {
   return snap ? Math.ceil(rightLim / 10) * 10 : Math.ceil(rightLim);
 }
 
-/** 본문이 들어갈 구간 (캔버스 좌표) — 왼쪽 위젯들의 오른쪽 끝 ~ 오른쪽 위젯들의 왼쪽 끝 */
-export function railBounds(side: WidgetConf[]): { left: number; right: number } {
+/** 본문이 들어갈 구간 (캔버스 좌표) — 왼쪽 위젯들의 오른쪽 끝 ~ 오른쪽 위젯들의 왼쪽 끝.
+ *  centered: 「가운데 정렬」(편집모드 버튼) — 좌우 위젯 폭이 달라도 본문이 화면(캔버스) 한가운데에 오게
+ *  가운데선에서 더 가까운 쪽 위젯까지의 거리로 좌우를 똑같이 잡는다 */
+export function railBounds(side: WidgetConf[], centered = false): { left: number; right: number } {
   const ls = side.filter(w => sideOf(w) === 1);
   const rs = side.filter(w => sideOf(w) === 3);
-  const left = ls.length ? Math.max(...ls.map(w => w.ax! + widthOf(w))) + RAIL_GAP : 0;
-  const right = rs.length ? Math.min(...rs.map(w => w.ax!)) - RAIL_GAP : CANVAS_W;
+  let left = ls.length ? Math.max(...ls.map(w => w.ax! + widthOf(w))) + RAIL_GAP : 0;
+  let right = rs.length ? Math.min(...rs.map(w => w.ax!)) - RAIL_GAP : CANVAS_W;
+  if (centered) {
+    const mid = CANVAS_W / 2;
+    const half = Math.max(0, Math.min(mid - left, right - mid));
+    left = mid - half; right = mid + half;
+  }
   return { left, right: Math.max(left, right) };
+}
+
+/** 가운데 열 위젯들을 한 덩어리로 가로 이동해 캔버스 한가운데에 맞춘다 (편집모드 「가운데 정렬」) — 메뉴 카드 제외 */
+export function centerMiddleWidgets(widgets: WidgetConf[]): WidgetConf[] {
+  const mids = widgets.filter(w => w.enabled && w.type !== 'menu' && w.ax != null && w.ay != null && sideOf(w) === 2);
+  if (!mids.length) return widgets;
+  const l = Math.min(...mids.map(w => w.ax!));
+  const r = Math.max(...mids.map(w => w.ax! + widthOf(w)));
+  const dx = Math.round((CANVAS_W - (l + r)) / 2);
+  if (!dx) return widgets;
+  return widgets.map(w => (mids.includes(w) ? { ...w, ax: w.ax! + dx } : w));
 }
 
 /** 좌우 위젯을 고정 표시하는 페이지 — 제외: 메인(자체 캔버스) · 환경설정(자체 넓은 레이아웃) ·

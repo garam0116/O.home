@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
 import { getRawSetting, setSetting, onSettingReload } from './settingStore';
-import { isRailPage, sideOf } from './widgetZone';
+import { isRailPage, sideOf, centerMiddleWidgets } from './widgetZone';
 
 export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
@@ -45,6 +45,7 @@ interface MainState {
   settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
   pcLayout?: PcLayout;                  // 없으면 top (v2.7)
+  centerBody?: boolean;                 // 가운데 정렬 — 다른 페이지 본문을 좌우 위젯 사이가 아니라 화면 한가운데에 (편집모드 버튼)
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
@@ -150,6 +151,9 @@ interface MainCtx {
   setPcLayout: (m: PcLayout, estH: number) => void;
   /** 지금 페이지가 2단형으로 그려지는지 (PC 기준 — 모바일은 CSS가 1단형으로 되돌림) */
   sideNav: boolean;
+  /** 가운데 정렬 (편집모드 버튼) — 켜면 가운데 열 위젯을 캔버스 한가운데로 옮기고 본문도 화면 가운데에 둔다.
+   *  편집 중 변경이라 저장은 편집 종료 시 「저장 후 종료」로 확정된다 */
+  setCenterAlign: (on: boolean) => void;
   setMobileOff: (id: string, v: boolean) => void;  // 모바일에서 제외 토글 (v1.9 — PC 제거는 우클릭 삭제)
   setMobileOrder: (ids: string[]) => void;
   setSettingsOrder: (ids: string[]) => void;   // 환경설정 위젯 탭 목록 순서만 바꿈 — 메인 배치·모바일 순서와 무관
@@ -316,6 +320,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
     document.body.classList.toggle('side-nav', sideNav);
   }, [sideNav]);
 
+  const setCenterAlign = useCallback((on: boolean) => {
+    setState(s => ({ ...s, centerBody: on, widgets: on ? centerMiddleWidgets(s.widgets) : s.widgets }));
+  }, []);
+
   // 토글은 모바일 표시만 제어 (v1.9 사용자 확정) — PC 메인에서 빼려면 편집모드 우클릭 삭제
   const setMobileOff = useCallback((id: string, v: boolean) => {
     setState(s => {
@@ -348,7 +356,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, editOn, editAvailable: canEditAt(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
-      updateWidget, addWidget, removeWidget, setLayoutMode, setPcLayout, sideNav, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
+      updateWidget, addWidget, removeWidget, setLayoutMode, setPcLayout, sideNav, setCenterAlign, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
     }}>
       {children}
 
