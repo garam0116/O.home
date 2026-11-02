@@ -4,16 +4,14 @@
 // 게시판 메뉴는 오른쪽에 글 수를 적는다.
 // 위젯이라 편집모드에서 좌우 열 안에서만 옮길 수 있다(가운데 열 금지 · 삭제 불가 — WidgetFrame/WidgetEditLayer).
 // 스크롤해도 화면의 같은 자리(맨 위에 있을 때 위치)에 그대로 보인다(사용자 요청 · 편집모드 중에는 끔). 모바일은 CSS로 숨기고 상단바 ≡가 대신한다.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { WidgetConf } from '@/lib/mainStore';
 import { useMainStore } from '@/lib/mainStore';
 import { useSiteSettings } from '@/lib/siteStore';
 import { useBlobUrl } from '@/lib/blobStore';
-import { useBoards, boardHref, MAIN_BOARD_ID } from '@/lib/boardStore';
-import { useLocalList, BOARD_SEED, type Post } from '@/lib/postStore';
 import { sideOf } from '@/lib/widgetZone';
-import { useSiteMenu, useSiteNav, UserArea, useBrandFit } from '@/components/shell/siteNav';
+import { useSiteMenu, useSiteNav, UserArea, useBrandFit, useBoardCounts } from '@/components/shell/siteNav';
 
 /** 카드가 화면보다 길 때 카드 아래쪽과 화면 아래 사이 간격 (px) */
 const STICK_GAP = 16;
@@ -42,16 +40,7 @@ export function MenuCard({ conf }: { conf: WidgetConf }) {
   };
 
   // 게시판 메뉴 오른쪽 글 수 (사용자 요청) — 게시판 목록과 같은 기준(그 게시판에 속한 글 전체)
-  const { boards } = useBoards();
-  const [posts, , postsLoaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    if (!postsLoaded) return m;
-    const per = new Map<string, number>();
-    for (const p of posts) { const b = p.boardId ?? MAIN_BOARD_ID; per.set(b, (per.get(b) ?? 0) + 1); }
-    for (const b of boards) m.set(boardHref(b.id, boards), per.get(b.id) ?? 0);
-    return m;
-  }, [posts, postsLoaded, boards]);
+  const counts = useBoardCounts();
   const countOf = (href?: string) => {
     const n = href ? counts.get(href) : undefined;
     return n == null ? null : <span className="mc-cnt">{n}</span>;
