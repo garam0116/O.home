@@ -1,13 +1,14 @@
 ﻿'use client';
 // 테마 컨텍스트 (5.1, v1.9 개정) — 모드별 독립 설정값 + 드래프트/저장 분리 + 프리셋
-// · 모드 전환은 각 모드의 수정본을 불러올 뿐 리셋하지 않음
-// · 포인트 자동은 기준색/톤을 "변경했을 때만" 전체 재파생
+// · 모드·톤 전환은 새 모드의 초기값 위에 사용자가 지정한 항목(edits)을 다시 얹음 (v2.0)
+// · 포인트 자동은 기준색/톤을 바꾸면 재파생하되 지정 항목은 유지
 // · 변경은 즉시 미리보기(DOM)되지만 저장은 [SAVE]를 눌러야 확정 — 새로고침 시 저장본으로 복귀
 // TODO(0차→): Supabase 연결 시 site_settings 테이블로 저장 위치 이동
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ThemeMode, PointTone, ThemeVars, ThemeState, ThemeStore, ThemePreset,
   DARK_THEME, DEFAULT_THEME_STORE, defaultVarsFor, derivePointTheme, themeToCssVars,
+  composeVars, inferEdits,
 } from './theme';
 import { newId } from './postStore';
 import { getBlob } from './blobStore';
@@ -45,16 +46,22 @@ const LEGACY_KEY = 'ohome.theme.v1';
 const CSS_KEY = 'ohome.themeCss.v1';
 const PRESET_KEY = 'ohome.themePresets.v1';
 
-const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => ({
-  ...DEFAULT_THEME_STORE,
-  ...(s ?? {}),
-  perMode: {
-    light: { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) },
-    dark: { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) },
-    point: { ...DEFAULT_THEME_STORE.perMode.point, ...(s?.perMode?.point ?? {}) },
-    custom: { ...DEFAULT_THEME_STORE.perMode.custom, ...(s?.perMode?.custom ?? {}) },
-  },
-});
+const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => {
+  const st: ThemeStore = {
+    ...DEFAULT_THEME_STORE,
+    ...(s ?? {}),
+    perMode: {
+      light: { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) },
+      dark: { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) },
+      point: { ...DEFAULT_THEME_STORE.perMode.point, ...(s?.perMode?.point ?? {}) },
+      custom: { ...DEFAULT_THEME_STORE.perMode.custom, ...(s?.perMode?.custom ?? {}) },
+    },
+    edits: { ...(s?.edits ?? {}) },
+  };
+  // 지정 항목 기록이 없던 예전 저장본 — 커스텀 값에서 초기값과 달라진 항목을 골라 이어받는다
+  if (!s?.edits && st.mode === 'custom') st.edits = inferEdits(st.perMode.custom, st.pointAccent, st.pointTone);
+  return st;
+};
 
 function applyToDom(vars: ThemeVars) {
   const css = themeToCssVars(vars);
@@ -162,36 +169,56 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const dirty = useMemo(() => JSON.stringify(saved) !== JSON.stringify(draft), [saved, draft]);
 
+  /* 모드·톤 전환 (v2.0 사용자 요청) — 지정한 포인트 컬러·배경 이미지 등(edits)을 새 모드의
+     초기값 위에 그대로 얹는다. 이전에 그 모드에서 보던 값은 기억하지 않는다 — 되돌리기는 [선택 리셋]. */
   const setMode = useCallback((mode: ThemeMode) =>
-    setDraft(d => ({ ...d, mode })), []);
+    setDraft(d => {
+      if (mode === d.mode) return d;
+      const vars = mode === 'custom'
+        ? d.perMode[d.mode]   // 지금 보이는 값을 그대로 이어서 커스텀으로
+        : composeVars(mode, d.pointAccent, d.pointTone, d.edits);
+      return { ...d, mode, perMode: { ...d.perMode, [mode]: vars } };
+    }), []);
 
+  // 포인트 컬러 — 기준색을 바꾸고 재파생하되, 지정해 둔 다른 항목은 유지
   const setPointAccent = useCallback((hex: string) =>
-    setDraft(d => ({
-      ...d, mode: 'point', pointAccent: hex,
-      perMode: { ...d.perMode, point: derivePointTheme(hex, d.pointTone) },
-    })), []);
+    setDraft(d => {
+      const edits = { ...d.edits, accent: hex };
+      delete edits.accentSoft;
+      return {
+        ...d, mode: 'point', pointAccent: hex, edits,
+        perMode: { ...d.perMode, point: composeVars('point', hex, d.pointTone, edits) },
+      };
+    }), []);
 
   const setPointTone = useCallback((tone: PointTone) =>
     setDraft(d => ({
       ...d, mode: 'point', pointTone: tone,
-      perMode: { ...d.perMode, point: derivePointTheme(d.pointAccent, tone) },
+      perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, tone, d.edits) },
     })), []);
 
   // 세부 수정 (v1.9 확정) — 프리셋 모드(라이트/다크/포인트)에서 뭐 하나라도 바꾸면
   // 현재 보이는 값 전체를 커스텀으로 복사하며 커스텀 모드로 전환. 커스텀에서는 그대로 반영.
   // 저장은 SAVE에서 — 커스텀 값과 mode='custom'이 함께 저장됨.
+  // 바꾼 항목은 edits에도 기록해 모드·톤을 바꿔도 이어지게 한다 (v2.0)
   const setVar = useCallback(<K extends keyof ThemeVars>(key: K, value: ThemeVars[K]) =>
-    setDraft(d => (d.mode === 'custom'
-      ? { ...d, perMode: { ...d.perMode, custom: { ...d.perMode.custom, [key]: value } } }
-      : {
-        ...d, mode: 'custom',
-        perMode: { ...d.perMode, custom: { ...d.perMode[d.mode], [key]: value } },
-      })), []);
+    setDraft(d => {
+      const edits = { ...d.edits, [key]: value };
+      const pointAccent = key === 'accent' && typeof value === 'string' ? value : d.pointAccent;
+      return d.mode === 'custom'
+        ? { ...d, pointAccent, edits, perMode: { ...d.perMode, custom: { ...d.perMode.custom, [key]: value } } }
+        : {
+          ...d, mode: 'custom', pointAccent, edits,
+          perMode: { ...d.perMode, custom: { ...d.perMode[d.mode], [key]: value } },
+        };
+    }), []);
 
-  // 선택 리셋 — 지정한 모드만 초기값으로 (드래프트, 저장은 SAVE에서)
+  // 선택 리셋 — 지정한 모드만 초기값으로 (드래프트, 저장은 SAVE에서).
+  // 지금 보고 있는 모드를 리셋하면 지정 항목 기록도 비운다 — 안 그러면 다음 전환 때 되살아난다
   const resetMode = useCallback((m: ThemeMode) =>
     setDraft(d => ({
       ...d,
+      edits: m === d.mode ? {} : d.edits,
       perMode: { ...d.perMode, [m]: defaultVarsFor(m, d.pointAccent, d.pointTone) },
     })), []);
 
@@ -223,7 +250,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const applyPreset = useCallback((id: string) => {
     const p = presets.find(x => x.id === id);
     if (!p) return;
-    setDraft(d => ({ ...d, mode: 'custom', perMode: { ...d.perMode, custom: { ...p.vars } } }));
+    setDraft(d => {
+      // 보관한 테마도 지정 항목으로 풀어 둔다 — 적용 뒤 모드·톤을 바꿔도 이어지게
+      const edits = inferEdits(p.vars, d.pointAccent, d.pointTone);
+      return {
+        ...d, mode: 'custom', edits, pointAccent: edits.accent ?? d.pointAccent,
+        perMode: { ...d.perMode, custom: { ...p.vars } },
+      };
+    });
   }, [presets]);
   const removePreset = useCallback((id: string) =>
     persistPresets(presets.filter(p => p.id !== id)),

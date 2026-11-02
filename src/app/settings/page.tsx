@@ -173,10 +173,10 @@ function DesignPane() {
   return (
     <div className="set-sec">
       <h3>테마</h3>
-      <div className="d">변경은 미리보기로만 반영 — [SAVE]를 눌러야 저장 · 모드마다 수정값을 따로 기억합니다</div>
+      <div className="d">변경은 미리보기로만 반영 — [SAVE]를 눌러야 저장 · 지정한 값은 모드를 바꿔도 이어집니다</div>
 
       <div className="set-row">
-        <div className="l"><b>모드</b><small>전환해도 각 모드의 수정값은 유지 — 초기화는 [선택 리셋]에서 모드별로</small></div>
+        <div className="l"><b>모드</b><small>전환해도 지정한 포인트 컬러·배경 등은 그대로 유지 — 초기화는 [선택 리셋]에서</small></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div className="seg in-panel">
             {modeBtn('light', '라이트')}
@@ -255,7 +255,7 @@ function DesignPane() {
       </div>
 
       <div className="set-row">
-        <div className="l"><b>포인트 컬러</b><small>포인트 자동 모드의 기준색 — 변경 즉시 전체 재파생</small></div>
+        <div className="l"><b>포인트 컬러</b><small>포인트 자동 모드의 기준색 — 변경 즉시 재파생 (직접 지정한 항목은 유지)</small></div>
         <div className="cp-group">
           <ColorField value={state.vars.accent}
             onChange={hex => state.mode === 'point' ? setPointAccent(hex) : setVar('accent', hex)} />

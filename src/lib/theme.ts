@@ -100,6 +100,11 @@ export const LIGHT_THEME: ThemeVars = {
   radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 밝은 배경에선 그림자를 약하게 (사용자 확정 30%)
 };
 
+/** 포인트색에서 옅은 보조색 파생 */
+export function softAccent(accent: string): string {
+  return adjust(accent, cc => ({ l: Math.min(0.75, cc.l + 0.18), s: cc.s * 0.8 }));
+}
+
 /**
  * 포인트 자동 모드 (v1.8 확정) — 포인트 컬러 하나로 전체 팔레트 파생.
  * 톤(다크/라이트) 선택 가능, 파생값은 세부 항목 hex 란에 전부 채워짐 (v1.9).
@@ -107,7 +112,7 @@ export const LIGHT_THEME: ThemeVars = {
 export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
   const { h, s } = hexToHsl(accent);
   const c = (sat: number, lig: number) => hslToHex({ h, s: Math.min(1, s * sat), l: lig });
-  const accentSoft = adjust(accent, cc => ({ l: Math.min(0.75, cc.l + 0.18), s: cc.s * 0.8 }));
+  const accentSoft = softAccent(accent);
 
   if (tone === 'dark') {
     return {
@@ -159,7 +164,38 @@ export interface ThemeStore {
   mode: ThemeMode;
   pointTone: PointTone;
   pointAccent: string;                     // 포인트 자동 기준색 (변경 시에만 재파생)
-  perMode: Record<ThemeMode, ThemeVars>;   // 각 모드의 수정본 — 탭을 바꿔도 유지
+  perMode: Record<ThemeMode, ThemeVars>;   // 각 모드의 현재 값 (화면에 보이는 값)
+  /* 사용자가 직접 지정한 항목 (v2.0 사용자 요청 — 「포인트 자동 톤·모드를 바꿀 때 지정한
+     포인트 컬러·배경 이미지가 다 초기화된다」). 모드·톤을 바꾸면 새 모드의 초기값 위에
+     이 값들을 그대로 다시 얹는다. 모드별로 따로 기억하지 않는다 — 되돌리기는 [선택 리셋]. */
+  edits: Partial<ThemeVars>;
+}
+
+/** 모드·톤을 바꿀 때 새 모드의 값 = 초기값 + 사용자가 지정한 항목 */
+export function composeVars(mode: Exclude<ThemeMode, 'custom'>, accent: string, tone: PointTone,
+  edits: Partial<ThemeVars>): ThemeVars {
+  if (mode === 'point') {
+    // 포인트색은 파생의 기준이므로 덮지 않는다 (accent는 pointAccent와 항상 같게 맞춰 둔다)
+    const { accent: _a, accentSoft: _s, ...rest } = edits;
+    void _a; void _s;
+    return { ...derivePointTheme(accent, tone), ...rest };
+  }
+  const out: ThemeVars = { ...defaultVarsFor(mode, accent, tone), ...edits };
+  if (edits.accent && !edits.accentSoft) out.accentSoft = softAccent(edits.accent);
+  return out;
+}
+
+/** 저장된 값이 어느 초기값에서 출발했는지 추정해 사용자 지정 항목만 골라낸다
+ *  (edits 기록이 없던 예전 저장본 · 테마 보관함 적용용) */
+export function inferEdits(vars: ThemeVars, accent: string, tone: PointTone): Partial<ThemeVars> {
+  const keys = Object.keys(vars) as (keyof ThemeVars)[];
+  const diff = (base: ThemeVars) => {
+    const out: Partial<ThemeVars> = {};
+    for (const k of keys) if (vars[k] !== undefined && vars[k] !== base[k]) (out as Record<string, unknown>)[k] = vars[k];
+    return out;
+  };
+  const cands = [LIGHT_THEME, DARK_THEME, derivePointTheme(accent, tone)].map(diff);
+  return cands.reduce((a, b) => (Object.keys(b).length < Object.keys(a).length ? b : a));
 }
 
 /** 모드별 초기값 (선택 리셋용) */
@@ -180,6 +216,7 @@ export const DEFAULT_THEME_STORE: ThemeStore = {
     point: derivePointTheme('#a63a45', 'dark'),
     custom: DARK_THEME,
   },
+  edits: {},
 };
 
 /** 저장해 둔 테마 프리셋 (v1.9 — 드롭다운에서 커스텀으로 적용) */
