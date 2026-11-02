@@ -39,6 +39,9 @@ export interface CommentRow extends Comment {
   targetId: string;                 // 달린 대상(글·로드뷰 항목·감상타래)의 id
   /** 대상 종류 — 같은 컬렉션을 나눠 쓴다 (thread: v2.0 사용자 요청) */
   target: 'post' | 'road' | 'thread';
+  /** 달린 글의 공개범위·작성자 (보안 검토 — visFloor.commentTargetMeta). 댓글이 그 범위로 저장된다 */
+  targetVis?: 'public' | 'member' | 'private';
+  targetAuthorId?: string;
 }
 
 export const COMMENT_SEED: CommentRow[] = [];

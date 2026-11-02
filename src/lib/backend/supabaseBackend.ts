@@ -3,7 +3,7 @@
 // 스키마·권한: supabase/schema.sql
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf,
+  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf, randomInviteCode,
 } from './types';
 import { visFloorOf } from '../visFloor';
 
@@ -159,8 +159,10 @@ export async function createSupabaseBackend(
     async syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null) {
       const { inserts, updates, moves, deletes } = diffList(prev, next);
       const toRow = ({ item, sort }: { item: T; sort: number }) => {
-        const { authorId, visibility } = metaOf(item, uid, visFloorOf(coll, item));
-        return { id: item.id, data: item, author_id: authorId, visibility, sort };
+        const { authorId, visibility, targetAuthorId } = metaOf(item, uid, visFloorOf(coll, item));
+        // 댓글이 달린 글의 작성자 (보안 검토) — comments 테이블에만 있는 칸
+        return { id: item.id, data: item, author_id: authorId, visibility, sort,
+          ...(coll === 'comments' ? { target_author_id: targetAuthorId } : {}) };
       };
       // 한 요청에 다 실어 보내면 큰 본문(TRPG 로그 등)이 여럿일 때 요청이 너무 커진다
       // (v2.0 — Firestore와 같은 문제 예방). 대략 크기를 재서 4MB쯤에서 끊어 보낸다.
@@ -223,6 +225,26 @@ export async function createSupabaseBackend(
         .on('postgres_changes', { event: '*', schema: 'public', table: coll }, () => onChange())
         .subscribe();
       return () => { void sb.removeChannel(ch); };
+    },
+
+    async fetchPwDoc<T extends ListItem>(coll: string, id: string): Promise<T | null> {
+      // 목록 조회로는 안 나오는 문서 — 서버 함수가 id가 정확히 맞을 때만 내준다 (supabase/schema.sql)
+      if (coll !== 'trpg_log_bodies') return null;
+      const { data, error } = await sb.rpc('get_pw_doc', { doc_id: id });
+      if (error || !data) return null;
+      return { ...(data as Record<string, unknown>), id } as T;
+    },
+
+    async ensureInviteCode() {
+      const { data, error } = await sb.from('site_settings').select('value').eq('key', 'ohome.invite.v1').maybeSingle();
+      if (error) throw error;   // 잘못 읽고 코드를 덮어쓰지 않게
+      const cur = typeof data?.value === 'string' ? data.value.trim() : '';
+      if (cur && cur.toUpperCase() !== 'WELCOME') return null;
+      const code = randomInviteCode();
+      const { error: e2 } = await sb.from('site_settings')
+        .upsert({ key: 'ohome.invite.v1', value: code, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (e2) throw e2;
+      return code;
     },
 
     async fetchSetting<T>(key: string) {

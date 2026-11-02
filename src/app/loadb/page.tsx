@@ -18,6 +18,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useMenuSettings, MenuPerm } from '@/lib/menuStore';
 import { GuestIdBar } from '@/components/ui/GuestId';
 import { fileDrop } from '@/lib/dnd';
+import { commentTargetMeta } from '@/lib/visFloor';
 
 const PAGE_SIZE = 4;
 const FOLD_LABEL = { spoiler: '스포일러', adult: '수위 주의' };
@@ -228,7 +229,9 @@ function RoadviewPageInner() {
 
   const addComment = (id: string, text: string, guest?: { name: string }, parentId?: string) => {
     // 게스트 댓글 (방문자 권한, v1.9) — 닉네임만, authorId는 빈 값. parentId가 있으면 대댓글 (v2.0)
-    const base = { id: newId(), text, date: new Date().toISOString(), target: 'road' as const, targetId: id, parentId };
+    // 달린 항목의 공개범위·작성자를 함께 적는다 — 비공개 메뉴의 댓글이 공개로 새지 않게 (보안 검토)
+    const base = { id: newId(), text, date: new Date().toISOString(), target: 'road' as const, targetId: id, parentId,
+      ...commentTargetMeta('roadview', itemsAll.find(it => it.id === id)) };
     const c: CommentRow = guest
       ? { ...base, author: guest.name, authorId: '' }
       : { ...base, author: user!.nickname, authorId: user!.id };

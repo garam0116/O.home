@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useSectionParam, filterSection, sectionSetter, secStamp } from '@/lib/sectionStore';
 import { useLocalList, newId } from '@/lib/postStore';
-import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, decodeLogText, logNo, saveLogBody } from '@/lib/galleryStore';
+import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, decodeLogText, logNo, saveLogBody, withLogBodies } from '@/lib/galleryStore';
 import { Relation, REL_SEED } from '@/lib/relStore';
 import { SearchBar, KInput, KTextarea, KRadio, KSelect, KDate, Pager } from '@/components/ui/Kit';
 import { Modal } from '@/components/ui/Modal';
@@ -209,7 +209,8 @@ function TrpgPageInner() {
       relId: nRel === 'none' ? undefined : nRel,
       date: nDate || undefined, ph: 'cool',
       visibility: nVis,
-      password: nPw.trim() || undefined,
+      // 비밀번호 자체는 공개되는 목록 문서에 두지 않는다 — 본문 사본 쪽에만 (보안 검토)
+      hasPassword: nPw.trim() ? true : undefined,
       listHidden: nListHidden,
       // 썸네일: 이미지(선택) 또는 단색/그라데이션
       thumbId: nThumb ? await resolveImageRef(nThumb) : undefined,
@@ -232,7 +233,7 @@ function TrpgPageInner() {
     // 본문 문서는 **뒤에** 붙인다 (v2.0 포크 제보) — 앞에 끼우면 기존 본문 전체의 자리가 밀려
     // 재저장 대상이 되는데, 큰 본문이 쌓인 홈에서는 그 합이 한 번의 쓰기 한도를 넘어 저장이 실패했다.
     // 본문은 id로만 찾으므로 순서는 아무 의미가 없다.
-    setBodies([...bodies, body]);
+    setBodies(await withLogBodies(bodies, id, body, nPw));
     setAddOpen(false);
     setNNo(''); setNVis('public'); setNPw(''); setNListHidden(false); setNTitle(''); setNCatch(''); setNWriter(''); setNWith(''); setNBody(''); setNFileName(''); setNDate(''); setNFile(null);
     setNThumb(null); setNThumbUrl(''); setNThumbCrop(undefined);
@@ -267,7 +268,7 @@ function TrpgPageInner() {
         {l.catchphrase && <div className="sc-catch">{l.catchphrase}</div>}
         {/* 나만보기 등도 이제 목록엔 뜨므로(v2.0), 못 여는 로그는 왜 못 여는지 표시 */}
         {!canOpen(l) && (
-          <div className="row"><b>열람</b> {l.password ? '비밀번호 필요' : '권한 없음'}</div>
+          <div className="row"><b>열람</b> {(l.hasPassword || l.password) ? '비밀번호 필요' : '권한 없음'}</div>
         )}
         {l.writer && <div className="row"><b>라이터</b> {l.writer}</div>}
         {l.withText && <div className="row"><b>동행</b> {l.withText}</div>}
@@ -316,7 +317,7 @@ function TrpgPageInner() {
                       {/* 편집모드에서만 — 목록 숨김이라 관리자에게만 예외로 보이는 중 (v2.0) */}
                       {editOn && l.listHidden && <span className="pill" style={{ marginLeft: 6 }}>숨김</span>}
                       {/* 나만보기 등도 목록엔 뜨므로(v2.0) — 못 여는 로그는 왜 못 여는지 표시 */}
-                      {!canOpen(l) && <span className="pill" style={{ marginLeft: 6 }}>{l.password ? '비밀번호 필요' : '비공개'}</span>}
+                      {!canOpen(l) && <span className="pill" style={{ marginLeft: 6 }}>{(l.hasPassword || l.password) ? '비밀번호 필요' : '비공개'}</span>}
                       <small>{[l.writer, l.withText].filter(Boolean).join(' · ')}{l.date ? ` · ${l.date.replace(/-/g, '.')}` : ''}</small>
                     </div>
                   </div>

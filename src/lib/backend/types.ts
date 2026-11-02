@@ -77,6 +77,12 @@ export interface Backend {
    *  「글에도 적용」을 누르면 돈다. 내용(data)·순서(sort)는 건드리지 않는다. */
   refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number>;
   subscribe(coll: string, onChange: () => void): () => void;
+  /** 문서 하나를 주소(id)로 직접 읽는다 (보안 검토) — 비밀번호 로그 본문처럼 **목록 질의로는
+   *  절대 안 나오고**, 주소(비밀번호 해시가 섞인 id)를 아는 사람만 읽는 문서용. 없거나 못 읽으면 null */
+  fetchPwDoc<T extends ListItem>(coll: string, id: string): Promise<T | null>;
+  /** 가입코드가 아직 없거나 누구나 아는 기본값(WELCOME)이면 무작위 코드로 바꾼다 (보안 검토, 관리자 전용).
+   *  새로 만들었으면 그 코드를, 손대지 않았으면 null을 돌려준다 */
+  ensureInviteCode(): Promise<string | null>;
 
   /* ---- 설정(key/value) ---- */
   fetchSetting<T>(key: string): Promise<T | null>;
@@ -150,15 +156,37 @@ export function diffList<T extends ListItem>(prev: T[], next: T[]) {
  *  단일 조회 권한도 함께 열리기 때문. (그래서 TRPG 로그는 본문을 별도 문서로 분리해 저장한다.) */
 export function metaOf(item: ListItem, uid: string | null, floor = 'public') {
   const rawAuthor = typeof item.authorId === 'string' ? item.authorId : '';
-  const authorId = rawAuthor || uid || null;
+  // 손님 댓글(authorId '')은 누가 다시 저장하든 작성자 없음으로 남긴다 (보안 검토) — 예전엔
+  // 관리자가 고쳐 저장하면 관리자 id가 들어가 「관리자가 쓴 댓글」로 바뀌었다
+  const guestComment = rawAuthor === '' && 'authorId' in item && typeof item.target === 'string';
+  const authorId = guestComment ? null : (rawAuthor || uid || null);
   const hasListHidden = typeof item.listHidden === 'boolean';
   const own = hasListHidden
     ? (item.listHidden ? 'private' : 'public')
+    // 비밀글(🔒)은 작성자·관리자만 — 예전엔 화면에서만 가리고 서버에는 공개로 저장돼
+    // F12(네트워크 탭)로 본문이 그대로 보였다 (보안 검토)
+    : item.secret === true ? 'private'
     : (typeof item.visibility === 'string' ? item.visibility : 'public');
   /* 메뉴를 비공개로 둔 곳의 글은 그 기준까지 좁혀 저장한다 (v2.0 사용자 요청 — visFloor 참조).
      **좁히기만 한다** — 글이 이미 더 좁으면 그대로다. 게시판 글처럼 visibility 칸이 아예 없는
-     종류도 여기서 정해지므로, 서버가 내주지 않는 것은 화면과 무관하게 보장된다. */
-  const rank: Record<string, number> = { public: 0, member: 1, private: 2 };
-  const visibility = (rank[floor] ?? 0) > (rank[own] ?? 0) ? floor : own;
-  return { authorId, visibility };
+     종류도 여기서 정해지므로, 서버가 내주지 않는 것은 화면과 무관하게 보장된다.
+     'pw'(비밀번호 로그 본문 사본)는 회원공개보다 좁고 비공개보다 넓다 — 주소를 아는 사람만 읽는다 */
+  const visibility = (VIS_RANK[floor] ?? 0) > (VIS_RANK[own] ?? 0) ? floor : own;
+  // 댓글이 달린 글의 작성자 — 비밀글에 달린 댓글을 그 글쓴이도 읽을 수 있게 규칙이 이 칸을 본다
+  const targetAuthorId = typeof item.targetAuthorId === 'string' && item.targetAuthorId ? item.targetAuthorId : null;
+  return { authorId, visibility, targetAuthorId };
 }
+
+/** 공개범위 넓이 — 클수록 좁다 */
+export const VIS_RANK: Record<string, number> = { public: 0, member: 1, pw: 1.5, private: 2 };
+
+/** 무작위 가입코드 — 헷갈리는 글자(0/O, 1/I/L)를 뺀 10자 */
+export function randomInviteCode(): string {
+  const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const buf = new Uint32Array(10);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, n => abc[n % abc.length]).join('');
+}
+
+/** 관리자만 읽는 설정 키 — 공개 설정 저장소(settings)에 두면 F12로 누구나 본다 */
+export const ADMIN_ONLY_SETTINGS = ['ohome.invite.v1', 'ohome.membertags.v1'];

@@ -25,6 +25,7 @@ import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { useToast } from '@/components/ui/Toast';
 import { itemPath } from '@/lib/itemNo';
+import { commentTargetMeta } from '@/lib/visFloor';
 
 // 접기 문구 (게시판 6.2와 동일)
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
@@ -236,7 +237,9 @@ function ThreadsPageInner() {
   const addComment = () => {
     if (!sel || !cmt.trim()) return;
     if (guestMode && !gName.trim()) { toast('닉네임을 입력해 주세요'); return; }
-    const base = { id: newId(), text: cmt.trim(), date: new Date().toISOString(), parentId: replyTo ?? undefined };
+    // 달린 타래의 공개범위·작성자를 함께 적는다 — 나만보기 타래의 댓글이 공개로 새지 않게 (보안 검토)
+    const base = { id: newId(), text: cmt.trim(), date: new Date().toISOString(), parentId: replyTo ?? undefined,
+      ...commentTargetMeta('threads', sel) };
     const c: CommentRow = user
       ? { ...base, target: 'thread' as const, targetId: sel.id, author: user.nickname, authorId: user.id }
       : { ...base, target: 'thread' as const, targetId: sel.id, author: gName.trim(), authorId: '' };

@@ -15,7 +15,7 @@ import { currentMenuSettings, hrefAccess } from './menuStore';
 import { MAIN_SEC, sectionHref, type SectionKind } from './sectionStore';
 import { MAIN_BOARD_ID, boardHref } from './boardStore';
 import type { Visibility } from './relStore';
-import type { ListItem } from './backend/types';
+import { metaOf, type ListItem } from './backend/types';
 
 /** 컬렉션 → 그 목록이 걸린 메뉴. 섹션형은 종류만 주고 소속은 항목의 `secId`에서 읽는다 */
 const AREA: Record<string, { kind?: SectionKind; href?: string; board?: boolean }> = {
@@ -44,14 +44,37 @@ export function areaHrefOf(coll: string, item: ListItem): string | null {
 
 /** 이 항목을 저장할 때 지켜야 할 **최소** 공개범위 */
 export function visFloorOf(coll: string, item: ListItem): Visibility {
+  // 댓글은 달린 글의 공개범위를 따른다 (보안 검토) — 예전엔 늘 공개로 저장돼 비밀글·회원 전용
+  // 글에 달린 댓글도 비로그인 방문자에게 그대로 내려갔다. 값은 댓글을 쓸 때 commentTargetMeta가 채운다
+  if (coll === 'comments') {
+    const tv = item.targetVis;
+    return tv === 'member' || tv === 'private' ? tv : 'public';
+  }
   const href = areaHrefOf(coll, item);
   if (!href) return 'public';
   const v = hrefAccess(currentMenuSettings(), href);
   return v === 'admin' ? 'private' : v === 'member' ? 'member' : 'public';
 }
 
-const RANK: Record<string, number> = { public: 0, member: 1, private: 2 };
+const RANK: Record<string, number> = { public: 0, member: 1, pw: 1.5, private: 2 };
 
 /** 둘 중 더 좁은 쪽 */
 export const strictestVis = (a: string, b: string): string =>
   ((RANK[a] ?? 0) >= (RANK[b] ?? 0) ? a : b);
+
+/** 댓글을 저장할 때 함께 적을 「달린 글」 정보 (보안 검토).
+ *  · targetVis — 그 글이 실제로 저장되는 공개범위(비밀글·메뉴 비공개 반영). 댓글도 이 범위로 저장된다
+ *  · targetAuthorId — 그 글의 작성자. 비밀글에 관리자가 단 답글을 글쓴이가 읽을 수 있게 규칙이 본다
+ *  targetColl: 글이 있는 컬렉션 (posts · roadview · threads) */
+export function commentTargetMeta(targetColl: string, target: { id: string } | undefined | null): {
+  targetVis: 'public' | 'member' | 'private'; targetAuthorId?: string;
+} {
+  if (!target) return { targetVis: 'public' };
+  const it = target as ListItem;
+  const { visibility, authorId } = metaOf(it, null, visFloorOf(targetColl, it));
+  const targetVis = visibility === 'member' ? 'member' : visibility === 'public' ? 'public' : 'private';
+  return { targetVis, ...(authorId ? { targetAuthorId: authorId } : {}) };
+}
+
+/** 댓글 대상 종류 → 그 글이 있는 컬렉션 */
+export const COMMENT_TARGET_COLL = { post: 'posts', road: 'roadview', thread: 'threads' } as const;
