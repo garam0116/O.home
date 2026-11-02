@@ -11,7 +11,7 @@ import {
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor, postMatches,
 } from '@/lib/postStore';
 import {
-  useBoardSettings, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm, perPageOf,
+  useBoardSettings, useBoardBoxStyle, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm, perPageOf,
   findBoardByKey, postNumbers, postHref,
 } from '@/lib/boardStore';
 import { useMenuSettings, canViewHref } from '@/lib/menuStore';
@@ -68,6 +68,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
     (boards.find(b => b.id === (p.boardId ?? MAIN_BOARD_ID))?.noComment
       ? 0 : commentsFor(cmtRows, 'post', p.id, p.comments).length);
   const { st: boardSet } = useBoardSettings();   // 시스템 뱃지 색 (환경설정 > 게시판 관리)
+  useBoardBoxStyle();   // 본문 박스 투명도·글씨색 (v2.6)
   const [cat, setCat] = useState('전체');
   /* 페이지 번호·검색어는 주소(`?page=3&q=단어`)에 둔다 (v2.5 사용자 요청) — 컴포넌트 상태로만 두면 글을 읽고
      뒤로가기(iOS 스와이프 포함)했을 때 목록이 새로 그려지며 1페이지·검색 전으로 돌아갔다.
