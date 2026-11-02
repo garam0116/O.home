@@ -117,7 +117,7 @@ export function useImageSource(onSelect: (url: string) => void) {
   return { open, element, handlers };
 }
 
-export function ImageUrlButton({ onSelect, label = '🔗 이미지 주소 붙여넣기' }: {
+export function ImageUrlButton({ onSelect, label = '🔗 URL' }: {
   onSelect: (url: string) => void; label?: string;
 }) {
   const source = useImageSource(onSelect);

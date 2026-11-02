@@ -76,7 +76,7 @@ function FullImageSource({ onSelect, children }: { onSelect: (url: string) => vo
   return (
     <div tabIndex={0} {...source.handlers} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
       {children}
-      <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 이미지 주소 붙여넣기</button>
+      <button type="button" className="btn btn-ghost" onClick={() => source.open()}>🔗 URL</button>
       {source.element}
     </div>
   );
@@ -497,7 +497,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
           {...fileDrop(fl => addArts(fl))}>
           ＋ ADD ART {arts.length === 0 && '(첫 장 등록 시 썸네일 크롭 지정)'}
         </button>
-        <button type="button" className="btn btn-ghost" onClick={() => artSource.open()}>🔗 이미지 주소 붙여넣기</button>
+        <button type="button" className="btn btn-ghost" onClick={() => artSource.open()}>🔗 URL</button>
 
         {!auObj && (
           <div style={{ display: 'grid', gap: 7 }}>
@@ -520,7 +520,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
                   } }} />
               </label>
               <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                onClick={() => thumbSource.open()}>🔗 주소</button>
+                onClick={() => thumbSource.open()}>🔗 URL</button>
               {thumbDraft && <>
                 <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                   onClick={() => setThumbCropOpen(true)}>✂ 크롭</button>
@@ -553,7 +553,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
                           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setSideImage(side, f); }} />
                       </label>
                       <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }}
-                        onClick={() => source.open()}>🔗 주소</button>
+                        onClick={() => source.open()}>🔗 URL</button>
                       {draft && <>
                         <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10.5 }}
                           onClick={() => setSideCropOpen(side)}>✂ 크롭</button>
@@ -730,7 +730,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
               }
               e.target.value = '';
             }} />
-          <button type="button" className="btn btn-ghost" onClick={() => headerSource.open()}>🔗 이미지 주소 붙여넣기</button>
+          <button type="button" className="btn btn-ghost" onClick={() => headerSource.open()}>🔗 URL</button>
           {(headerUrl || (!headerRemoved && initHeaderId)) && (
             <>
               <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}

@@ -23,7 +23,7 @@ function WidgetImageSource({ children, onSelect, onFiles }: {
   return <div tabIndex={0} style={{ display: 'grid', gap: 3, flexShrink: 0 }} {...source.handlers} {...fileDrop(onFiles)}>
     {children}
     <button type="button" className="btn btn-ghost" style={{ padding: '3px 6px', fontSize: 10 }}
-      onClick={() => source.open()}>🔗 이미지 주소</button>
+      onClick={() => source.open()}>🔗 URL</button>
     {source.element}
   </div>;
 }
@@ -493,7 +493,7 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
           {...imageSource.handlers} {...fileDrop(files => void selectFiles(Array.from(files), null))}
           onClick={() => { setSwapFor(null); document.getElementById(inputId)?.click(); }}>＋ 이미지 추가</button>
         <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-          onClick={() => imageSource.open()}>🔗 이미지 주소로 넣기</button>
+          onClick={() => imageSource.open()}>🔗 URL</button>
         <KCheck label="둥근 모서리" checked={rounded} onChange={v => set({ rounded: v })} />
         {onClose && <button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={onClose}>CLOSE</button>}
       </div>

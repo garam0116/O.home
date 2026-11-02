@@ -437,7 +437,7 @@ function TrpgPageInner() {
                 if (f) selectThumb({ kind: 'file', file: f });
                 e.target.value = '';
               }} />
-            <button type="button" className="btn btn-ghost" onClick={() => thumbSource.open()}>🔗 이미지 주소 붙여넣기</button>
+            <button type="button" className="btn btn-ghost" onClick={() => thumbSource.open()}>🔗 URL</button>
             {thumbSource.element}
             {nThumb ? (
               <div style={{ display: 'flex', gap: 6 }}>

@@ -100,7 +100,7 @@ export function RichEditorContent({ value, onChange, placeholder }: {
         <span className="re-sep" />
         <TBtn title={busy ? '올리는 중…' : '이미지 올리기'} label={busy ? '⏳' : '🖼'}
           onClick={() => { if (!busy) fileRef.current?.click(); }} />
-        <TBtn title="이미지 주소로 넣기" label="🔗 이미지 주소로 넣기"
+        <TBtn title="이미지 주소로 넣기" label="🔗 URL"
           onClick={() => imageSource.open()} />
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; void insertImage(f); }} />

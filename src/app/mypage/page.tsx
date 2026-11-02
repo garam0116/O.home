@@ -220,7 +220,7 @@ export default function MyPage() {
             {...fileDrop(fl => changeAvatar(fl[0]))} {...avatarSource.handlers}>
             <b style={{ display: 'block', marginBottom: 3 }}>이미지를 끌어다 놓거나 클릭</b>
           </div>
-          <button type="button" className="btn btn-ghost" onClick={() => avatarSource.open()}>🔗 이미지 주소 붙여넣기</button>
+          <button type="button" className="btn btn-ghost" onClick={() => avatarSource.open()}>🔗 URL</button>
           {(user.avatarUrl || user.avatarColor) && (
             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 11, justifySelf: 'end' }}
               onClick={async () => {

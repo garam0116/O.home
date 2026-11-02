@@ -403,7 +403,7 @@ function ThreadsPageInner() {
                         <button className="icobtn" data-tip="사진 추가 (최대 4장)" onClick={() => imgRef.current?.click()}>
                           <PhotoIcon />
                         </button>
-                        <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 이미지 주소 붙여넣기</button>
+                        <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 URL</button>
                         {/* 접기 (v2.0 스포일러 쿠션) — 게시판 글쓰기의 접기와 같은 선택지 */}
                         <KSelect minWidth={122} value={foldType} onChange={v => setFoldType(v as FoldPick)} options={FOLD_OPTIONS} />
                         {foldType === 'custom' && (
@@ -516,7 +516,7 @@ function ThreadsPageInner() {
             <button className="icobtn" data-tip="사진 추가 (최대 4장)" onClick={() => epImgRef.current?.click()}>
               <PhotoIcon />
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => editImageSource.open()}>🔗 이미지 주소 붙여넣기</button>
+            <button type="button" className="btn btn-ghost" onClick={() => editImageSource.open()}>🔗 URL</button>
           </div>
         </div>
       </Modal>

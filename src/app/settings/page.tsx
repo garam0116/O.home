@@ -85,6 +85,9 @@ const DRAFT_TABS: Partial<Record<(typeof CATEGORIES)[number], readonly string[]>
   'BGM': ['ohome.bgm.v1'],
 };
 
+/** 디자인 탭에서 옮겨 온 테마 색이 있는 탭 (v2.6) — SAVE가 테마 드래프트까지 함께 저장한다 */
+const THEME_TABS: readonly string[] = ['위젯', 'BGM'];
+
 /** 설정 화면이 사라질 때 드래프트를 버리는 예약 — 곧바로 다시 그려지는 설정 화면(탭 이동)이 있으면 취소한다 */
 let draftEndTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -119,20 +122,36 @@ function CP({ label, k, def }: { label?: string; k: keyof ThemeVars; def?: strin
 function WidgetStyleRow() {
   const { state, setVar } = useTheme();
   const v = state.vars;
+  // 위젯 탭 맨 위로 이동 (v2.6 사용자 요청) — 설명은 이름 아래 한 줄, 색 3개·테두리 토글은 오른쪽 한 줄
   return (
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
-      <div className="l"><b>위젯</b>
+      <div className="l"><b>위젯 카드 색</b>
         <small>메인·사이드에 얹히는 카드 — 비워 두면 카드 색을 그대로 따라갑니다</small></div>
-      <div style={{ display: 'grid', gap: 8, justifyItems: 'end' }}>
-        <div className="cp-grid2">
-          <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
-          <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
-          <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
-        </div>
-        <div className="cf-row" style={{ justifyContent: 'flex-end' }}>
-          <KCheck label="테두리" checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
-          {v.wgBorder && <CP label="색" k="wgBd" def="#e6e8ec" />}
-        </div>
+      <div className="cp-group" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
+        <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
+        <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
+        <KToggle label="테두리" checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
+        {v.wgBorder && <CP k="wgBd" def="#e6e8ec" />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * BGM 플레이어 색 (v2.6 사용자 요청 — 디자인 탭에서 BGM 탭 맨 위로 이동).
+ * 값은 그대로 테마 값이라 포인트 자동 모드에서는 포인트 컬러를 따라 다시 파생된다.
+ */
+function BgmStyleRow() {
+  return (
+    <div className="set-row" style={{ flexWrap: 'wrap' }}>
+      <div className="l"><b>플레이어 색</b>
+        <small>화면 구석 미니 플레이어와 팝업 리스트의 색</small></div>
+      <div className="cp-group" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <CP label="배경" k="bgmBg" />
+        <CP label="글씨" k="bgmFg" />
+        <CP label="아이콘" k="bgmIc" />
+        <CP label="볼륨바" k="bgmVol" />
       </div>
     </div>
   );
@@ -154,11 +173,11 @@ function FontRoleRow({ role }: { role: FontRole }) {
             ...fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> })),
           ]} />
         {/* 굵기 — 폰트 선택·크기와 한 줄이라 버튼 나열 대신 선택창 (줄바꿈 방지) */}
-        <KSelect minWidth={92} value={cfg.weight === undefined ? '' : String(cfg.weight)}
+        <KSelect minWidth={112} value={cfg.weight === undefined ? '' : String(cfg.weight)}
           onChange={v => setRole(role, { weight: v ? Number(v) : undefined })}
           options={[
-            { value: '', label: '굵기: 기본' }, { value: '300', label: '가늘게' },
-            { value: '400', label: '보통' }, { value: '700', label: '굵게' },
+            { value: '', label: '굵기: 기본' }, { value: '300', label: '굵기: 가늘게' },
+            { value: '400', label: '굵기: 보통' }, { value: '700', label: '굵기: 굵게' },
           ]} />
         <KStep value={cfg.scale ?? 100} min={80} max={130} step={5} suffix="%"
           onChange={v => setRole(role, { scale: v })} />
@@ -320,7 +339,7 @@ function DesignPane() {
                 onClick={() => document.getElementById('themeBgFile')?.click()}>
                 {state.vars.bgImageId ? 'CHANGE' : 'UPLOAD'}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => backgroundSource.open()}>🔗 이미지 주소 붙여넣기</button>
+              <button type="button" className="btn btn-ghost" onClick={() => backgroundSource.open()}>🔗 URL</button>
               {state.vars.bgImageId && (
                 <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
                   onClick={() => setVar('bgImageId', undefined)}>REMOVE</button>
@@ -420,16 +439,6 @@ function DesignPane() {
         </div>
       </div>
 
-      <div className="set-row">
-        <div className="l"><b>BGM 플레이어</b></div>
-        <div className="cp-group">
-          <CP label="배경" k="bgmBg" />
-          <CP label="글씨" k="bgmFg" />
-          <CP label="아이콘" k="bgmIc" />
-          <CP label="볼륨바" k="bgmVol" />
-        </div>
-      </div>
-
       {/* 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통 */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링 — 번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
@@ -487,9 +496,6 @@ function DesignPane() {
           <CP label="글씨" k="segFg" />
         </div>
       </div>
-
-      {/* 위젯 스타일 (v2.0 사용자 요청) — 메인·사이드 카드. 안 정하면 카드 색을 그대로 따라간다 */}
-      <WidgetStyleRow />
 
       <div className="set-row">
         <div className="l"><b>진한 버튼</b><small>등록·저장 버튼과 체크박스·선택 필터 칩 공통</small></div>
@@ -653,6 +659,9 @@ function WidgetsPane() {
       <h3>위젯</h3>
       <div className="d">메인 위젯의 내용·설정값 관리 — 메인 페이지의 관리 모달과 같은 데이터 · 이 탭에서 바꾼 값은 [SAVE]를 눌러야 저장
         <br />⠿ 드래그로 이 목록의 순서만 바꿀 수 있습니다 — 메인의 실제 배치·모바일 순서는 바뀌지 않습니다</div>
+
+      {/* 위젯 카드 색 (v2.6 디자인 탭에서 이동) — 위젯 목록 위 */}
+      <WidgetStyleRow />
 
       <DragList items={editable} keyOf={w => w.id} onReorder={list => setSettingsOrder(list.map(w => w.id))}
         render={w => (
@@ -1317,7 +1326,7 @@ function SiteImageControl({ field, accept, emptyText, failText, wide }: {
         onClick={() => document.getElementById(inputId)?.click()}>
         {ref ? 'CHANGE' : 'UPLOAD'}
       </button>
-      <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 이미지 주소 붙여넣기</button>
+      <button type="button" className="btn btn-ghost" onClick={() => imageSource.open()}>🔗 URL</button>
       {ref && (
         <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
           onClick={() => set({ [field]: undefined })}>REMOVE</button>
@@ -2517,7 +2526,7 @@ function BgmCoverPick({ value, videoId, onChange }: { value?: string; videoId: s
       <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
         onClick={() => fileRef.current?.click()}>{value ? 'CHANGE' : 'UPLOAD'}</button>
       <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
-        onClick={() => source.open()}>🔗 이미지 주소</button>
+        onClick={() => source.open()}>🔗 URL</button>
       {value && <button type="button" className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }}
         onClick={() => onChange(undefined)}>REMOVE</button>}
       {source.element}
@@ -2602,7 +2611,10 @@ function BgmPane() {
   return (
     <div className="set-sec">
       <h3>BGM</h3>
-      <div className="d">유튜브 곡 목록 관리 — 플레이어 팝업 리스트에 노출 · 화면은 숨기고 소리만 재생 · 커버 이미지(레코드판·팝업)는 직접 지정하거나, 비워 두면 유튜브 썸네일 · 곡 목록과 재생 설정은 [SAVE]를 눌러야 저장</div>
+      <div className="d">유튜브 곡 목록 관리 — 플레이어 팝업 리스트에 노출 · 화면은 숨기고 소리만 재생 · 커버 이미지(레코드판·팝업)는 직접 지정하거나, 비워 두면 유튜브 썸네일 · 곡 목록·재생 설정·플레이어 색은 [SAVE]를 눌러야 저장</div>
+
+      {/* 플레이어 색 (v2.6 디자인 탭에서 이동) — 곡 목록 위 */}
+      <BgmStyleRow />
 
       <DragList
         items={state.tracks}
@@ -2871,9 +2883,14 @@ function SettingsInner() {
     window.addEventListener(DRAFT_EVT, forceDraft);
     return () => window.removeEventListener(DRAFT_EVT, forceDraft);
   }, []);
-  const paneDirty = !!draftKeys && settingDraftOwner() === tab && settingDraftDirty();
-  const paneSave = () => commitSettingDraft();
-  const paneDiscard = () => { discardSettingDraft(); setPaneGen(g => g + 1); };
+  /* 위젯·BGM 탭에는 디자인 탭에서 옮겨 온 테마 색(위젯 카드 색·플레이어 색)이 있다 (v2.6).
+     그 색은 테마 드래프트(useTheme)에 살므로, 이 탭들의 SAVE·변경 취소·이탈 확인이 테마까지 함께 다룬다 */
+  const { dirty: themeDirty, discard: themeDiscard, save: themeSave } = useTheme();
+  const withTheme = THEME_TABS.includes(tab);
+  const draftDirty = !!draftKeys && settingDraftOwner() === tab && settingDraftDirty();
+  const paneDirty = draftDirty || (withTheme && themeDirty);
+  const paneSave = () => { commitSettingDraft(); if (withTheme) themeSave(); };
+  const paneDiscard = () => { discardSettingDraft(); if (withTheme) themeDiscard(); setPaneGen(g => g + 1); };
   // 저장 안 한 채 새로고침·창 닫기 경고 (디자인 탭과 같은 방식)
   useEffect(() => {
     if (!paneDirty) return;
@@ -2926,15 +2943,14 @@ function SettingsInner() {
      적용돼 있어」). 디자인 탭의 SAVE는 색·역할 폰트·로고/탭 제목 **셋**을 함께 저장하는데,
      이탈 경고와 원복은 색(useTheme)만 보고 있었다. 나머지 둘은 모듈·프로바이더에 사는
      드래프트라 페이지를 떠나도 사라지지 않아, 저장한 것처럼 계속 적용된 채로 남았다. */
-  const { dirty: themeDirty, discard: themeDiscard, save: themeSave } = useTheme();
   const { rolesDirty, saveRoles, discardRoles } = useFonts();
   const siteDraft = useSiteDraft();
   // 상단바로 떠날 때의 확인은 디자인 탭 미리보기와 SAVE 탭(v2.5)의 저장 안 한 변경을 함께 본다
   const designDirty = themeDirty || rolesDirty || siteDraft.dirty;
   const designDiscard = () => { themeDiscard(); discardRoles(); siteDraft.discard(); };
   const dirty = designDirty || paneDirty;
-  const save = () => { themeSave(); saveRoles(); siteDraft.save(); paneSave(); };
-  const discard = () => { designDiscard(); paneDiscard(); };
+  const save = () => { themeSave(); saveRoles(); siteDraft.save(); commitSettingDraft(); };
+  const discard = () => { designDiscard(); discardSettingDraft(); setPaneGen(g => g + 1); };
   const themeRef = useRef({ dirty, discard, designDirty, designDiscard });
   themeRef.current = { dirty, discard, designDirty, designDiscard };
   // 페이지를 떠날 때 디자인 미리보기만 여기서 원복 — SAVE 탭 드래프트는 위의 드래프트 처리가 맡는다
