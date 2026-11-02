@@ -1304,7 +1304,15 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
    흐림은 색을 덧칠하지 않고 그림을 마스크로 지우므로, 비치는 색이 곧 박스색(라이트·다크·본문 박스 투명도)이다.
    게시판 이름(양옆 가는 선)·세리프 제목·작성자 줄은 가운데 정렬. 태그는 EDIT/DELETE 아랫줄 */
 .post-hd{position:relative;isolation:isolate;margin:-26px -28px 0;height:260px;border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
-.post-hd-img{position:absolute;inset:0;z-index:-1;-webkit-mask-image:linear-gradient(#000 38%,transparent 92%);mask-image:linear-gradient(#000 38%,transparent 92%)}
+.post-hd-img{position:absolute;inset:0;z-index:-1;-webkit-mask-image:linear-gradient(#000 18%,transparent 88%);mask-image:linear-gradient(#000 18%,transparent 88%)}
+/* 박스색 덮개 (v2.7 사용자 제보 — 반투명 박스에서 그림이 제목·게시판 라벨까지 비쳐 라벨이 안 보였다).
+   마스크만으로는 뒤에 비치는 배경화면이 그대로라, 테마 박스색(라이트·다크)으로 아래쪽을 실제로 덮는다.
+   박스 투명도가 낮아도 글씨 뒤는 최소 70%는 덮이게 한다. 투명도 0% + 「글씨: 테마 따라감」이면
+   밝은 글씨가 올라가므로 박스색 대신 어두운 배경색으로 덮는다 */
+.post-hd{--hd-scrim:color-mix(in srgb,var(--panel-solid) calc(max(var(--bbox-a,1),.7)*100%),transparent)}
+html.bbox-theme.bbox-zero .post-hd{--hd-scrim:color-mix(in srgb,var(--bg-g2,#121418) 70%,transparent)}
+.post-hd::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(transparent 22%,var(--hd-scrim) 78%)}
+.post-hd.no-img::after{content:none}
 .post-hd-tx{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 28px 12px;min-width:0}
 .post-hd.no-img{height:auto;margin:0;border-radius:0;overflow:visible}
 .post-hd.no-img .post-hd-tx{padding:0 0 4px}
@@ -1319,6 +1327,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   /* 모바일은 헤더가 화면 가로 전체 — 위(16px)·양옆(8px) 여백까지 덮고 둥글림 없음 */
   .board-detail>.board-post{overflow:visible}
   .post-hd{margin:-16px -8px 0;height:240px;border-radius:0}
+  /* 모바일 글 화면은 박스 대신 흰 바탕(#appMain) — 덮개도 같은 흰색으로 */
+  .post-hd{--hd-scrim:rgba(255,255,255,max(calc(var(--bbox-a,1)*.851),.7))}
   .post-hd.no-img{margin:0}
   .post-hd-tx{padding:0 16px 10px}
   .post-hd-title{font-size:calc(26px*var(--fs,1))}
