@@ -81,10 +81,10 @@ const STORAGE_KEY = 'ohome.fonts.v2';
 const LEGACY_KEY = 'ohome.fonts.v1'; // 구버전: 커스텀 폰트 배열만 저장
 
 /** 사이트 역할 폰트 (환경설정 > 디자인) — 폰트 + 굵기 + 크기 배율 (폰트별 체감 크기 보정) */
-export type FontRole = 'title' | 'pagetitle' | 'subtitle' | 'logosub' | 'menu' | 'dropdown' | 'body';
+export type FontRole = 'title' | 'pagetitle' | 'subtitle' | 'logosub' | 'menu' | 'dropdown' | 'posttitle' | 'body';
 /** 드롭다운 역할의 특수값 — 메뉴 폰트를 그대로 따라감 (기본) */
 export const FOLLOW_MENU = '_menu';
-/** 메뉴 타이틀 역할의 특수값 — 타이틀 폰트를 그대로 따라감 (기본) */
+/** 메뉴 타이틀·게시글 제목 역할의 특수값 — 타이틀 폰트를 그대로 따라감 (기본) */
 export const FOLLOW_TITLE = '_title';
 export interface RoleSetting {
   id: string;        // 폰트 id
@@ -99,12 +99,13 @@ export const ROLE_LABEL: Record<FontRole, { label: string; desc?: string }> = {
   logosub: { label: '로고 서브타이틀 폰트', desc: '상단바 로고 아랫줄 문구 — TRPG 티켓 하단 문구도 따라감' },
   menu: { label: '메뉴 폰트', desc: '상단 메뉴' },
   dropdown: { label: '드롭다운 폰트', desc: '하위메뉴 드롭다운 — 기본은 메뉴 폰트를 따라감' },
+  posttitle: { label: '게시글 제목 폰트', desc: '게시글 본문 화면의 제목 — 기본은 타이틀 폰트를 따라감' },
   body: { label: '본문 폰트', desc: '사이트 기본 글꼴 — 별도 폰트를 지정하지 않은 모든 텍스트' },
 };
 const DEFAULT_ROLES: Record<FontRole, RoleSetting> = {
   title: { id: 'serif' }, pagetitle: { id: FOLLOW_TITLE }, subtitle: { id: 'default' },
   logosub: { id: 'default' },
-  menu: { id: 'default' }, dropdown: { id: FOLLOW_MENU }, body: { id: 'default' },
+  menu: { id: 'default' }, dropdown: { id: FOLLOW_MENU }, posttitle: { id: FOLLOW_TITLE }, body: { id: 'default' },
 };
 
 interface FontState {
@@ -264,7 +265,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
        (숨김일 뿐) 여기 걸리지 않는다 — 직접 등록했다 지운 폰트만 해당된다. */
     const resolve = (id: string, role?: FontRole): string => {
       if (id === FOLLOW_MENU) return 'var(--font-menu)';   // 드롭다운: 메뉴 폰트 따라감
-      if (id === FOLLOW_TITLE) return 'var(--serif)';      // 메뉴 타이틀: 타이틀 폰트 따라감
+      if (id === FOLLOW_TITLE) return 'var(--serif)';      // 메뉴 타이틀·게시글 제목: 타이틀 폰트 따라감
       const f = pool.find(x => x.id === id);
       if (!f) {
         const back = role ? DEFAULT_ROLES[role].id : 'default';
@@ -282,6 +283,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     root.setProperty('--font-pagetitle', resolve(roles.pagetitle.id, 'pagetitle'));
     root.setProperty('--font-subtitle', resolve(roles.subtitle.id, 'subtitle'));
     root.setProperty('--font-logosub', resolve(roles.logosub.id, 'logosub'));
+    root.setProperty('--font-posttitle', resolve(roles.posttitle.id, 'posttitle'));
     (Object.keys(roles) as FontRole[]).forEach(r => {
       const cfg = roles[r];
       root.setProperty(`--fs-${r}`, String((cfg.scale ?? 100) / 100));

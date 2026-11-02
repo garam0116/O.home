@@ -659,7 +659,7 @@ export function BannerEditor({ conf, onSaved, onClose }: {
   );
 }
 
-/* ---------- NEW (최신글) — 표시 개수 · 제목 정렬 · 날짜 형식 · 글씨색 (v2.6 사용자 요청) ---------- */
+/* ---------- NEW (최신글) — 표시 개수 · 제목 정렬 · 날짜 형식 · 폰트 · 글씨색 (v2.6 사용자 요청) ---------- */
 export const LATEST_COUNT = { def: 5, min: 1, max: 20 } as const;
 export interface LatestSet extends FreeTextColorSet {
   count?: number;
@@ -667,12 +667,17 @@ export interface LatestSet extends FreeTextColorSet {
   titleAlign?: 'len' | 'align';
   /** 날짜 — 'full': 2026.09.27.(기본) / 'short': 09.27 */
   dateFmt?: 'full' | 'short';
+  /** 폰트 (v2.6 사용자 요청) — 비우면 기본(타이틀 폰트 = var(--serif)). 제목 글씨는 본문 폰트를 따라간다 */
+  lblFontId?: string;   // LATEST 글자
+  catFontId?: string;   // 카테고리(게시판 이름)
+  dateFontId?: string;  // 날짜
 }
 export const latestCountOf = (s: LatestSet) =>
   Math.min(LATEST_COUNT.max, Math.max(LATEST_COUNT.min, Math.round(s.count ?? LATEST_COUNT.def)));
 
 export function LatestEditor({ conf }: { conf: WidgetConf }) {
   const { updateWidget } = useMainStore();
+  const { fonts, familyOf } = useFonts();
   const s = conf.settings as LatestSet;
   // 바꾸는 즉시 반영 — 글씨색 필드(텍스트 위젯과 공용)가 setState 모양을 쓰므로 그 모양으로 받는다
   const setDraft: React.Dispatch<React.SetStateAction<LatestSet>> = u => {
@@ -703,6 +708,17 @@ export function LatestEditor({ conf }: { conf: WidgetConf }) {
           <button className={fmt === 'short' ? 'on' : ''} onClick={() => setDraft({ dateFmt: 'short' })}>09.27</button>
         </div>
       </div>
+      {([['lblFontId', 'LATEST 폰트'], ['catFontId', '카테고리 폰트'], ['dateFontId', '날짜 폰트']] as const).map(([key, label]) => (
+        <div key={key} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="cp-lb">{label}</span>
+          <KSelect minWidth={170} value={s[key] ?? ''}
+            onChange={v => setDraft({ [key]: v || undefined })}
+            options={[
+              { value: '', label: <span style={{ fontFamily: 'var(--serif)' }}>기본 (타이틀 폰트)</span> },
+              ...fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> })),
+            ]} />
+        </div>
+      ))}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <FreeTextColorField draft={s} setDraft={setDraft} />
       </div>
