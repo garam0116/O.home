@@ -68,7 +68,7 @@ export interface ThemeState {
 
 /** 다크 모드 (기본 디폴트) — 프로토타입 "시크 모노톤" 기준 */
 export const DARK_THEME: ThemeVars = {
-  bgG1: '#2b3038', bgG2: '#121418',
+  bgG1: '#1f2329', bgG2: '#0b0c0f', // 배경을 한 단계 더 어둡게 (v2.0 사용자 요청 · 이전 #2b3038 → #121418)
   bgType: 'gradient', bgAngle: 180, bgBlur: 0,
   cardBg: '#fbfbfc', cardFg: '#1d2025',
   topBg: '#14161b', topFg: '#aab0ba', topHv: '#ffffff', topBrand: '#f2f3f5',
@@ -85,7 +85,7 @@ export const DARK_THEME: ThemeVars = {
 
 /** 라이트 모드 — 호버 글씨색은 흰 배경에서도 보이는 색 (v1.9) */
 export const LIGHT_THEME: ThemeVars = {
-  bgG1: '#f2f3f5', bgG2: '#dfe1e6',
+  bgG1: '#f9fafb', bgG2: '#eceef1', // 배경을 한 단계 더 밝게 (v2.0 사용자 요청 · 이전 #f2f3f5 → #dfe1e6)
   bgType: 'gradient', bgAngle: 180, bgBlur: 0,
   cardBg: '#fbfbfc', cardFg: '#1d2025',
   topBg: '#fbfbfc', topFg: '#5d636d', topHv: '#a63a45', topBrand: '#2b3038',
@@ -233,6 +233,21 @@ export const DEFAULT_THEME_STORE: ThemeStore = {
   },
   edits: {},
 };
+
+/* 예전 기본 배경색 (v2.0 이전) — 저장본에 이 값이 그대로 남아 있으면 직접 고른 색이 아니라
+   당시 기본값이므로, 불러올 때 새 기본값으로 바꿔 준다. 직접 바꾼 배경색은 건드리지 않는다. */
+const LEGACY_BG: Partial<Record<ThemeMode, { g1: string; g2: string; to: ThemeVars }>> = {
+  dark: { g1: '#2b3038', g2: '#121418', to: DARK_THEME },
+  light: { g1: '#f2f3f5', g2: '#dfe1e6', to: LIGHT_THEME },
+};
+
+/** 저장된 모드 값의 배경이 예전 기본값 그대로면 새 기본 배경으로 교체 */
+export function migrateLegacyBg(mode: ThemeMode, v: ThemeVars): ThemeVars {
+  const old = LEGACY_BG[mode];
+  if (!old) return v;
+  if (v.bgG1?.toLowerCase() !== old.g1 || v.bgG2?.toLowerCase() !== old.g2) return v;
+  return { ...v, bgG1: old.to.bgG1, bgG2: old.to.bgG2 };
+}
 
 /** 저장해 둔 테마 프리셋 (v1.9 — 드롭다운에서 커스텀으로 적용) */
 export interface ThemePreset { id: string; name: string; vars: ThemeVars }

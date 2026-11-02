@@ -25,7 +25,7 @@
   /* 역할 폰트 크기 배율 — 모든 font-size는 calc(Npx*var(--fs,1)) 형태, --fs는 영역별로 재지정 */
   --fs:var(--fs-body,1);
   /* 테마 변수 — 환경설정 > 디자인에서 변경 (기본 = 다크 모드) */
-  --bg-g1:#2b3038; --bg-g2:#121418;
+  --bg-g1:#1f2329; --bg-g2:#0b0c0f;
   --top-bg:rgba(20,22,27,.82); --top-fg:#aab0ba; --top-hv:#ffffff; --top-brand:#f2f3f5;
   --dd-bg:rgba(28,31,37,.97); --dd-fg:#c6cad1; --dd-hv:rgba(255,255,255,.1);
   --page-title:#eceef1; --page-desc:#9aa0a9;
@@ -155,7 +155,7 @@ a{color:inherit;text-decoration:none}
 .m-nav-dim{position:absolute;inset:0;background:rgba(0,0,0,.45);animation:fade .18s}
 .m-nav-panel{position:absolute;top:0;right:0;bottom:0;width:min(300px,82vw);display:flex;flex-direction:column;
   /* 테마 드롭다운색이 반투명이어도 뒤가 비치지 않게 사이트 배경색을 밑에 깐다 */
-  background:linear-gradient(var(--dd-bg),var(--dd-bg)),var(--bg-g2,#121418);color:var(--dd-fg);border-left:1px solid var(--line-dark);box-shadow:var(--sh-dd);
+  background:linear-gradient(var(--dd-bg),var(--dd-bg)),var(--bg-g2,#0b0c0f);color:var(--dd-fg);border-left:1px solid var(--line-dark);box-shadow:var(--sh-dd);
   padding-bottom:env(safe-area-inset-bottom);animation:mNavIn .22s ease-out;--fs:var(--fs-menu,1)}
 @keyframes mNavIn{from{transform:translateX(100%)}}
 .m-nav-head{display:flex;justify-content:flex-end;align-items:center;height:58px;padding:0 10px;flex-shrink:0;border-bottom:1px solid var(--line-dark)}
