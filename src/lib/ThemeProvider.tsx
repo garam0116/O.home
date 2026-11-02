@@ -9,7 +9,6 @@ import {
   ThemeMode, PointTone, ThemeVars, ThemeState, ThemeStore, ThemePreset,
   DARK_THEME, DEFAULT_THEME_STORE, defaultVarsFor, derivePointTheme, themeToCssVars,
   composeVars, sharedEdits,
-  migrateLegacyBg,
 } from './theme';
 import { newId } from './postStore';
 import { getBlob } from './blobStore';
@@ -52,8 +51,8 @@ const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => {
     ...DEFAULT_THEME_STORE,
     ...(s ?? {}),
     perMode: {
-      light: migrateLegacyBg('light', { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) }),
-      dark: migrateLegacyBg('dark', { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) }),
+      light: { ...DEFAULT_THEME_STORE.perMode.light, ...(s?.perMode?.light ?? {}) },
+      dark: { ...DEFAULT_THEME_STORE.perMode.dark, ...(s?.perMode?.dark ?? {}) },
       point: { ...DEFAULT_THEME_STORE.perMode.point, ...(s?.perMode?.point ?? {}) },
       custom: { ...DEFAULT_THEME_STORE.perMode.custom, ...(s?.perMode?.custom ?? {}) },
     },
@@ -138,6 +137,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--bg-g2', pageBg.g2);
       root.style.setProperty('--bg-angle', `${pageBg.angle}deg`);
       root.style.setProperty('--bg-image', 'none');   // 사이트 배경 이미지가 덮지 않게
+      root.style.setProperty('--bg-dim-layer', 'none'); // 사진 덮개도 함께 끈다
     }
   }, [draft, pageColor, pageBg, loaded]);
 
