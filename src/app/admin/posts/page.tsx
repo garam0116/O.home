@@ -67,29 +67,35 @@ function PostList() {
 
   return (
     <>
-      {/* 게시판 선택 + 검색 — 모바일에서도 한 줄 (검색창이 남는 폭을 채우되 넓어도 260px까지) */}
-      <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 10, alignItems: 'center', marginBottom: 14 }}>
-        <KSelect value={boardId} onChange={value => { setBoardId(value); setPage(1); }}
-          options={[
-            { value: '', label: '전체 게시판' },
-            ...boardOptions,
-            ...missingBoards.map(id => ({ value: id, label: boardName(id) })),
-          ]} />
-        <KInput aria-label="제목·작성자·본문 검색" placeholder="제목·작성자·본문 검색" value={query}
-          style={{ flex: '1 1 0', minWidth: 0, maxWidth: 260 }}
-          onChange={e => { setQuery(e.target.value); setPage(1); }} />
+      {/* 게시판 선택 + 검색(왼쪽)과 일괄 이동(오른쪽)을 한 줄에 — 좁은 화면에선 일괄 이동이 아랫줄로 내려가 오른쪽 정렬 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        {/* 게시판 선택 + 검색 — 모바일에서도 한 줄 (검색창이 남는 폭을 채우되 넓어도 260px까지) */}
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 10, alignItems: 'center', flex: '1 1 320px', minWidth: 0 }}>
+          <KSelect value={boardId} onChange={value => { setBoardId(value); setPage(1); }}
+            options={[
+              { value: '', label: '전체 게시판' },
+              ...boardOptions,
+              ...missingBoards.map(id => ({ value: id, label: boardName(id) })),
+            ]} />
+          <KInput aria-label="제목·작성자·본문 검색" placeholder="제목·작성자·본문 검색" value={query}
+            style={{ flex: '1 1 0', minWidth: 0, maxWidth: 260 }}
+            onChange={e => { setQuery(e.target.value); setPage(1); }} />
+        </div>
+        {/* 일괄 이동 — 체크한 글을 고른 게시판으로 한 번에 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'flex-end', marginLeft: 'auto' }}>
+          <span style={{ color: 'var(--page-desc)', fontSize: 13 }}>선택한 {selectedIds.length}개를</span>
+          <KSelect value={bulkDest} onChange={setBulkDest} placeholder="옮길 게시판" options={boardOptions} />
+          <button className="btn btn-dark" disabled={!postsLoaded || !boardsLoaded || selectedIds.length === 0 || !bulkDest}
+            onClick={moveSelected}>이동</button>
+          {selectedIds.length > 0 &&
+            <button className="btn btn-ghost" onClick={() => setSelected(new Set())}>선택 해제</button>}
+        </div>
       </div>
       {!postsLoaded || !boardsLoaded ? <p role="status">게시글을 불러오는 중…</p> : (
         <>
-          <p className="hint">총 {filtered.length}개 · 글을 체크한 뒤 옮길 게시판을 고르고 이동을 누르세요</p>
-          {/* 일괄 이동 — 체크한 글을 고른 게시판으로 한 번에 */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '10px 0 14px' }}>
-            <span style={{ color: 'var(--page-desc)', fontSize: 13 }}>선택한 {selectedIds.length}개를</span>
-            <KSelect value={bulkDest} onChange={setBulkDest} placeholder="옮길 게시판" options={boardOptions} />
-            <button className="btn btn-dark" disabled={selectedIds.length === 0 || !bulkDest} onClick={moveSelected}>이동</button>
-            {selectedIds.length > 0 &&
-              <button className="btn btn-ghost" onClick={() => setSelected(new Set())}>선택 해제</button>}
-          </div>
+          <p className="hint" style={{ textAlign: 'right', margin: '0 0 14px' }}>
+            총 {filtered.length}개 · 글을 체크한 뒤 옮길 게시판을 고르고 이동을 누르세요
+          </p>
           <div className="panel admin-posts" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead><tr>
