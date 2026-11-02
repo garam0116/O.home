@@ -750,12 +750,10 @@ function BoardPane() {
                 )}
             </div>
             <div className="cp-group" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <div className="mini-seg">
-                {BOARD_SKINS.map(k => (
-                  <button key={k.id} className={b.skin === k.id ? 'on' : ''}
-                    onClick={() => patchBoard(b.id, { skin: k.id })}>{k.label}</button>
-                ))}
-              </div>
+              {/* 리스트 스킨 — 눌러서 고르는 선택창 (버튼 세 개 나열 대신) */}
+              <KSelect minWidth={110} value={b.skin}
+                onChange={v => patchBoard(b.id, { skin: v as typeof b.skin })}
+                options={BOARD_SKINS.map(k => ({ value: k.id, label: k.label }))} />
               {/* 목록 글씨색 (v1.9) — 미지정이면 테마 기본색 */}
               <span className="cp-lb">글씨</span>
               <ColorField value={b.fg ?? '#2c3037'} onChange={hex => patchBoard(b.id, { fg: hex })} />
