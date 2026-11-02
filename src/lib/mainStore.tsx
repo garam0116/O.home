@@ -38,6 +38,7 @@ interface MainState {
   layoutMode: LayoutMode;
   widgets: WidgetConf[];
   mobileOrder: string[];                // 모바일 세로 나열 순서 (위젯 id)
+  settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
 }
 
@@ -111,6 +112,7 @@ interface MainCtx {
   setLayoutMode: (m: LayoutMode) => void;
   setMobileOff: (id: string, v: boolean) => void;  // 모바일에서 제외 토글 (v1.9 — PC 제거는 우클릭 삭제)
   setMobileOrder: (ids: string[]) => void;
+  setSettingsOrder: (ids: string[]) => void;   // 환경설정 위젯 탭 목록 순서만 바꿈 — 메인 배치·모바일 순서와 무관
   saveNow: () => void;                  // 환경설정 등 편집모드 밖에서의 변경 즉시 저장
   resetMain: () => void;                // 메인 페이지를 기본 구성으로 되돌리기 (v1.9 — 즉시 저장)
 }
@@ -267,6 +269,10 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
     setState(s => { const n = { ...s, mobileOrder: ids }; persist(n); return n; });
   }, [persist]);
 
+  const setSettingsOrder = useCallback((ids: string[]) => {
+    setState(s => { const n = { ...s, settingsOrder: ids }; persist(n); return n; });
+  }, [persist]);
+
   const saveNow = useCallback(() => persist(state), [persist, state]);
 
   // 메인 페이지 기본 구성으로 되돌리기 (v1.9 사용자 요청) — 위젯 구성·배치·크기·모바일 순서 전부 초기화
@@ -279,7 +285,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, editOn, editAvailable: EDIT_PAGES.includes(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
-      updateWidget, addWidget, removeWidget, setLayoutMode, setMobileOff, setMobileOrder, saveNow, resetMain,
+      updateWidget, addWidget, removeWidget, setLayoutMode, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
     }}>
       {children}
 
