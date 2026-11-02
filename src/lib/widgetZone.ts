@@ -38,11 +38,13 @@ export function railBounds(side: WidgetConf[]): { left: number; right: number } 
 }
 
 /** 좌우 위젯을 고정 표시하는 페이지 — 제외: 메인(자체 캔버스) · 환경설정(자체 넓은 레이아웃) ·
- *  자관 전체(목록·상세·작성) · 글쓰기/수정 화면(본문 폭이 넓어야 함) (v2.4 사용자 확정) */
+ *  자관 전체(목록·상세·작성) · 로드비 · 다이어리 · 글쓰기/수정 화면(본문 폭이 넓어야 함) (v2.4 사용자 확정) */
 export function isRailPage(pathname: string): boolean {
   if (pathname === '/') return false;
   if (pathname === '/settings' || pathname.startsWith('/settings/')) return false;
   if (pathname === '/rels' || pathname.startsWith('/rels/')) return false;
+  // 로드비·다이어리는 위젯 없이 본문만 (v2.4 사용자 요청) — /roadview는 로드비 옛 주소
+  for (const base of ['/loadb', '/roadview', '/diary']) if (pathname === base || pathname.startsWith(base + '/')) return false;
   // 글쓰기·수정 — /board/write · /board/b/x/write · /threads/new · /diary/1/edit · /rels/1/au/2/edit 등
   if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
   return true;

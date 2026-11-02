@@ -98,7 +98,7 @@ const REMOVED_TYPES = ['image', 'upcoming', 'apply', 'memoboard'];
 const EDIT_PAGES = ['/', '/rels', '/gallery', '/trpg'];
 /** 좌우 위젯 레일이 있는 페이지는 모두 편집모드 가능 (v2.4 — 위젯을 어느 페이지에서든 옮기게) */
 const canEditAt = (pathname: string) => EDIT_PAGES.includes(pathname) || isRailPage(pathname);
-const EDIT_PAGE_NAMES = '자관 상세·작성, 글쓰기·수정 화면, 환경설정을 제외한 모든 페이지';
+const EDIT_PAGE_NAMES = '자관 상세·작성, 로드비, 다이어리, 글쓰기·수정 화면, 환경설정을 제외한 모든 페이지';
 
 interface MainCtx {
   state: MainState;
