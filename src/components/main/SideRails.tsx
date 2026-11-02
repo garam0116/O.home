@@ -21,7 +21,7 @@ export function RailHost({ children }: { children: React.ReactNode }) {
   // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 레일 없는 페이지는 isRailPage가 거르므로 1단형 그대로
   const side = useMemo(() => (onPage ? railWidgets(state.widgets, sideNav) : []), [onPage, state.widgets, sideNav]);
   const active = side.length > 0;
-  const { left, right } = railBounds(side);
+  const { left, right } = railBounds(side, !!state.centerBody);
   // 본문이 좁으면 페이지별로 보정 (v2.8) — 다이어리 달력 숨김 · 로드비 댓글 칸 축소 (globals.css body.rail-narrow)
   const narrow = active && right - left < NARROW_BODY;
   const { ctx, setCtx, openCtx } = useWidgetCtx(side);
@@ -89,7 +89,7 @@ function RailWidthHint() {
   const boardW = boardWOf(site);
   const side = railWidgets(state.widgets, state.pcLayout === 'side');
   if (!side.length) return null;
-  const { left, right } = railBounds(side);
+  const { left, right } = railBounds(side, !!state.centerBody);
   const w = Math.round(right - left);
   const short = boardW - w;
   return (
