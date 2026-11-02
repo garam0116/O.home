@@ -1307,12 +1307,12 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .post-hd-img{position:absolute;inset:0;z-index:-1;-webkit-mask-image:linear-gradient(#000 30%,transparent 92%);mask-image:linear-gradient(#000 30%,transparent 92%)}
 /* 박스색 덮개 (v2.7 사용자 제보 — 반투명 박스에서 그림이 제목·게시판 라벨까지 비쳐 라벨이 안 보였다).
    마스크만으로는 뒤에 비치는 배경화면이 그대로라, 테마 박스색(라이트·다크)으로 아래쪽을 실제로 덮는다.
-   박스 투명도가 낮아도 글씨 뒤는 최소 70%는 덮이게 한다. 덮개는 글씨 자리에서 가장 진하고 헤더 맨 아래에서 다시 투명해진다 —
+   박스 투명도가 낮아도 글씨 뒤는 최소 88%는 덮이게(v2.7 사용자 요청으로 70→88, 라벨~제목 구간 내내 유지) 한다. 덮개는 글씨 자리에서 가장 진하고 헤더 맨 아래에서 다시 투명해진다 —
    끝까지 진하게 두면 바로 아래 반투명 박스와 색이 뚝 끊긴다 (v2.7 사용자 제보). 투명도 0% + 「글씨: 테마 따라감」이면
    밝은 글씨가 올라가므로 박스색 대신 어두운 배경색으로 덮는다 */
-.post-hd{--hd-scrim:color-mix(in srgb,var(--panel-solid) calc(max(var(--bbox-a,1),.7)*100%),transparent)}
-html.bbox-theme.bbox-zero .post-hd{--hd-scrim:color-mix(in srgb,var(--bg-g2,#121418) 70%,transparent)}
-.post-hd::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(transparent 20%,var(--hd-scrim) 70%,transparent 100%)}
+.post-hd{--hd-scrim:color-mix(in srgb,var(--panel-solid) calc(max(var(--bbox-a,1),.88)*100%),transparent)}
+html.bbox-theme.bbox-zero .post-hd{--hd-scrim:color-mix(in srgb,var(--bg-g2,#121418) 88%,transparent)}
+.post-hd::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(transparent 12%,var(--hd-scrim) 58%,var(--hd-scrim) 80%,transparent 100%)}
 .post-hd.no-img::after{content:none}
 .post-hd-tx{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 28px 12px;min-width:0}
 .post-hd.no-img{height:auto;margin:0;border-radius:0;overflow:visible}
@@ -1331,7 +1331,7 @@ html.bbox-theme.bbox-zero .post-hd{--hd-scrim:color-mix(in srgb,var(--bg-g2,#121
   .board-detail>.board-post{overflow:visible}
   .post-hd{margin:-16px -8px 0;height:240px;border-radius:0}
   /* 모바일 글 화면은 박스 대신 흰 바탕(#appMain) — 덮개도 같은 흰색으로 */
-  .post-hd{--hd-scrim:rgba(255,255,255,max(calc(var(--bbox-a,1)*.851),.7))}
+  .post-hd{--hd-scrim:rgba(255,255,255,max(calc(var(--bbox-a,1)*.851),.88))}
   .post-hd.no-img{margin:0}
   .post-hd-tx{padding:0 16px 10px}
   .post-hd-title{font-size:calc(26px*var(--fs,1))}
