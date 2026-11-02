@@ -37,7 +37,8 @@ export interface BackupPost {
   thumbCrop?: CropValue;     // 대표(첫) 이미지의 썸네일 크롭 (6.1)
   phList: string[];          // 데모 플레이스홀더
   desc: string;
-  category: string;          // 말머리
+  /** 말머리 — 기능 삭제 (v2.6 사용자 요청). 예전 글에 남은 값만 있고 보이지 않는다 */
+  category?: string;
   madeDate?: string;         // 제작일 (선택)
   date: string;
   author: string;

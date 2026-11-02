@@ -1,5 +1,5 @@
 ﻿'use client';
-// 게시판 설정 (5.2 게시판 관리) — 시스템 뱃지 + 갤러리 분류·뱃지 색
+// 게시판 설정 (5.2 게시판 관리) — 시스템 뱃지 색 · 페이지당 글 수 · 본문 박스
 import { useCallback, useEffect, useState } from 'react';
 import { newId } from './postStore';
 import { MAIN_SEC, cleanSlug } from './sectionStore';
@@ -15,24 +15,10 @@ export const DEFAULT_BOARD_SYSTEM: BoardBadge[] = [
   { id: 'fold', label: '접힘', bg: '#f2e6e7', border: '#d9b8bc', fg: '#a63a45' },
 ];
 
-/** 갤러리(그림백업) 유형 뱃지 2종 — 로그/단일 (라벨·색 수정 가능, 삭제 불가) */
-export const DEFAULT_GALLERY_BADGES: BoardBadge[] = [
-  { id: 'log', label: '로그', bg: '#1d2025', border: '#1d2025', fg: '#ffffff' },
-  { id: 'single', label: '단일', bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' },
-  // 단일(세로정렬) (v1.9) — 로그와 달리 이미지 사이 갭을 두고 세로로 죽 내려보는 게시글
-  { id: 'vlist', label: '단일(세로)', bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' },
-];
-
-/** 갤러리 말머리 (v2.0) — 자유롭게 관리 */
-export const DEFAULT_GALLERY_CATS: BoardBadge[] = ['합작', '낙서', '커미션', '설정화'].map(c => ({
-  id: `gcat-${c}`, label: c, bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d',
-}));
-
 export interface BoardSettings {
-  system: BoardBadge[]; gallery: BoardBadge[]; galleryCats: BoardBadge[];
-  /** 갤러리마다 따로 쓰는 말머리 (v2.0 사용자 요청) — 정한 적 없으면 기본 갤러리 것을 그대로.
-   *  새로 만들자마자 말머리가 비면 글부터 못 쓴다(감상타래와 같은 규칙). */
-  secGalleryCats?: Record<string, BoardBadge[]>;
+  /* 갤러리 유형 뱃지·말머리는 쓰지 않아 삭제 (v2.6 사용자 요청) — 예전 저장본에 남은 값은 읽지 않고,
+     다음 저장 때 빠진다 */
+  system: BoardBadge[];
   /** 게시판 목록 한 페이지에 보일 글 수 (v2.3 사용자 요청) — 모든 게시판 공통. 비우면 10 */
   perPage?: number;
   /** 본문 박스 불투명도 0~100 (v2.6 사용자 요청) — 게시판 목록·글 화면의 흰 박스(모바일은 글 화면의 흰 바탕).
@@ -43,7 +29,6 @@ export interface BoardSettings {
 }
 const DEFAULTS: BoardSettings = {
   system: DEFAULT_BOARD_SYSTEM,
-  gallery: DEFAULT_GALLERY_BADGES, galleryCats: DEFAULT_GALLERY_CATS,
 };
 
 /** 게시판 목록 페이지당 글 수 — 기본값·범위 (v2.3) */
@@ -77,14 +62,6 @@ export function useBoardBoxStyle() {
   }, [on, a, theme]);
 }
 
-/** 그 갤러리에서 쓸 말머리 (v2.0) — 따로 정한 적이 없으면 기본 갤러리 것 */
-export const galleryCatsOf = (s: BoardSettings, secId: string): BoardBadge[] =>
-  (secId === MAIN_SEC ? s.galleryCats : s.secGalleryCats?.[secId] ?? s.galleryCats);
-
-/** 그 갤러리의 말머리를 담은 patch — 기본 갤러리면 예전 자리에 그대로 저장한다 */
-const galleryCatsPatch = (s: BoardSettings, secId: string, cats: BoardBadge[]): Partial<BoardSettings> =>
-  (secId === MAIN_SEC ? { galleryCats: cats } : { secGalleryCats: { ...s.secGalleryCats, [secId]: cats } });
-
 export function useBoardSettings() {
   const [st, setSt] = useState<BoardSettings>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
@@ -96,9 +73,6 @@ export function useBoardSettings() {
         const p = JSON.parse(raw) as Partial<BoardSettings>;
         setSt({
           system: DEFAULT_BOARD_SYSTEM.map(d => p.system?.find(s => s.id === d.id) ?? d),
-          gallery: DEFAULT_GALLERY_BADGES.map(d => p.gallery?.find(g => g.id === d.id) ?? d),
-          galleryCats: p.galleryCats ?? DEFAULT_GALLERY_CATS,
-          secGalleryCats: p.secGalleryCats,
           perPage: p.perPage,
           boxAlpha: p.boxAlpha,
           boxText: p.boxText,
@@ -118,26 +92,10 @@ export function useBoardSettings() {
   }, []);
   const patchSystem = useCallback((id: string, p: Partial<BoardBadge>) =>
     apply(s => ({ ...s, system: s.system.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
-  const patchGallery = useCallback((id: string, p: Partial<BoardBadge>) =>
-    apply(s => ({ ...s, gallery: s.gallery.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
-  /* 갤러리 말머리 — 추가·수정·삭제·정렬 (v2.0).
-     **갤러리마다 따로** 가질 수 있다 (v2.0 사용자 요청) — 첫 인자가 어느 갤러리인지다.
-     보고 있는 갤러리 것만 건드리므로 다른 갤러리 말머리가 지워지지 않는다. */
-  const mutGalleryCats = useCallback((secId: string, fn: (cats: BoardBadge[]) => BoardBadge[]) =>
-    apply(s => ({ ...s, ...galleryCatsPatch(s, secId, fn(galleryCatsOf(s, secId))) })), [apply]);
-  const patchGalleryCat = useCallback((secId: string, id: string, p: Partial<BoardBadge>) =>
-    mutGalleryCats(secId, cs => cs.map(b => (b.id === id ? { ...b, ...p } : b))), [mutGalleryCats]);
-  const addGalleryCat = useCallback((secId: string) =>
-    mutGalleryCats(secId, cs => [...cs, { id: newId(), label: '새 말머리', bg: '#eef0f2', border: '#d7dae0', fg: '#5d636d' }]), [mutGalleryCats]);
-  const removeGalleryCat = useCallback((secId: string, id: string) =>
-    mutGalleryCats(secId, cs => cs.filter(b => b.id !== id)), [mutGalleryCats]);
-  const setGalleryCats = useCallback((secId: string, cats: BoardBadge[]) =>
-    mutGalleryCats(secId, () => cats), [mutGalleryCats]);
   const setPerPage = useCallback((n: number) => apply(s => ({ ...s, perPage: n })), [apply]);
   const setBox = useCallback((p: Pick<BoardSettings, 'boxAlpha' | 'boxText'>) => apply(s => ({ ...s, ...p })), [apply]);
   return {
-    st, loaded, patchSystem, patchGallery, setPerPage, setBox,
-    patchGalleryCat, addGalleryCat, removeGalleryCat, setGalleryCats,
+    st, loaded, patchSystem, setPerPage, setBox,
   };
 }
 

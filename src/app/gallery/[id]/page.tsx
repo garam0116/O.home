@@ -12,7 +12,6 @@ import { useBlobUrl } from '@/lib/blobStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { PageTitle } from '@/components/ui/PageText';
 import { Lightbox } from '@/components/ui/Lightbox';
-import { useBoardSettings, boardBadgeStyle } from '@/lib/boardStore';
 import { useNoKey, itemPath } from '@/lib/itemNo';
 
 export default function BackupDetailPage() {
@@ -25,7 +24,6 @@ export default function BackupDetailPage() {
   const [cur, setCur] = useState(0);
   const [delAsk, setDelAsk] = useState(false);
   const [lbOpen, setLbOpen] = useState(false); // 단일형 — 클릭 확대 보기
-  const { st: boardSet } = useBoardSettings(); // 유형 뱃지 색 (환경설정 > 게시판 관리)
 
   const p = posts.find(x => x.id === id);
   /* 이 글이 속한 곳이 비공개면 주소로 들어와도 열리지 않게 (v2.0 사용자 요청).
@@ -72,7 +70,7 @@ export default function BackupDetailPage() {
       <div className="page-head">
         <PageTitle href={tt.href}>{tt.title}</PageTitle>
         <p>
-          {p.category} · {p.author} · {fmtDate(p.date)}{p.madeDate ? ` · 제작 ${p.madeDate}` : ''}
+          {p.author} · {fmtDate(p.date)}{p.madeDate ? ` · 제작 ${p.madeDate}` : ''}
           {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
           {(p.tags ?? []).map(t => <i key={t} className="tag-in">#{t}</i>)}
         </p>
@@ -87,9 +85,6 @@ export default function BackupDetailPage() {
         {/* 제목·뱃지 세로 중앙 정렬 + 아래 여백 확보 */}
         <h2 style={{ fontSize: 18, marginBottom: p.desc ? 8 : 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           {p.title}
-          <span style={boardBadgeStyle(boardSet.gallery.find(b => b.id === p.type))}>
-            {boardSet.gallery.find(b => b.id === p.type)?.label}
-          </span>
         </h2>
         {p.desc && (
           <div className="post-body" style={{ fontSize: 12.5, margin: '0 0 16px' }}
