@@ -235,7 +235,7 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
     .slice(0, count);
   return (
     <div className={`new-wgt${set.titleAlign === 'align' ? ' align' : ''}`} style={{ color: freeTextColor(set) }}>
-      <div className="new-lbl">NEW</div>
+      <div className="new-lbl">LATEST</div>
       <div className="new-list">
       {latest.map(p => {
         const readable = canRead(p);
@@ -251,7 +251,7 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
       </div>
       {latest.length === 0 && <p className="new-empty">아직 올라온 글이 없습니다</p>}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="NEW 설정"
+      <Modal open={open} onClose={() => setOpen(false)} title="LATEST 설정"
         desc="모든 게시판의 최신글 목록 — 바꾸면 바로 반영 · 환경설정 「위젯」에서도 관리 가능"
         actions={<button className="btn btn-dark" onClick={() => setOpen(false)}>CLOSE</button>}>
         {open && <LatestEditor conf={conf} />}

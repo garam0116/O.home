@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 
 const ADDABLE: WidgetType[] = ['banner', 'memo', 'ddaycard', 'dday', 'todo', 'freetext', 'deco', 'diary', 'latest', 'search', 'member'];   // banner: 여러 개 추가 (v2.0 사용자 요청) · member: 꺼냈다 뺐다 (v2.1)
 /** 내용 설정 모달이 있는 위젯 — 우클릭 「설정」 노출 대상 (v1.9) */
-const EDITABLE: WidgetType[] = ['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco', 'search'];
+const EDITABLE: WidgetType[] = ['banner', 'memo', 'dday', 'ddaycard', 'todo', 'freetext', 'deco', 'search', 'latest'];
 
 export type WidgetCtx = { id: string; x: number; y: number } | null;
 
