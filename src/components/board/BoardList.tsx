@@ -163,7 +163,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
         <div className="toolrow-act">
           <SearchBar key={searchAll ? q : bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />
           {!searchAll && allow(board.permWrite) && !!user && (
-            <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>✎ WRITE</button>
+            <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>WRITE</button>
           )}
         </div>
       </div>
