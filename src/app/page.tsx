@@ -13,12 +13,14 @@ export default function MainPage() {
   // 메뉴 카드는 PC 2단형일 때만 (v2.7) — 1단형은 상단바가, 모바일은 상단바 ≡가 메뉴 (모바일에선 CSS로 숨김)
   const enabled = state.widgets.filter(w => w.enabled && (sideNav || w.type !== 'menu'));
   const byCol = (c: 1 | 2 | 3) => enabled.filter(w => w.col === c);
+  // 모바일 세로 순서 (v2.9) — 고정 슬라이드 배너도 환경설정 순서 목록에서 옮길 수 있다.
+  // 목록 순서는 짝수(i*2), 회원정보창은 고정 배너 바로 아래(홀수)에 붙어 예전처럼 배너 → 회원정보창 흐름을 유지
   const mOrder = (id: string) => {
-    // 고정 슬라이드 배너는 모바일에서 항상 맨 위 (회원정보창 -1보다 앞)
-    if (state.widgets.find(w => w.id === id)?.fixed) return -2;
     const i = state.mobileOrder.indexOf(id);
-    return i === -1 ? 99 : i;
+    return i === -1 ? 999 : i * 2;
   };
+  const fixedBanner = state.widgets.find(w => w.fixed && w.type === 'banner');
+  const memberOrder = fixedBanner && state.mobileOrder.includes(fixedBanner.id) ? mOrder(fixedBanner.id) + 1 : -1;
 
   // 우클릭 메뉴·위젯 추가 모달은 다른 페이지(좌우 위젯 레일)와 공통 (v2.4)
   const { ctx, setCtx, openCtx } = useWidgetCtx(enabled);
@@ -81,7 +83,7 @@ export default function MainPage() {
           /* 절대배치 캔버스 — 위젯 전부 직속, 좌표는 각자 ax/ay */
           enabled.map(w =>
             w.type === 'member'
-              ? <WidgetFrame key={w.id} conf={w} mobileOrder={-1} onCtx={(id, x, y) => setCtx({ id, x, y })}><MemberBox /></WidgetFrame>
+              ? <WidgetFrame key={w.id} conf={w} mobileOrder={memberOrder} onCtx={(id, x, y) => setCtx({ id, x, y })}><MemberBox /></WidgetFrame>
               : frame(w))
         ) : (
           <>
@@ -100,7 +102,7 @@ export default function MainPage() {
             <div>
               {byCol(3).map(w =>
                 w.type === 'member'
-                  ? <WidgetFrame key={w.id} conf={w} mobileOrder={-1} onCtx={(id, x, y) => setCtx({ id, x, y })}><MemberBox /></WidgetFrame>
+                  ? <WidgetFrame key={w.id} conf={w} mobileOrder={memberOrder} onCtx={(id, x, y) => setCtx({ id, x, y })}><MemberBox /></WidgetFrame>
                   : frame(w)
               )}
             </div>

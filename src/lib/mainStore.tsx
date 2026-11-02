@@ -49,7 +49,7 @@ interface MainState {
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
-  banner: { title: '슬라이드 배너', desc: '고정 요소 — 최상단' },
+  banner: { title: '슬라이드 배너', desc: '이미지 슬라이드 — 기본 배너는 삭제 불가' },
   member: { title: '회원정보창', desc: '로그인/프로필' },
   menu: { title: '메뉴 카드', desc: 'PC 2단형 레이아웃 전용 — 좌우 열에서만 이동, 삭제 불가 (모바일은 상단바 ≡)' },
   memo: { title: 'MEMO', desc: '관리자 메모 (클릭 시 관리 모달)' },
@@ -91,7 +91,7 @@ const DEFAULT_STATE: MainState = {
     { id: 'dday', type: 'dday', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 160, w: 260, h: 90, settings: { items: [] } },
     { id: 'todo', type: 'todo', col: 3, enabled: true, tx: 0, ty: 0, ax: 860, ay: 260, w: 260, h: 90, settings: { items: [] } },
   ],
-  mobileOrder: ['menu', 'memo', 'diary', 'latest', 'dday', 'todo'],
+  mobileOrder: ['banner', 'menu', 'memo', 'diary', 'latest', 'dday', 'todo'],   // 고정 배너도 순서 목록에 포함 (v2.9)
 };
 
 const STORAGE_KEY = 'ohome.main.v1';
@@ -208,7 +208,12 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
         const ids = new Set(kept.map(w => w.id));
         // 삭제한 기본 위젯은 병합으로 되살리지 않음
         const merged = [...kept, ...DEFAULT_STATE.widgets.filter(w => !ids.has(w.id) && !removed.has(w.id))];
-        setState(recenter({ ...DEFAULT_STATE, ...parsed, widgets: merged, removedIds: [...removed] }));
+        // 고정 슬라이드 배너도 모바일 순서 목록에서 옮길 수 있게 (v2.9 사용자 요청) —
+        // 예전 저장분에는 목록에 없으므로 맨 앞에 넣어 지금 화면(배너 최상단)을 그대로 유지
+        const order = parsed.mobileOrder ?? DEFAULT_STATE.mobileOrder;
+        const missingFixed = merged.filter(w => w.fixed && !order.includes(w.id)).map(w => w.id);
+        const mobileOrder = missingFixed.length ? [...missingFixed, ...order] : order;
+        setState(recenter({ ...DEFAULT_STATE, ...parsed, widgets: merged, mobileOrder, removedIds: [...removed] }));
       } else setState(DEFAULT_STATE);
     } catch { /* 기본값 사용 */ } };
     load();
