@@ -10,9 +10,8 @@ import { useCustomLinks, linkEntries } from '@/lib/linkStore';
 import { useBoards } from '@/lib/boardStore';
 import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
-import { ColorField } from '@/components/ui/ColorField';
 import { useFonts } from '@/lib/fontStore';
-import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem } from '@/components/main/widgetEditors';
+import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor } from '@/components/main/widgetEditors';
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
@@ -394,21 +393,21 @@ export function FreeTextWidget({ conf }: { conf: WidgetConf }) {
   const { updateWidget } = useMainStore();
   const { fonts, familyOf } = useFonts();
   const [open, setOpen] = useState(false);
-  const s = conf.settings as { text?: string; fontId?: string; size?: number; color?: string; align?: 'left' | 'center' | 'right'; bold?: boolean };
+  const s = conf.settings as { text?: string; fontId?: string; size?: number; color?: string; colorMode?: FreeTextColorMode; align?: 'left' | 'center' | 'right'; bold?: boolean };
   const [draft, setDraft] = useState(s);
   useEditEvent(conf.id, () => { setDraft({ ...s }); setOpen(true); });
   return (
     <div>
       <p style={{
         fontFamily: familyOf(s.fontId) ?? 'var(--sans)',
-        fontSize: s.size ?? 15, color: s.color ?? 'var(--page-desc)',
+        fontSize: s.size ?? 15, color: freeTextColor(s), // 기본은 테마 따라감 (다음 글/이전 글과 같은 색)
         textAlign: s.align ?? 'left', fontWeight: s.bold ? 700 : 400,
         lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0, wordBreak: 'keep-all',
       }}>
         {s.text || (isAdmin ? '자유 텍스트 — 편집모드에서 우클릭 → 설정' : '')}
       </p>
       <Modal open={open} onClose={() => setOpen(false)} title="자유 텍스트"
-        desc="패널 없이 문구만 표시 — 폰트·크기·색·정렬 지정, 배치는 편집모드에서 드래그"
+        desc="패널 없이 문구만 표시 — 글씨색은 기본으로 테마(다크/라이트)를 따라감, 배치는 편집모드에서 드래그"
         actions={<>
           <button className="btn btn-ghost" onClick={() => setOpen(false)}>CANCEL</button>
           <button className="btn btn-dark" onClick={() => {
@@ -426,8 +425,9 @@ export function FreeTextWidget({ conf }: { conf: WidgetConf }) {
               onChange={v => setDraft(d => ({ ...d, size: v }))} />
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="cp-lb">글씨색</span>
-            <ColorField value={draft.color ?? '#5d636d'} onChange={hex => setDraft(d => ({ ...d, color: hex }))} />
+            <FreeTextColorField draft={draft} setDraft={setDraft} />
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="mini-seg">
               {(['left', 'center', 'right'] as const).map(a => (
                 <button key={a} className={(draft.align ?? 'left') === a ? 'on' : ''}
