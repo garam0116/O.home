@@ -4,9 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { WidgetConf, useMainStore, WIDGET_META, decoSlides } from '@/lib/mainStore';
 import { useAuth } from '@/lib/auth';
-import { boardEntries, useMenuSettings, buildMenu, canViewHref } from '@/lib/menuStore';
-import { sectionHref, MAIN_SEC, useSections, sectionMenuEntries } from '@/lib/sectionStore';
-import { useCustomLinks, linkEntries } from '@/lib/linkStore';
+import { useMenuSettings, canViewHref } from '@/lib/menuStore';
+import { sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { useBoards, boardHref, postHref, postNumbers, MAIN_BOARD_ID } from '@/lib/boardStore';
 import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
@@ -18,6 +17,7 @@ import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
 import { useBlobUrl } from '@/lib/blobStore';
 import { normalizeInternalLink } from '@/lib/link';
 import { itemPath } from '@/lib/itemNo';
+import { MenuCard } from '@/components/main/MenuCard';
 
 /* 편집모드 우클릭 「설정」 → 해당 위젯의 설정 모달 열기 (v1.9 사용자 확정 — 이벤트로 연결) */
 function useEditEvent(id: string, onOpen: () => void) {
@@ -114,38 +114,6 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
           {mngOpen && <BannerEditor conf={conf} onSaved={() => setMngOpen(false)} onClose={() => setMngOpen(false)} />}
         </Modal>
       </div>
-    </div>
-  );
-}
-
-/* ---------- 메뉴리스트 (모바일 전용, 8장) ---------- */
-export function MenuListWidget() {
-  const router = useRouter();
-  const [open, setOpen] = useState<string | null>(null);
-  const [menuSet, , menuLoaded] = useMenuSettings(); // 메뉴 관리 (5.2) 반영
-  const { boards, loaded: boardsLoaded } = useBoards(); // 다중 게시판 (5.2)
-  const { user: wUser, isAdmin: wIsAdmin } = useAuth(); // 공개범위 필터 (v1.9)
-  const { map: wSecMap } = useSections();      // 여러 개로 만든 섹션 (v2.0 — 빠져 있었다)
-  const { links: wLinks } = useCustomLinks();  // 커스텀 링크 (v2.0)
-  return (
-    <div className="panel menu-list wgt-menu">
-      {(menuLoaded && boardsLoaded
-        ? buildMenu(menuSet, [...boardEntries(boards), ...sectionMenuEntries(wSecMap), ...linkEntries(wLinks)], { loggedIn: !!wUser, isAdmin: wIsAdmin, id: wUser?.id })
-        : []).map(m =>
-        m.children ? (
-          <div key={m.label} className={`mgrp ${open === m.label ? 'open' : ''}`}>
-            <a onClick={() => setOpen(o => (o === m.label ? null : m.label))}>{m.label}</a>
-            <div className="msub">
-              {/* 커스텀 링크의 외부 주소는 새 창 (v2.0) — 상단 메뉴와 같은 규칙 */}
-              {m.children.map(c => (
-                <a key={c.href} onClick={() => (/^https?:\/\//.test(c.href) ? window.open(c.href, '_blank') : router.push(c.href))}>{c.label}</a>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <a key={m.label} onClick={() => (/^https?:\/\//.test(m.href!) ? window.open(m.href!, '_blank') : router.push(m.href!))}>{m.label}</a>
-        )
-      )}
     </div>
   );
 }
@@ -625,7 +593,7 @@ export function SearchWidget({ conf }: { conf: WidgetConf }) {
 export function renderWidget(conf: WidgetConf) {
   switch (conf.type) {
     case 'banner': return <BannerWidget conf={conf} />;
-    case 'menu': return <MenuListWidget />;
+    case 'menu': return <MenuCard conf={conf} />;   // PC 2단형 메뉴 카드 (v2.7)
     case 'memo': return <MemoWidget conf={conf} />;
     case 'diary': return <DiaryWidget />;
     case 'latest': return <LatestWidget conf={conf} />;

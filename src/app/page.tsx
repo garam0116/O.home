@@ -8,10 +8,10 @@ import { MemberBox } from '@/components/main/MemberBox';
 import { WidgetEditLayer, useWidgetCtx } from '@/components/main/WidgetEditLayer';
 
 export default function MainPage() {
-  const { state, gridOn, updateWidget } = useMainStore();
+  const { state, gridOn, updateWidget, sideNav } = useMainStore();
 
-  // 메뉴리스트 위젯은 그리지 않음 — 모바일 메뉴는 상단바 ≡ 버튼이 대신함 (저장 데이터는 보존)
-  const enabled = state.widgets.filter(w => w.enabled && w.type !== 'menu');
+  // 메뉴 카드는 PC 2단형일 때만 (v2.7) — 1단형은 상단바가, 모바일은 상단바 ≡가 메뉴 (모바일에선 CSS로 숨김)
+  const enabled = state.widgets.filter(w => w.enabled && (sideNav || w.type !== 'menu'));
   const byCol = (c: 1 | 2 | 3) => enabled.filter(w => w.col === c);
   const mOrder = (id: string) => {
     // 고정 슬라이드 배너는 모바일에서 항상 맨 위 (회원정보창 -1보다 앞)
@@ -82,12 +82,12 @@ export default function MainPage() {
           enabled.map(w =>
             w.type === 'member'
               ? <WidgetFrame key={w.id} conf={w} mobileOrder={-1} onCtx={(id, x, y) => setCtx({ id, x, y })}><MemberBox /></WidgetFrame>
-              : frame(w, w.type === 'menu' ? 'wgt-hide-pc' : undefined))
+              : frame(w))
         ) : (
           <>
             {/* (마이그레이션 전 1회용) 기존 열 흐름 렌더 — 위치 스냅샷 후 절대배치로 전환 */}
             <div>
-              {byCol(1).map(w => frame(w, w.type === 'menu' ? 'wgt-hide-pc' : undefined))}
+              {byCol(1).map(w => frame(w))}
             </div>
             <div>
               {byCol(2).map(w =>

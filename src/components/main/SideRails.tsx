@@ -16,9 +16,10 @@ import { WidgetEditLayer, useWidgetCtx } from '@/components/main/WidgetEditLayer
 
 export function RailHost({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { state, editOn, gridOn } = useMainStore();
+  const { state, editOn, gridOn, sideNav } = useMainStore();
   const onPage = isRailPage(pathname);
-  const side = useMemo(() => (onPage ? railWidgets(state.widgets) : []), [onPage, state.widgets]);
+  // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 레일 없는 페이지는 isRailPage가 거르므로 1단형 그대로
+  const side = useMemo(() => (onPage ? railWidgets(state.widgets, sideNav) : []), [onPage, state.widgets, sideNav]);
   const active = side.length > 0;
   const { left, right } = railBounds(side);
   const { ctx, setCtx, openCtx } = useWidgetCtx(side);
@@ -74,7 +75,7 @@ function RailWidthHint() {
   const { state } = useMainStore();
   const [site] = useSiteSettings();
   const boardW = boardWOf(site);
-  const side = railWidgets(state.widgets);
+  const side = railWidgets(state.widgets, state.pcLayout === 'side');
   if (!side.length) return null;
   const { left, right } = railBounds(side);
   const w = Math.round(right - left);

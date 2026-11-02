@@ -105,7 +105,7 @@ export function WidgetEditLayer({ ctx, setCtx, enabled, sideOnly }: {
           <button onClick={() => { updateWidget(me.id, { freeMove: !me.freeMove }); setCtx(null); }}>
             {me.freeMove ? '그리드 반영' : '그리드 무시'}
           </button>
-          {(EDITABLE.includes(me.type) || !me.fixed) && <div className="sep" />}
+          {(EDITABLE.includes(me.type) || (!me.fixed && me.type !== 'menu')) && <div className="sep" />}
           {/* 내용 편집 — 편집모드에서도 우클릭으로 설정 모달을 연다 (v1.9 사용자 확정) */}
           {EDITABLE.includes(me.type) && (
             <button onClick={() => {
@@ -113,7 +113,8 @@ export function WidgetEditLayer({ ctx, setCtx, enabled, sideOnly }: {
               setCtx(null);
             }}>설정</button>
           )}
-          {!me.fixed && (
+          {/* 메뉴 카드(PC 2단형)는 지우면 사이트를 돌아다닐 수 없어서 삭제 불가 (v2.7) — 끄려면 환경설정에서 1단형으로 */}
+          {!me.fixed && me.type !== 'menu' && (
             <button className="danger" onClick={() => { setDelAsk(me); setCtx(null); }}>위젯 삭제</button>
           )}
         </div>
