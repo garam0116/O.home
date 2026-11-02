@@ -57,7 +57,7 @@ function BackupPageInner() {
 
   const visible = posts
     .filter(p => isAdmin || p.visibility === 'public' || (p.visibility === 'member' && user))
-    .filter(p => !q || p.title.includes(q) || p.category.includes(q)
+    .filter(p => !q || p.title.includes(q)
       || (p.tags ?? []).some(t => t.toLowerCase().includes(q.toLowerCase())));   // 태그 검색 (v2.0)
 
   // 편집모드 카드 드래그 정렬 (v1.9 — 갤러리 보기)
