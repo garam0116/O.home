@@ -133,10 +133,12 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   const [notice, setNotice] = useState<string | null>(null);
   const pendingNav = useRef<string | null>(null);
   const snapshot = useRef<MainState | null>(null);
+  const editRef = useRef(false);
+  editRef.current = editOn;
 
   // 로드 — 환경설정에서 SAVE 없이 변경을 취소하면 저장본을 다시 읽는다 (v2.5)
   useEffect(() => {
-    const load = () => { try {
+    const load = () => { if (editRef.current) return; try {   // 편집 중인 배치는 덮지 않는다
       const raw = getRawSetting(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as MainState;

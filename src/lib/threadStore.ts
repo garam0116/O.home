@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import type { CropValue } from '@/components/ui/CropEditor';
 import type { Visibility } from './relStore';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 import { MAIN_SEC } from './sectionStore';
 
 /* ---------- 타래 데이터 ---------- */
@@ -83,11 +83,14 @@ export function useThreadSettings(): [ThreadSettings, (patch: Partial<ThreadSett
   const [st, setSt] = useState<ThreadSettings>(DEFAULT_THREAD_SETTINGS);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    try {
+    // 서버에서 새 값이 오면 다시 읽는다 (v2.5)
+    const load = () => { try {
       const raw = getRawSetting(SET_KEY);
       if (raw) setSt({ ...DEFAULT_THREAD_SETTINGS, ...JSON.parse(raw) });
-    } catch { /* 기본값 */ }
+    } catch { /* 기본값 */ } };
+    load();
     setLoaded(true);
+    return onSettingReload(SET_KEY, load);
   }, []);
   const patch = useCallback((p: Partial<ThreadSettings>) => {
     setSt(s => {
