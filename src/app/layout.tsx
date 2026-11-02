@@ -14,6 +14,7 @@ import { SetupGate } from '@/components/shell/SetupGate';
 import { DocTitle } from '@/components/shell/DocTitle';
 import { DocIcon } from '@/components/shell/DocIcon';
 import { SettingSync } from '@/components/shell/SettingSync';
+import { SecurityMigrate } from '@/components/shell/SecurityMigrate';
 import { ListSync } from '@/components/shell/ListSync';
 import { NumberSync } from '@/components/shell/NumberSync';
 import { UploadBusy } from '@/components/shell/UploadBusy';
@@ -98,6 +99,8 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   <DocIcon />
                   {/* 설정이 서버에 저장되지 않았을 때 알림 (v2.0) — 조용히 실패하면 원인을 알 수 없다 */}
                   <SettingSync />
+                  {/* 관리자 로그인 때 예전에 공개로 저장된 비밀 데이터를 옮긴다 (보안 검토) */}
+                  <SecurityMigrate />
                   {/* 글·댓글 저장이 거부됐을 때 이유를 알림 (v2.0) — 조용히 되돌리면 스스로 사라진 것처럼 보인다 */}
                   <ListSync />
                   <NumberSync />

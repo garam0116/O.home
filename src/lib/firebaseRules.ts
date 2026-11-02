@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 // 설치 화면에서 복사해 쓰는 Firebase 보안 규칙 — 원본: firebase/firestore.rules · firebase/storage.rules
-// (원본을 고치면 이 파일도 함께 갱신)
+// 이 파일은 scripts/sync-rules.mjs가 만든다 — 원본을 고친 뒤 `node scripts/sync-rules.mjs`
 
 export const FIRESTORE_RULES = `rules_version = '2';
 
@@ -11,6 +11,7 @@ export const FIRESTORE_RULES = `rules_version = '2';
 // 문서 구조
 //   meta/owner            { uid, admins[] }   ← 첫 로그인 계정이 1회만 자기를 등록
 //   meta/invite           { code }            ← 가입코드 (관리자만 읽기·쓰기)
+//   meta/membertags       { value }           ← 회원 태그 (관리자만 — 공개 설정에 두면 F12로 보인다)
 //   members/{uid}         { code, at }        ← 가입코드를 맞힌 회원 (회원 권한의 근거)
 //   profiles/{uid}        { nickname, avatarUrl, avatarColor }
 //   settings/{key}        { value }           ← 테마·메뉴·폰트·메인 위젯 등
@@ -43,17 +44,35 @@ service cloud.firestore {
         && (exists(/databases/$(database)/documents/members/$(request.auth.uid)) || isAdmin());
     }
 
-    // 가입코드 확인 — meta/invite가 없으면 예전 위치(settings/ohome.invite.v1), 그것도 없으면 기본 WELCOME.
-    // (예전 버전은 코드를 공개 설정에 저장했다 — 관리자가 다시 로그인해 옮기기 전까지도 그 코드가 통하게)
-    // 규칙 언어의 삼항 연산자는 쓰지 않는다
+    // 가입코드 확인 — 관리자만 읽는 meta/invite와 정확히 같아야 한다.
+    // (보안 검토) 예전에는 코드가 없으면 기본값 WELCOME, 또는 공개 설정(settings)에 남은 옛 코드도
+    // 통과시켰다 — 둘 다 누구나 알 수 있는 값이라 아무나 회원이 될 수 있었다.
+    // 코드가 아직 없으면 관리자가 로그인할 때 무작위 코드가 자동으로 만들어진다.
     function inviteOk(code) {
       let inv = /databases/$(database)/documents/meta/invite;
-      let legacy = /databases/$(database)/documents/settings/$('ohome.invite.v1');
-      return (exists(inv) && code == get(inv).data.code)
-        || (!exists(inv) && exists(legacy)
-            && (code == get(legacy).data.get('value', '')
-                || (get(legacy).data.get('value', '') in [null, ''] && code == 'WELCOME')))
-        || (!exists(inv) && !exists(legacy) && code == 'WELCOME');
+      return exists(inv) && code is string && code.size() > 0 && code == get(inv).data.code;
+    }
+
+    // 읽기 권한 — 전체공개 / 회원공개(회원) / 내가 쓴 것 / 내 글에 달린 댓글 / 관리자
+    function canRead(coll) {
+      return resource.data.visibility == 'public'
+        || (resource.data.visibility == 'member' && isMember())
+        || (signedIn() && resource.data.authorId == request.auth.uid)
+        || (coll == 'comments' && signedIn() && resource.data.targetAuthorId == request.auth.uid)
+        || isAdmin();
+    }
+
+    // 손님 댓글 — 로그인 없이 남기는 것. 작성자 칸을 비워야 하고(남의 이름으로 못 쓰게),
+    // 저장 칸·글자 수를 제한한다 (대용량 문서로 저장소를 채우지 못하게)
+    function commentOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['data', 'authorId', 'visibility', 'sort', 'updatedAt', 'targetAuthorId'])
+        && d.visibility in ['public', 'member', 'private']
+        && d.data is map
+        && d.data.get('text', '') is string && d.data.get('text', '').size() <= 10000
+        && d.data.get('author', '') is string && d.data.get('author', '').size() <= 60
+        && ((!signedIn() && d.authorId == null)
+            || (signedIn() && d.authorId == request.auth.uid));
     }
 
     // 콘텐츠 컬렉션 목록 — 여기 없는 이름은 아무 권한도 없다
@@ -74,6 +93,11 @@ service cloud.firestore {
 
     // ── 가입코드 — 관리자만 (누구나 읽을 수 있으면 코드가 의미 없다) ──
     match /meta/invite {
+      allow read, write: if isAdmin();
+    }
+
+    // ── 회원 태그 — 관리자만 (관리자 화면에서만 보이는 값) ──────────
+    match /meta/membertags {
       allow read, write: if isAdmin();
     }
 
@@ -104,33 +128,46 @@ service cloud.firestore {
     // ── 번호 발급 카운터 (v2.4) — 글 주소 /board/1 의 번호 ─────────
     //    종류마다 문서 하나 { n }. 누구나 읽고, 회원은 값을 **올리기만** 할 수 있다 —
     //    줄이거나 같은 값을 다시 쓰면 이미 나간 번호가 또 나가게 되므로 막는다.
+    //    한 번에 올리는 폭도 제한한다 (보안 검토 — 회원이 아주 큰 값으로 올려 번호를 망가뜨리지 못하게).
+    //    관리자는 제한 없음 (백업 복원 등)
     match /counters/{kind} {
       allow read: if true;
-      allow create: if isMember() && request.resource.data.n is int;
+      allow create: if isMember() && request.resource.data.n is int
+        && (isAdmin() || request.resource.data.n <= 100000);
       allow update: if isMember() && request.resource.data.n is int
-        && request.resource.data.n > resource.data.n;
+        && request.resource.data.n > resource.data.n
+        && (isAdmin() || request.resource.data.n <= resource.data.n + 10000);
       allow delete: if isAdmin();
     }
 
     // ── 콘텐츠 ─────────────────────────────────────────────────
     match /{coll}/{docId} {
-      // 읽기: 전체공개 / 멤버공개(회원) / 내가 쓴 것 / 관리자
-      allow read: if isContent(coll) && (
-        resource.data.visibility == 'public'
-        || (resource.data.visibility == 'member' && isMember())
-        || (signedIn() && resource.data.authorId == request.auth.uid)
-        || isAdmin()
-      );
+      // 목록 질의: 위 canRead 그대로
+      allow list: if isContent(coll) && canRead(coll);
+      // 단건 조회: canRead + 비밀번호 로그 본문 사본('pw') — 문서 id에 비밀번호 해시가 들어 있어
+      // 비밀번호를 아는 사람만 주소를 만들 수 있다. 목록 질의로는 절대 나오지 않는다 (보안 검토)
+      allow get: if isContent(coll) && (canRead(coll)
+        || (coll == 'trpg_log_bodies' && resource.data.visibility == 'pw'));
 
-      // 쓰기: 회원 — 댓글은 비로그인 방문자도 남길 수 있음(닉네임 방식)
-      allow create: if isContent(coll) && (isMember() || coll == 'comments');
+      // 쓰기: 회원 — 작성자 칸은 본인이어야 한다(관리자는 복원 등으로 남의 것도 가능).
+      // 댓글은 비로그인 방문자·회원 아닌 계정도 남길 수 있음(닉네임 방식, commentOk 조건)
+      allow create: if isContent(coll) && (
+        (isMember() && (isAdmin() || request.resource.data.authorId == request.auth.uid))
+        || (coll == 'comments' && commentOk())
+      );
 
       // 수정·삭제: 작성자 본인 · 관리자
       // 댓글은 글과 따로 저장되므로(v2.0) 댓글을 달 때 글을 수정할 필요가 없다 —
       // 예전엔 댓글이 글 안에 있어서 일반 회원이 관리자 글에 댓글을 달면 이 규칙에 막혔다.
       // 게스트 댓글(로그인 없이 남긴 것)은 authorId가 비어 있어 본인 확인이 안 되므로
       // 지우는 것은 관리자만.
-      allow update, delete: if isContent(coll)
+      // 작성자 칸은 바꿀 수 없다 (보안 검토 — 내 글을 남의 이름으로 넘기지 못하게)
+      allow update: if isContent(coll)
+        && isMember()
+        && (isAdmin()
+            || (resource.data.authorId == request.auth.uid
+                && request.resource.data.authorId == request.auth.uid));
+      allow delete: if isContent(coll)
         && isMember()
         && (resource.data.authorId == request.auth.uid
             || isAdmin());
@@ -144,12 +181,15 @@ export const STORAGE_RULES = `rules_version = '2';
 // ============================================================
 // O.HOME Storage 보안 규칙 (이미지·파일)
 // Firebase 콘솔 → Storage → 규칙 에 붙여넣고 [게시].
-//   · 읽기는 공개 (방문자가 그림을 봐야 하므로)
-//   · 올리기는 로그인 회원 — 파일에 올린 사람(owner)을 기록
+//   · 파일 하나 받기(get)는 공개 (방문자가 그림을 봐야 하므로)
+//   · 파일 목록(list)은 관리자만 — 공개면 주소창에 버킷 주소만 넣어도 비공개 글·비밀글에
+//     넣은 이미지까지 전부 나열된다 (보안 검토). 목록은 「안 쓰는 파일 정리」에만 쓴다
+//   · 올리기는 회원(가입코드를 맞힌 계정) — 로그인 계정은 누구나 만들 수 있어 그것만으로는
+//     무료 한도를 남이 채울 수 있다. 파일에 올린 사람(owner)을 기록
+//   · 이미지·오디오·영상·폰트·로그 문서(텍스트/HTML)만, 한 번에 20MB까지
 //   · 덮어쓰기는 올린 사람만, 지우기는 올린 사람 또는 관리자
-//   · 한 번에 20MB 초과 업로드 차단
-// 관리자 판정에 Firestore(meta/owner)를 읽는다 — 게시할 때 콘솔이 권한 부여를 물으면 [허용].
-// (Firestore 데이터베이스가 (default)가 아니면 관리자의 「남의 파일 지우기」만 막힌다)
+// 관리자·회원 판정에 Firestore(meta/owner, members)를 읽는다 — 게시할 때 콘솔이 권한 부여를 물으면 [허용].
+// (Firestore 데이터베이스가 (default)가 아니면 회원 업로드와 관리자 기능이 막힌다)
 // ============================================================
 
 service firebase.storage {
@@ -160,17 +200,28 @@ service firebase.storage {
         && (own.uid == request.auth.uid || request.auth.uid in own.get('admins', []));
     }
 
-    match /ohome/{allPaths=**} {
-      allow read: if true;
-      // 새 파일 또는 내 파일만 — 같은 경로 덮어쓰기도 create로 들어올 수 있어 기존 주인을 확인한다
-      allow create: if request.auth != null
-        && (resource == null || resource.metadata.get('owner', '') == request.auth.uid)
-        && request.resource.size < 20 * 1024 * 1024
-        && request.resource.metadata.get('owner', '') == request.auth.uid;
-      allow update: if request.auth != null
-        && resource.metadata.get('owner', '') == request.auth.uid
+    function isMember() {
+      return request.auth != null
+        && (firestore.exists(/databases/(default)/documents/members/$(request.auth.uid)) || isAdmin());
+    }
+
+    function fileOk() {
+      return request.resource.size < 20 * 1024 * 1024
         && request.resource.metadata.get('owner', '') == request.auth.uid
-        && request.resource.size < 20 * 1024 * 1024;
+        && request.resource.contentType.matches(
+          '^(image|audio|video|font)/.+$|^text/(plain|html)(;.*)?$|^application/(octet-stream|font-.+|x-font-.+|vnd[.]ms-fontobject)$');
+    }
+
+    match /ohome/{allPaths=**} {
+      allow get: if true;
+      allow list: if isAdmin();
+      // 새 파일 또는 내 파일만 — 같은 경로 덮어쓰기도 create로 들어올 수 있어 기존 주인을 확인한다
+      allow create: if isMember()
+        && (resource == null || resource.metadata.get('owner', '') == request.auth.uid)
+        && fileOk();
+      allow update: if isMember()
+        && resource.metadata.get('owner', '') == request.auth.uid
+        && fileOk();
       allow delete: if request.auth != null
         && (resource.metadata.get('owner', '') == request.auth.uid || isAdmin());
     }

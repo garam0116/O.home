@@ -3,12 +3,15 @@ rules_version = '2';
 // ============================================================
 // O.HOME Storage 보안 규칙 (이미지·파일)
 // Firebase 콘솔 → Storage → 규칙 에 붙여넣고 [게시].
-//   · 읽기는 공개 (방문자가 그림을 봐야 하므로)
-//   · 올리기는 로그인 회원 — 파일에 올린 사람(owner)을 기록
+//   · 파일 하나 받기(get)는 공개 (방문자가 그림을 봐야 하므로)
+//   · 파일 목록(list)은 관리자만 — 공개면 주소창에 버킷 주소만 넣어도 비공개 글·비밀글에
+//     넣은 이미지까지 전부 나열된다 (보안 검토). 목록은 「안 쓰는 파일 정리」에만 쓴다
+//   · 올리기는 회원(가입코드를 맞힌 계정) — 로그인 계정은 누구나 만들 수 있어 그것만으로는
+//     무료 한도를 남이 채울 수 있다. 파일에 올린 사람(owner)을 기록
+//   · 이미지·오디오·영상·폰트·로그 문서(텍스트/HTML)만, 한 번에 20MB까지
 //   · 덮어쓰기는 올린 사람만, 지우기는 올린 사람 또는 관리자
-//   · 한 번에 20MB 초과 업로드 차단
-// 관리자 판정에 Firestore(meta/owner)를 읽는다 — 게시할 때 콘솔이 권한 부여를 물으면 [허용].
-// (Firestore 데이터베이스가 (default)가 아니면 관리자의 「남의 파일 지우기」만 막힌다)
+// 관리자·회원 판정에 Firestore(meta/owner, members)를 읽는다 — 게시할 때 콘솔이 권한 부여를 물으면 [허용].
+// (Firestore 데이터베이스가 (default)가 아니면 회원 업로드와 관리자 기능이 막힌다)
 // ============================================================
 
 service firebase.storage {
@@ -19,17 +22,28 @@ service firebase.storage {
         && (own.uid == request.auth.uid || request.auth.uid in own.get('admins', []));
     }
 
-    match /ohome/{allPaths=**} {
-      allow read: if true;
-      // 새 파일 또는 내 파일만 — 같은 경로 덮어쓰기도 create로 들어올 수 있어 기존 주인을 확인한다
-      allow create: if request.auth != null
-        && (resource == null || resource.metadata.get('owner', '') == request.auth.uid)
-        && request.resource.size < 20 * 1024 * 1024
-        && request.resource.metadata.get('owner', '') == request.auth.uid;
-      allow update: if request.auth != null
-        && resource.metadata.get('owner', '') == request.auth.uid
+    function isMember() {
+      return request.auth != null
+        && (firestore.exists(/databases/(default)/documents/members/$(request.auth.uid)) || isAdmin());
+    }
+
+    function fileOk() {
+      return request.resource.size < 20 * 1024 * 1024
         && request.resource.metadata.get('owner', '') == request.auth.uid
-        && request.resource.size < 20 * 1024 * 1024;
+        && request.resource.contentType.matches(
+          '^(image|audio|video|font)/.+$|^text/(plain|html)(;.*)?$|^application/(octet-stream|font-.+|x-font-.+|vnd[.]ms-fontobject)$');
+    }
+
+    match /ohome/{allPaths=**} {
+      allow get: if true;
+      allow list: if isAdmin();
+      // 새 파일 또는 내 파일만 — 같은 경로 덮어쓰기도 create로 들어올 수 있어 기존 주인을 확인한다
+      allow create: if isMember()
+        && (resource == null || resource.metadata.get('owner', '') == request.auth.uid)
+        && fileOk();
+      allow update: if isMember()
+        && resource.metadata.get('owner', '') == request.auth.uid
+        && fileOk();
       allow delete: if request.auth != null
         && (resource.metadata.get('owner', '') == request.auth.uid || isAdmin());
     }

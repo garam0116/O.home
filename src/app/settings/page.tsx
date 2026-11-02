@@ -40,6 +40,7 @@ import { useBgm, BgmTrack, parseVideoId, ytThumb } from '@/lib/bgmStore';
 import { useFonts, fontCssUrl, FontDef, FontRole, ROLE_LABEL, FOLLOW_MENU, FOLLOW_TITLE } from '@/lib/fontStore';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc, getPageText, setPageText } from '@/components/ui/PageText';
+import { resyncCommentMeta } from '@/lib/securityMigrate';
 import { putBlob } from '@/lib/blobStore';
 import { useImageSource } from '@/components/ui/ImageSource';
 import { getSetting, setSetting, pushLocalSettings, unsyncedSettingKeys, SETTING_KEYS } from '@/lib/settingStore';
@@ -1779,25 +1780,33 @@ function MenuPane() {
   }, [savedKey, msLoaded, bLoaded]);
 
   const setTree = (t: MenuGroupNode[]) => setDraft(t);
-  const saveAll = () => { patch({ tree, removedBoards: removed }); toast('메뉴가 저장되었습니다'); };
+  const saveAll = () => {
+    patch({ tree, removedBoards: removed });
+    toast('메뉴가 저장되었습니다');
+    // 메뉴 공개범위를 바꾸면 이미 올라간 글에도 바로 적용한다 (보안 검토) — 예전엔 「글에도 적용」을
+    // 따로 눌러야 했고, 잊으면 비공개로 바꾼 메뉴의 글이 서버에선 계속 공개였다
+    if (backend()) void applyVis(true);
+  };
 
   /* 이미 올라간 글의 공개범위를 서버에 적용 (v2.0 사용자 요청).
      화면에서 가리는 것만으로는 API를 직접 부르는 사람에게 그대로 보인다 — 서버(RLS)가
      내주지 않게 하려면 행의 공개범위 칸 자체가 좁아야 한다.
      컬렉션을 하나씩 훑어 **비공개 메뉴에 걸린 것만** 골라 그 칸만 갱신한다(내용·순서는 그대로).
      새 글은 저장할 때마다 같은 기준이 자동으로 걸리므로(visFloor) 이 버튼은 **이미 있는 글**용이다. */
-  const applyVis = async () => {
+  const applyVis = async (quiet = false) => {
     const be = backend();
     if (!be) { toast('서버에 연결돼 있지 않습니다 — 브라우저 저장 모드에는 서버 권한 자체가 없습니다'); return; }
     setVisBusy(true);
     try {
+      // 댓글은 달린 글의 공개범위를 따른다 — 그 기준(targetVis)부터 새 메뉴 설정으로 다시 계산
+      await resyncCommentMeta(be, user?.id ?? null);
       let n = 0;
       for (const coll of CONTENT_COLLECTIONS) {
         const rows = await be.fetchList(coll);
         const targets = rows.filter(r => visFloorOf(coll, r) !== 'public');
         if (targets.length) n += await be.refreshVis(coll, targets, user?.id ?? null);
       }
-      toast(n ? `글 ${n}건을 서버에서도 가렸습니다` : '비공개로 둔 메뉴에 글이 없습니다');
+      if (!quiet) toast(n ? `글 ${n}건을 서버에서도 가렸습니다` : '비공개로 둔 메뉴에 글이 없습니다');
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : '적용하지 못했습니다');
     }
@@ -1824,7 +1833,7 @@ function MenuPane() {
   const [resetAsk, setResetAsk] = useState(false);   // 기본 구성 리셋 확인 모달
   const [mtab, setMtab] = useState<'basic' | 'perm'>('basic');   // 기본(구성) / 권한 탭 (v1.9)
   const leaveWith = (action: 'save' | 'discard') => {
-    if (action === 'save') patch({ tree, removedBoards: removed });
+    if (action === 'save') { patch({ tree, removedBoards: removed }); if (backend()) void applyVis(true); }
     else revert();
     dirtyRef.current = false;
     setLeaveAsk(false);

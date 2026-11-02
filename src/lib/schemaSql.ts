@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 // 설치 화면에서 복사해 쓰는 스키마 SQL — 원본: supabase/schema.sql
-// (원본을 고치면 이 파일도 함께 갱신)
+// 이 파일은 scripts/sync-rules.mjs가 만든다 — 원본을 고친 뒤 `node scripts/sync-rules.mjs`
 
 export const SCHEMA_SQL = `-- ============================================================
 -- O.HOME 서버 스키마 (공개 홈용)
@@ -42,7 +42,9 @@ $$;
 
 -- ── 5. 가입 시 프로필 자동 생성 (첫 가입자 = 관리자) ─────────
 -- 가입코드는 서버에서 확인한다 — 화면에서만 확인하면 가입 API를 직접 불러 건너뛸 수 있다.
--- 코드는 site_settings의 'ohome.invite.v1'(관리자만 읽기), 없으면 기본 WELCOME.
+-- 코드는 site_settings의 'ohome.invite.v1'(관리자만 읽기). 코드가 없으면 아무도 가입할 수 없다
+-- (보안 검토 — 예전 기본값 WELCOME은 공개 저장소에 적혀 있어 누구나 알았다).
+-- 관리자가 로그인하면 코드가 없을 때 무작위 코드가 자동으로 만들어진다.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare existing int;
@@ -51,7 +53,7 @@ begin
   select count(*) into existing from public.profiles;
   if existing > 0 then
     select nullif(value #>> '{}', '') into expected from public.site_settings where key = 'ohome.invite.v1';
-    if coalesce(new.raw_user_meta_data->>'invite', '') <> coalesce(expected, 'WELCOME') then
+    if expected is null or coalesce(new.raw_user_meta_data->>'invite', '') <> expected then
       raise exception 'invalid invite code';
     end if;
   end if;
@@ -102,6 +104,7 @@ begin
     execute format('create index if not exists %I on public.%I (sort)', t || '_sort_idx', t);
 
     -- 읽기: 전체공개 / 멤버공개(로그인) / 본인 글 / 관리자
+    -- ('pw' = 비밀번호 로그 본문 사본 — 목록으로는 안 나오고 get_pw_doc 함수로만 읽힌다)
     execute format('drop policy if exists "read" on public.%I', t);
     execute format($p$
       create policy "read" on public.%I for select using (
@@ -111,16 +114,19 @@ begin
         or public.is_admin()
       )$p$, t);
 
-    -- 쓰기: 로그인 회원 (댓글만 아래에서 비로그인 허용으로 덮어씀)
+    -- 쓰기: 로그인 회원 — 작성자 칸은 본인이어야 한다 (보안 검토 — 남의 이름으로 글을 못 만들게.
+    -- 관리자는 복원 등으로 남의 것도 가능). 댓글만 아래에서 비로그인 허용으로 덮어씀
     execute format('drop policy if exists "insert" on public.%I', t);
     execute format($p$
-      create policy "insert" on public.%I for insert to authenticated with check (true)$p$, t);
+      create policy "insert" on public.%I for insert to authenticated
+        with check (author_id = auth.uid() or public.is_admin())$p$, t);
 
-    -- 수정·삭제: 본인 · 관리자
+    -- 수정·삭제: 본인 · 관리자. 수정 결과의 작성자도 본인이어야 한다(내 글을 남에게 못 넘기게)
     execute format('drop policy if exists "update" on public.%I', t);
     execute format($p$
       create policy "update" on public.%I for update to authenticated
-        using (author_id = auth.uid() or public.is_admin())$p$, t);
+        using (author_id = auth.uid() or public.is_admin())
+        with check (author_id = auth.uid() or public.is_admin())$p$, t);
 
     execute format('drop policy if exists "delete" on public.%I', t);
     execute format($p$
@@ -131,8 +137,29 @@ end $$;
 
 -- 댓글은 비로그인 방문자도 남길 수 있다 (닉네임 방식, v2.0).
 -- 수정·삭제는 위 공통 정책 그대로: 작성자 본인 또는 관리자.
+-- 손님은 작성자 칸을 비워야 하고, 글자 수를 제한한다 (보안 검토 — 남의 이름·대용량 방지)
 drop policy if exists "insert" on public.comments;
-create policy "insert" on public.comments for insert with check (true);
+create policy "insert" on public.comments for insert with check (
+  (author_id is null or author_id = auth.uid() or public.is_admin())
+  and visibility in ('public', 'member', 'private')
+  and length(coalesce(data->>'text', '')) <= 10000
+  and length(coalesce(data->>'author', '')) <= 60
+);
+
+-- 댓글이 달린 글의 작성자 (보안 검토) — 비밀글 댓글을 그 글쓴이도 읽을 수 있게
+alter table public.comments add column if not exists target_author_id uuid;
+drop policy if exists "read_target_author" on public.comments;
+create policy "read_target_author" on public.comments for select
+  using (target_author_id is not null and target_author_id = auth.uid());
+
+-- 비밀번호 로그 본문 사본 읽기 (보안 검토) — 행 id에 비밀번호 해시가 들어 있어
+-- 비밀번호를 아는 사람만 id를 만들 수 있다. 목록 조회로는 나오지 않는다
+create or replace function public.get_pw_doc(doc_id text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select data from public.trpg_log_bodies where id = doc_id and visibility = 'pw'
+$$;
+revoke all on function public.get_pw_doc(text) from public;
+grant execute on function public.get_pw_doc(text) to anon, authenticated;
 
 -- ── 7. 사이트 설정 권한 (읽기 공개 · 쓰기 관리자) ────────────
 alter table public.profiles enable row level security;
@@ -184,10 +211,10 @@ create policy "invite_write" on public.invite_codes for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "invite_use" on public.invite_codes;
 
--- 설정은 공개 읽기 — 단 가입코드('ohome.invite.v1')는 관리자만
+-- 설정은 공개 읽기 — 단 가입코드·회원 태그는 관리자만
 drop policy if exists "settings_select" on public.site_settings;
 create policy "settings_select" on public.site_settings for select
-  using (key <> 'ohome.invite.v1' or public.is_admin());
+  using (key not in ('ohome.invite.v1', 'ohome.membertags.v1') or public.is_admin());
 drop policy if exists "settings_write" on public.site_settings;
 create policy "settings_write" on public.site_settings for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
@@ -197,8 +224,19 @@ insert into storage.buckets (id, name, public)
 values ('ohome', 'ohome', true)
 on conflict (id) do nothing;
 
+-- 공개 버킷이라 파일 주소로 받기는 정책 없이 된다. 이 정책은 **목록 조회**를 정한다 —
+-- 누구나 목록을 보면 비공개 글·비밀글에 넣은 이미지까지 전부 나열된다 (보안 검토).
+-- 관리자 + 자기가 올린 파일만 (지우기에도 이 권한이 필요하다)
 drop policy if exists "ohome_read" on storage.objects;
-create policy "ohome_read" on storage.objects for select using (bucket_id = 'ohome');
+create policy "ohome_read" on storage.objects for select
+  using (bucket_id = 'ohome' and (owner = auth.uid() or public.is_admin()));
+-- 한 파일 20MB · 이미지/오디오/영상/폰트/로그 문서만
+update storage.buckets set
+  file_size_limit = 20971520,
+  allowed_mime_types = array['image/*', 'audio/*', 'video/*', 'font/*', 'text/plain', 'text/html',
+    'application/octet-stream', 'application/font-woff', 'application/x-font-ttf',
+    'application/x-font-otf', 'application/vnd.ms-fontobject']
+where id = 'ohome';
 drop policy if exists "ohome_write" on storage.objects;
 create policy "ohome_write" on storage.objects for insert to authenticated with check (bucket_id = 'ohome');
 -- 덮어쓰기는 올린 사람 또는 관리자만 (남의 이미지를 바꿔치기하지 못하게)
@@ -242,6 +280,10 @@ begin
   if cnt < 0 then raise exception 'bad count'; end if;
   insert into public.counters (kind, n) values (k, 0) on conflict (kind) do nothing;
   select n into cur from public.counters where kind = k for update;
+  -- 회원이 아주 큰 값으로 올려 번호를 망가뜨리지 못하게 (보안 검토). 관리자는 제한 없음
+  if not public.is_admin() and (cnt > 1000 or coalesce(floor_n, 0) > cur + 10000) then
+    raise exception 'too large';
+  end if;
   cur := greatest(cur, coalesce(floor_n, 0));
   update public.counters set n = cur + cnt where kind = k;
   return cur + 1;

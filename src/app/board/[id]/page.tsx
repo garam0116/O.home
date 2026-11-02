@@ -16,6 +16,7 @@ import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { GuestIdBar } from '@/components/ui/GuestId';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
+import { commentTargetMeta } from '@/lib/visFloor';
 
 const FOLD_LABEL = { spoiler: '스포일러 주의', adult: '수위 주의' };
 
@@ -91,7 +92,9 @@ export default function BoardDetailPage() {
     if (!canComment) { toast('댓글은 로그인 후 작성할 수 있습니다'); return; }
     if (!cmt.trim()) return;
     if (guestMode && !gName.trim()) { toast('닉네임을 입력해 주세요'); return; }
-    const base = { id: newId(), text: cmt.trim(), date: new Date().toISOString(), parentId: replyTo ?? undefined };
+    // 달린 글의 공개범위·작성자를 함께 적는다 — 비밀글 댓글이 공개로 새지 않게 (보안 검토)
+    const base = { id: newId(), text: cmt.trim(), date: new Date().toISOString(), parentId: replyTo ?? undefined,
+      ...commentTargetMeta('posts', post) };
     const c: CommentRow = user
       ? { ...base, target: 'post', targetId: post.id, author: user.nickname, authorId: user.id }
       : { ...base, target: 'post', targetId: post.id, author: gName.trim(), authorId: '' };

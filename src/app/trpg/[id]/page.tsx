@@ -7,7 +7,10 @@ import { useHrefBlock } from '@/components/shell/MenuGuard';
 import { sectionHref, MAIN_SEC, secStamp, useSectionTitle } from '@/lib/sectionStore';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
-import { TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, showAsHtml, decodeLogText, logNo, saveLogBody } from '@/lib/galleryStore';
+import {
+  TrpgLog, TRPG_SEED, TrpgLogBody, TRPG_BODY_SEED, bodyVisibility, showAsHtml, decodeLogText, logNo, saveLogBody,
+  withLogBodies, withoutLogBodies, fetchPwBody, fetchPwBodyById,
+} from '@/lib/galleryStore';
 import { Relation, REL_SEED, relPath } from '@/lib/relStore';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { getBlob, putBlob, useBlobUrl } from '@/lib/blobStore';
@@ -66,17 +69,34 @@ export default function TrpgDetailPage() {
   const blocked = useHrefBlock(l && sectionHref('trpg', l.secId ?? MAIN_SEC));
   // 큰 글씨 — 추가 섹션이면 그 이름, 눌렀을 때도 그 목록으로 (v2.0 사용자 제보)
   const tt = useSectionTitle('trpg', l?.secId, 'TRPG LOG');
-  const bd = bodies.find(x => x.id === id);   // 분리 저장된 본문 — 권한이 없으면 애초에 안 온다 (undefined)
+  // 비밀번호로 연 본문 사본 (보안 검토) — 권한이 없는 사람은 일반 본문을 아예 받지 못하므로,
+  // 비밀번호 해시로 만든 주소의 사본을 서버에서 직접 읽어 온다
+  const [pwBody, setPwBody] = useState<TrpgLogBody | null>(null);
+  // 분리 저장된 본문 — 권한이 없으면 애초에 안 온다 (undefined). 비밀번호로 열었으면 그 사본
+  const bd = bodies.find(x => x.id === id) ?? pwBody ?? undefined;
+  // 비밀번호 사본 — 관리자·작성자는 목록으로 받는다(수정 화면에 지금 비밀번호를 채우는 데 쓴다)
+  const pwCopy = bodies.find(x => x.pwOf === id);
+  const hasPw = !!(l?.hasPassword || l?.password);
 
   // 접근권한 (4.3) — 관리자 / 공개범위 충족 / 비밀번호 입력자
   const baseAllowed = !!l && (isAdmin
     || l.visibility === 'public' || (l.visibility === 'member' && !!user));
 
-  // 비밀번호 열람 (4.3) — 세션 동안 유지
+  // 비밀번호 열람 (4.3) — 세션 동안 유지. 비밀번호 대신 사본 주소를 기억해 다시 읽는다
   const [unlocked, setUnlocked] = useState(false);
   const [pwTry, setPwTry] = useState('');
+  const [pwChecking, setPwChecking] = useState(true);   // 저장된 사본 주소를 확인하는 중
   useEffect(() => {
-    try { if (sessionStorage.getItem(`trpg-unlock:${id}`) === '1') setUnlocked(true); } catch { /* 무시 */ }
+    let alive = true;
+    let saved: string | null = null;
+    try { saved = sessionStorage.getItem(`trpg-unlock:${id}`); } catch { /* 무시 */ }
+    if (!saved || !saved.startsWith(`${id}~`)) { setPwChecking(false); return; }
+    void fetchPwBodyById(saved).then(b => {
+      if (!alive) return;
+      if (b) { setPwBody(b); setUnlocked(true); }
+      setPwChecking(false);
+    });
+    return () => { alive = false; };
   }, [id]);
 
   // 이 로그를 볼 수 없으면(없거나, 권한도 비밀번호도 없으면) 홈으로 — 예전엔 이 자리에 "열람 권한이
@@ -85,12 +105,20 @@ export default function TrpgDetailPage() {
   useEffect(() => {
     if (!loaded) return;
     if (!l) { router.replace('/'); return; }
-    if (!baseAllowed && !unlocked && !l.password) router.replace('/');
-  }, [loaded, l, baseAllowed, unlocked, router]);
-  const tryUnlock = () => {
-    if (l?.password && pwTry === l.password) {
+    if (!baseAllowed && !unlocked && !hasPw) router.replace('/');
+  }, [loaded, l, baseAllowed, unlocked, hasPw, router]);
+  // 비밀번호 확인은 서버가 한다 (보안 검토) — 맞는 비밀번호로 만든 주소에만 사본이 있다.
+  // 예전엔 목록 문서에 평문 비밀번호가 있어 화면에서 비교했다(= F12로 비밀번호가 보였다)
+  const tryUnlock = async () => {
+    if (!pwTry.trim()) return;
+    const b = await fetchPwBody(id, pwTry);
+    if (b) {
+      setPwBody(b);
       setUnlocked(true);
-      try { sessionStorage.setItem(`trpg-unlock:${id}`, '1'); } catch { /* 무시 */ }
+      try { sessionStorage.setItem(`trpg-unlock:${id}`, b.id); } catch { /* 무시 */ }
+    } else if (l?.password && pwTry === l.password) {
+      // 아직 옮겨지지 않은 옛 로그 (관리자가 로그인하면 새 구조로 옮겨진다) — 예전 방식 그대로
+      setUnlocked(true);
     } else {
       toast('비밀번호가 올바르지 않습니다');
     }
@@ -161,7 +189,9 @@ export default function TrpgDetailPage() {
       writer: e.writer.trim(), withText: e.withText.trim(),
       relId: e.relId === 'none' ? undefined : e.relId,
       date: e.date || undefined,
-      visibility: e.visibility, password: e.password.trim() || undefined,
+      visibility: e.visibility,
+      // 비밀번호는 공개되는 목록 문서에 두지 않는다 — 본문 사본 쪽에만 (보안 검토)
+      password: undefined, hasPassword: e.password.trim() ? true : undefined,
       listHidden: e.listHidden,
       ...thumbPatch,
       // 예전엔 본문이 이 문서에 있었다 — 저장할 때마다 확실히 비워서(구버전 잔재 정리),
@@ -185,7 +215,8 @@ export default function TrpgDetailPage() {
     };
     // 새 본문 문서는 뒤에 붙인다 (v2.0 포크 제보) — 앞에 끼우면 기존 본문 전체의 자리가 밀려
     // 재저장 대상이 되고, 큰 본문이 쌓인 홈에서는 그 합이 쓰기 한도를 넘어 저장이 실패했다
-    setBodies(bd ? bodies.map(x => x.id === id ? nextBody : x) : [...bodies, nextBody]);
+    // 일반 본문 + 비밀번호 사본(있으면)을 함께 맞춘다 — 비밀번호가 바뀌면 예전 사본은 지워진다
+    setBodies(await withLogBodies(bodies, id, nextBody, e.password));
     if (bodyMode !== 'keep') setBodyText(null); // 본문 다시 로드
     setEOpen(false);
     setBodyMode('keep'); setEFile(null); setEText('');
@@ -245,7 +276,7 @@ export default function TrpgDetailPage() {
   if (blocked) return blocked;
   if (!loaded || !l) return <section className="page" />;
   if (!baseAllowed && !unlocked) {
-    if (!l.password) return <section className="page" />;
+    if (!hasPw || pwChecking) return <section className="page" />;
     // 비밀번호 게이트 — 맞으면 이 세션 동안 열람 유지
     return (
       <section className="page">
@@ -254,8 +285,8 @@ export default function TrpgDetailPage() {
           <EditableDesc k="trpg-lock-desc" def="비밀번호를 입력하면 열람할 수 있습니다" always /></div>
         <div className="panel" style={{ maxWidth: 420, margin: '0 auto', padding: 26, display: 'grid', gap: 10 }}>
           <KInput type="password" placeholder="비밀번호" value={pwTry} onChange={e => setPwTry(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); }} />
-          <button className="btn btn-dark" style={{ justifyContent: 'center', padding: 9 }} onClick={tryUnlock}>확인</button>
+            onKeyDown={e => { if (e.key === 'Enter') void tryUnlock(); }} />
+          <button className="btn btn-dark" style={{ justifyContent: 'center', padding: 9 }} onClick={() => void tryUnlock()}>확인</button>
         </div>
       </section>
     );
@@ -336,7 +367,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
             setE({
               noText: l.noText ?? '', title: l.title, catchphrase: l.catchphrase ?? '', writer: l.writer,
               withText: l.withText, relId: l.relId ?? 'none', date: l.date ?? '',
-              visibility: l.visibility, password: l.password ?? '', listHidden: !!l.listHidden,
+              visibility: l.visibility, password: pwCopy?.password ?? l.password ?? '', listHidden: !!l.listHidden,
             });
             // 본문·썸네일 교체 상태 초기화 (기본: 현재 것 유지)
             setBodyMode('keep'); setEFile(null); setEText(bodyText ?? '');
@@ -579,7 +610,7 @@ html,body{margin:0!important;padding:0!important;height:auto!important;min-heigh
         buttons={[
           { label: 'DELETE', kind: 'accent', onClick: () => {
             setLogs(logs.filter(x => x.id !== l.id));
-            setBodies(bodies.filter(x => x.id !== l.id));   // 분리 저장된 본문도 함께 삭제 (v2.0)
+            setBodies(withoutLogBodies(bodies, l.id));   // 분리 저장된 본문·비밀번호 사본도 함께 삭제 (v2.0)
             router.push(tt.href);
           } },
           { label: 'CANCEL', kind: 'ghost', onClick: () => setDelAsk(false) },

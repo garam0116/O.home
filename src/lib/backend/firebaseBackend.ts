@@ -7,7 +7,7 @@
 //  · 문서 = 항목 하나, 필드는 { data, authorId, visibility, sort }
 //  · 관리자 판정은 meta/owner 문서 — 첫 로그인 계정이 소유자로 등록된다(규칙이 1회만 허용)
 import {
-  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf,
+  Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf, randomInviteCode,
 } from './types';
 import { visFloorOf } from '../visFloor';
 
@@ -52,13 +52,15 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   };
 
   const {
-    collection, doc, getDoc, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
+    collection, doc, getDoc, getDocFromServer, getDocs, getDocsFromServer, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, limit,
     runTransaction,
   } = fsMod;
   type Cons = ReturnType<typeof where>;
 
   // 가입코드는 공개 설정(settings)이 아니라 관리자만 읽는 meta/invite에 둔다 (보안 검토)
   const INVITE_KEY = 'ohome.invite.v1';
+  // 회원 태그도 관리자 화면에서만 보이는 값이라 meta/membertags에 둔다 (보안 검토)
+  const TAGS_KEY = 'ohome.membertags.v1';
 
   // Firestore SDK는 서버에 못 닿으면 무한 재시도한다 — 쓰기가 영영 안 끝나는 것을 막는다
   const TIMEOUT = Symbol('timeout');
@@ -114,6 +116,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   /** 관리자 로그인 시 1회 — 보안 규칙 갱신 이전 데이터를 새 구조로 옮긴다.
    *  · 기존 회원(프로필이 있는 계정)에게 members 문서를 만들어 회원 권한 유지 (meta/owner.membersMigrated로 1회만)
    *  · 공개 설정(settings)에 있던 가입코드를 관리자 전용 meta/invite로 옮기고 공개 사본 삭제
+   *  · 공개 설정에 있던 회원 태그를 관리자 전용 meta/membertags로 옮기고 공개 사본 삭제 (보안 검토)
    *  최신 규칙이 아직 게시되지 않았다면 조용히 실패한다 — 규칙을 게시하고 다시 로그인하면 된다. */
   let migrating = false;
   const migrateAsAdmin = async () => {
@@ -140,11 +143,19 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
         const inv = await getDoc(doc(db, 'meta', 'invite'));
         if (!inv.exists()) {
           const v = (legacy.data() as { value?: unknown }).value;
-          await setDoc(doc(db, 'meta', 'invite'), { code: (typeof v === 'string' && v.trim()) || 'WELCOME' });
+          await setDoc(doc(db, 'meta', 'invite'), { code: (typeof v === 'string' && v.trim()) || randomInviteCode() });
         }
         await deleteDoc(legacy.ref);
       }
     } catch { failed = true; /* 예전 규칙 */ }
+    try {
+      const pub = await getDoc(doc(db, 'settings', TAGS_KEY));
+      if (pub.exists()) {
+        const cur = await getDoc(doc(db, 'meta', 'membertags'));
+        if (!cur.exists()) await setDoc(doc(db, 'meta', 'membertags'), { value: (pub.data() as { value?: unknown }).value ?? {} });
+        await deleteDoc(pub.ref);
+      }
+    } catch { failed = true; /* 예전 규칙 — 새 규칙을 게시하면 다음 로그인 때 옮겨진다 */ }
     // 실패했으면 다음 로그인 상태 확인 때 다시 시도 (규칙을 게시한 뒤 새로고침 없이도 옮겨지게)
     if (failed) migrating = false;
   };
@@ -159,15 +170,18 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
    * 정렬(orderBy)은 일부러 붙이지 않는다. where + orderBy 조합은 복합 색인을 만들어야 해서
    * 설치한 사람이 콘솔에서 색인을 추가해야 하기 때문 — 대신 받은 뒤 sort로 정렬한다.
    */
-  const readSets = async (): Promise<Cons[][]> => {
+  const readSets = async (coll: string): Promise<Cons[][]> => {
     await authReady;
     const u = auth.currentUser;
     if (!u) return [[where('visibility', '==', 'public')]];
     if (await isAdminNow()) return [[]];                    // 관리자는 전부
+    // 내 글에 달린 댓글 — 비밀글 댓글은 비공개로 저장되지만 글쓴이는 읽어야 한다 (보안 검토)
+    const mine: Cons[][] = [[where('authorId', '==', u.uid)]];
+    if (coll === 'comments') mine.push([where('targetAuthorId', '==', u.uid)]);
     // 가입코드 없이 만든 계정(회원 아님) — 전체공개 + 내가 쓴 것만
-    if (!(await isMemberNow())) return [[where('visibility', '==', 'public')], [where('authorId', '==', u.uid)]];
+    if (!(await isMemberNow())) return [[where('visibility', '==', 'public')], ...mine];
     // 회원: 전체공개+회원공개, 그리고 내가 쓴 것(비공개 포함)은 따로 받아 합친다
-    return [[where('visibility', 'in', ['public', 'member'])], [where('authorId', '==', u.uid)]];
+    return [[where('visibility', 'in', ['public', 'member'])], ...mine];
   };
 
   const listQuery = (coll: string, cs: Cons[]) =>
@@ -388,12 +402,19 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async fetchList<T extends ListItem>(coll: string): Promise<T[]> {
-      const sets = await readSets();
+      const sets = await readSets(coll);
       // 반드시 getDocsFromServer — 일반 getDocs는 로컬(오프라인) 캐시가 있으면 그걸로 조용히 성공해
       // 버린다. 실시간 구독이 한 번의 쓰기에 두 번(로컬 반영·서버 확정) 반응해 재조회가 겹칠 때
       // 낡은 캐시 결과가 방금 반영된 변경을 도로 덮어써 "새로고침해야 보임"이 되던 원인 중 하나
       // (v2.0 사용자 발견 — 목록 숨김을 바꿔도 반영이 안 되는 것처럼 보임)
-      const snaps = await Promise.all(sets.map(cs => getDocsFromServer(listQuery(coll, cs))));
+      const snaps = await Promise.all(sets.map((cs, i) => {
+        const q = getDocsFromServer(listQuery(coll, cs));
+        // 「내 글에 달린 댓글」 질의(마지막)는 새 규칙을 게시하기 전에는 거부된다 — 그때도
+        // 댓글 목록 전체가 막히지 않게 이 질의만 빈 결과로 넘긴다 (보안 검토 호환)
+        return coll === 'comments' && i === sets.length - 1 && sets.length > 2
+          ? q.catch(() => ({ docs: [] as Awaited<typeof q>['docs'] }))
+          : q;
+      }));
       // 두 질의(공개분 · 내 글)를 합치므로 문서 id로 중복을 없앤 뒤 sort로 정렬한다
       const seen = new Map<string, { sort: number; item: T }>();
       snaps.forEach(s => s.docs.forEach(d => {
@@ -422,9 +443,10 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       for (const part of parts) {
         const batch = writeBatch(db);
         part.forEach(({ item, sort }) => {
-          const { authorId, visibility } = metaOf(item, uid, visFloorOf(coll, item));
+          const { authorId, visibility, targetAuthorId } = metaOf(item, uid, visFloorOf(coll, item));
           batch.set(doc(db, coll, item.id), {
             data: item, authorId, visibility, sort, updatedAt: Date.now(),
+            ...(coll === 'comments' && targetAuthorId ? { targetAuthorId } : {}),
           });
         });
         await batch.commit();
@@ -464,7 +486,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       // 조건이 두 갈래면 구독도 두 개 — fetchList와 같은 이유(질의 전체 거부 방지)
       let offs: Array<() => void> = [];
       let stopped = false;
-      void readSets().then(sets => {
+      void readSets(coll).then(sets => {
         if (stopped) return;
         offs = sets.map(cs => {
           let first = true;
@@ -486,7 +508,33 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       return () => { stopped = true; offs.forEach(off => off()); offs = []; };
     },
 
+    async fetchPwDoc<T extends ListItem>(coll: string, id: string): Promise<T | null> {
+      try {
+        // 서버에서 — 캐시에 남은 예전 결과로 「비밀번호가 맞다」고 오판하지 않게
+        const snap = await getDocFromServer(doc(db, coll, id));
+        if (!snap.exists()) return null;
+        const raw = snap.data() as { data?: Record<string, unknown> };
+        return { ...(raw.data ?? {}), id: snap.id } as T;
+      } catch { return null; }
+    },
+
+    async ensureInviteCode() {
+      const ref = doc(db, 'meta', 'invite');
+      const snap = await getDoc(ref);   // 읽기 실패는 그대로 던진다 — 잘못 읽고 코드를 덮어쓰지 않게
+      const cur = snap.exists() ? String((snap.data() as { code?: unknown }).code ?? '').trim() : '';
+      if (cur && cur.toUpperCase() !== 'WELCOME') return null;
+      const code = randomInviteCode();
+      await setDoc(ref, { code });
+      return code;
+    },
+
     async fetchSetting<T>(key: string) {
+      if (key === TAGS_KEY) {
+        try {
+          const t = await getDoc(doc(db, 'meta', 'membertags'));
+          return t.exists() ? ((t.data() as { value?: T }).value ?? null) : null;
+        } catch { return null; }
+      }
       if (key === INVITE_KEY) {
         try {
           const inv = await getDoc(doc(db, 'meta', 'invite'));
@@ -498,9 +546,15 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     },
 
     async saveSetting(key, value) {
+      if (key === TAGS_KEY) {
+        if (value == null) await deleteDoc(doc(db, 'meta', 'membertags'));
+        else await setDoc(doc(db, 'meta', 'membertags'), { value });
+        try { await deleteDoc(doc(db, 'settings', TAGS_KEY)); } catch { /* 무시 */ }
+        return;
+      }
       if (key === INVITE_KEY) {
         if (value == null) await deleteDoc(doc(db, 'meta', 'invite'));
-        else await setDoc(doc(db, 'meta', 'invite'), { code: String(value).trim() || 'WELCOME' });
+        else await setDoc(doc(db, 'meta', 'invite'), { code: String(value).trim() || randomInviteCode() });
         // 예전 버전이 공개 설정에 남긴 사본은 지운다
         try { await deleteDoc(doc(db, 'settings', INVITE_KEY)); } catch { /* 무시 */ }
         return;
@@ -511,12 +565,21 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     async fetchAllSettings() {
       const snap = await getDocs(collection(db, 'settings'));
       const out: Record<string, unknown> = {};
-      snap.docs.forEach(d => { if (d.id !== INVITE_KEY) out[d.id] = (d.data() as { value: unknown }).value; });
+      snap.docs.forEach(d => { if (d.id !== INVITE_KEY && d.id !== TAGS_KEY) out[d.id] = (d.data() as { value: unknown }).value; });
       await authReady;
       if (await isAdminNow()) {
         try {
           const inv = await getDoc(doc(db, 'meta', 'invite'));
           if (inv.exists()) out[INVITE_KEY] = (inv.data() as { code?: unknown }).code;
+        } catch { /* 예전 규칙 */ }
+        try {
+          const t = await getDoc(doc(db, 'meta', 'membertags'));
+          if (t.exists()) out[TAGS_KEY] = (t.data() as { value?: unknown }).value;
+          else {
+            // 아직 옮겨지지 않았으면(새 규칙 게시 전) 공개 설정에 남은 사본을 쓴다
+            const pub = snap.docs.find(d => d.id === TAGS_KEY);
+            if (pub) out[TAGS_KEY] = (pub.data() as { value: unknown }).value;
+          }
         } catch { /* 예전 규칙 */ }
       }
       return out;
