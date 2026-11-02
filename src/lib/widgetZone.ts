@@ -67,24 +67,22 @@ export function centerMiddleWidgets(widgets: WidgetConf[]): WidgetConf[] {
 }
 
 /** 좌우 위젯을 고정 표시하는 페이지 — 제외: 메인(자체 캔버스) · 환경설정(자체 넓은 레이아웃) ·
- *  자관 전체(목록·상세·작성) · 로드비 · 다이어리 · 글쓰기/수정 화면(본문 폭이 넓어야 함) (v2.4 사용자 확정) */
+ *  자관 상세(좌·가운데·우 3열 — 상단바도 없이 전체 화면, 왼쪽 위 뒤로가기만) · 글쓰기/수정 화면(본문 폭이 넓어야 함).
+ *  자관 목록·다이어리·로드비도 다른 페이지와 같은 레이아웃으로 통일 (v2.8 사용자 확정 — v2.4의 「위젯 없이 본문만」을 바꿈) */
 export function isRailPage(pathname: string): boolean {
   if (pathname === '/') return false;
   if (pathname === '/settings' || pathname.startsWith('/settings/')) return false;
-  if (pathname === '/rels' || pathname.startsWith('/rels/')) return false;
-  // 로드비·다이어리는 위젯 없이 본문만 (v2.4 사용자 요청) — /roadview는 로드비 옛 주소
-  for (const base of ['/loadb', '/roadview', '/diary']) if (pathname === base || pathname.startsWith(base + '/')) return false;
-  // 글쓰기·수정 — /board/write · /board/b/x/write · /threads/new · /diary/1/edit · /rels/1/au/2/edit 등
+  // 자관은 목록(/rels · /rels/r · /rels/r/{섹션})만 — 그 밖의 /rels/…는 상세·새로 만들기
+  if (pathname.startsWith('/rels/') && pathname !== '/rels/r' && !/^\/rels\/r\/[^/]+$/.test(pathname)) return false;
+  // 글쓰기·수정 — /board/write · /board/b/x/write · /threads/new · /diary/1/edit · /rels/r/x/new 등
   if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
   return true;
 }
 
-/** PC 2단형일 때 다른 위젯 없이 메뉴 카드만 띄우는 페이지 (v2.8 사용자 요청) — 레일 없는 페이지 중
- *  자관 목록(섹션 목록 포함) · 다이어리 · 로드비. 본문은 메뉴 카드 옆 남은 폭을 다 쓴다.
- *  제외: 자관 상세(좌·가운데·우 3열이라 너무 좁아짐 — 1단형 유지, 대신 왼쪽 위 뒤로가기) · 글쓰기/수정 · 환경설정 */
-export function isMenuOnlyPage(pathname: string): boolean {
-  if (/\/(write|new|edit)(\/|$)/.test(pathname)) return false;
-  if (pathname === '/rels' || pathname === '/rels/r' || /^\/rels\/r\/[^/]+$/.test(pathname)) return true;
-  for (const base of ['/loadb', '/roadview', '/diary']) if (pathname === base || pathname.startsWith(base + '/')) return true;
-  return false;
+/** 이보다 본문(좌우 위젯 사이)이 좁으면 다이어리 달력을 숨기고 로드비 댓글 칸을 줄인다 (v2.8) */
+export const NARROW_BODY = 700;
+
+/** 자관 상세 — 상단바 없이 전체 화면 (v2.8 사용자 요청 · 모바일 포함). 뒤로가기는 페이지 왼쪽 위 */
+export function isBareRelPage(pathname: string): boolean {
+  return pathname.startsWith('/rels/') && !isRailPage(pathname) && !/\/(write|new|edit)(\/|$)/.test(pathname);
 }

@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMainStore } from '@/lib/mainStore';
 import { useSiteSettings, boardWOf } from '@/lib/siteStore';
-import { isRailPage, isMenuOnlyPage, railWidgets, railBounds } from '@/lib/widgetZone';
+import { isRailPage, isBareRelPage, railWidgets, railBounds, NARROW_BODY } from '@/lib/widgetZone';
 import { WidgetFrame } from '@/components/main/WidgetFrame';
 import { renderWidget } from '@/components/main/widgets';
 import { MemberBox } from '@/components/main/MemberBox';
@@ -18,15 +18,12 @@ export function RailHost({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { state, editOn, gridOn, sideNav } = useMainStore();
   const onPage = isRailPage(pathname);
-  // 메뉴 카드만 띄우는 페이지 (v2.8) — 자관 목록·다이어리·로드비는 2단형이면 다른 위젯 없이 메뉴 카드만
-  const menuOnly = sideNav && !onPage && isMenuOnlyPage(pathname);
-  // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 그 밖의 레일 없는 페이지는 1단형 그대로
-  const side = useMemo(
-    () => (onPage ? railWidgets(state.widgets, sideNav) : menuOnly ? railWidgets(state.widgets, true).filter(w => w.type === 'menu') : []),
-    [onPage, menuOnly, state.widgets, sideNav]);
+  // PC 2단형이면 메뉴 카드도 레일에 함께 (v2.7) — 레일 없는 페이지는 isRailPage가 거르므로 1단형 그대로
+  const side = useMemo(() => (onPage ? railWidgets(state.widgets, sideNav) : []), [onPage, state.widgets, sideNav]);
   const active = side.length > 0;
-  // 메뉴 카드만 있는 페이지는 「가운데 정렬」을 따르지 않는다 — 본문이 메뉴 카드 옆 남은 폭을 다 쓰게
-  const { left, right } = railBounds(side, !!state.centerBody && !menuOnly);
+  const { left, right } = railBounds(side, !!state.centerBody);
+  // 본문이 좁으면 페이지별로 보정 (v2.8) — 다이어리 달력 숨김 · 로드비 댓글 칸 축소 (globals.css body.rail-narrow)
+  const narrow = active && right - left < NARROW_BODY;
   const { ctx, setCtx, openCtx } = useWidgetCtx(side);
 
   // 위젯 아래 끝까지 페이지가 길어지게 — 본문이 짧아도 위젯이 잘리지 않는다
@@ -50,6 +47,16 @@ export function RailHost({ children }: { children: React.ReactNode }) {
     document.body.classList.toggle('rails-on', active);
     return () => document.body.classList.remove('rails-on');
   }, [active]);
+  useEffect(() => {
+    document.body.classList.toggle('rail-narrow', narrow);
+    return () => document.body.classList.remove('rail-narrow');
+  }, [narrow]);
+  // 자관 상세는 상단바 없이 전체 화면 (v2.8 · 모바일 포함) — 돌아갈 길은 페이지 왼쪽 위 뒤로가기
+  const bare = isBareRelPage(pathname);
+  useEffect(() => {
+    document.body.classList.toggle('no-topbar', bare);
+    return () => document.body.classList.remove('no-topbar');
+  }, [bare]);
 
   return (
     // 구조는 늘 같게 두고 클래스만 바꾼다 — 첫 좌우 위젯을 추가하는 순간 페이지(작성 중인 글 등)가 다시 그려지지 않게
