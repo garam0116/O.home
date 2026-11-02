@@ -742,6 +742,9 @@ a{color:inherit;text-decoration:none}
 /* 고정 캔버스 모드: 창을 줄여도 배치 유지 — 좁은 창은 가로 스크롤(왼쪽 기준), 모바일 전환 시 해제 (v1.9) */
 body.main-fixed .page-main-wrap{min-width:1180px;margin-left:max(0px, calc(50% - 590px));margin-right:0}
 body.main-fixed #appMain,body.edit-on #appMain{overflow-x:auto}
+/* 화면 정중앙 (v2.8 사용자 확정) — 스크롤바 자리를 오른쪽에만 비우면(stable) 캔버스가 그 폭의 절반만큼 왼쪽으로 치우친다.
+   좌우 위젯이 있는 PC 화면(메인·레일 페이지)은 양쪽에 같은 폭을 비워 캔버스 가운데선 = 화면 가운데선 */
+@media (min-width:621px){body.main-fixed #appMain,body.rails-on #appMain{scrollbar-gutter:stable both-edges}}
 /* 편집모드: 반응형 모드·좁은 창에서도 캔버스를 콘텐츠 1120px로 고정 —
    가운데 1fr 열이 항상 610px(10px 배수)이 되어 10px 격자가 정확히 맞음 */
 body.edit-on .page-main-wrap{width:1180px;min-width:1180px;margin-left:max(0px, calc(50% - 590px));margin-right:0}
