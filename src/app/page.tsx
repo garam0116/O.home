@@ -114,8 +114,23 @@ export default function MainPage() {
     }, 250);   // 폰트·이미지 로드 후 안정된 레이아웃에서 측정
     return () => clearTimeout(t);
   }, [absMode, enabled.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 실제 렌더 높이로 캔버스 바닥을 잰다 — 높이 자동 위젯(디데이)이 길어지면 캔버스·페이지도 같이 길어진다
+  const [measuredBottom, setMeasuredBottom] = useState(0);
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!absMode || !grid) return;
+    const measure = () => {
+      let b = 0;
+      grid.querySelectorAll<HTMLElement>(':scope > .wgt').forEach(el => { b = Math.max(b, el.offsetTop + el.offsetHeight); });
+      setMeasuredBottom(b);
+    };
+    const ro = new ResizeObserver(measure);
+    grid.querySelectorAll(':scope > .wgt').forEach(el => ro.observe(el));
+    measure();
+    return () => ro.disconnect();
+  }, [absMode, enabled]);
   const canvasH = absMode
-    ? Math.max(400, ...enabled.map(w => (w.ay ?? 0) + (w.h ?? 200))) + 40
+    ? Math.max(400, measuredBottom, ...enabled.filter(w => w.type !== 'dday' && w.type !== 'ddaycard').map(w => (w.ay ?? 0) + (w.h ?? 200))) + 40
     : undefined;
 
   return (

@@ -16,6 +16,9 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
   const { editOn, gridOn, updateWidget } = useMainStore();
   // 메인은 항상 고정 캔버스 (v1.9 — 반응형 옵션 제거, PC/모바일 두 가지만) — 저장 크기 상시 유지
   const useSize = true;
+  // 높이 자동 위젯 (사용자 요청) — 디데이는 항목이 늘면 위젯이 아래로 길어지고 페이지가 스크롤된다.
+  // 저장 높이(h)는 무시하고 가로(w)만 적용 · 리사이즈 핸들도 가로만 바꾼다
+  const autoH = conf.type === 'dday' || conf.type === 'ddaycard';
   const ref = useRef<HTMLDivElement>(null);
   // Shift+드래그 중앙 정렬에서 폭이 20px 배수가 아니라 딱 가운데가 안 될 때의 안내 (v1.9 사용자 요청)
   const [centerAsk, setCenterAsk] = useState<{ w: number; canvasW: number; grow: number; shrink: number } | null>(null);
@@ -150,7 +153,7 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
         w = Math.round((absL + w) / 10) * 10 - absL;
         h = Math.round((absT + h) / 10) * 10 - absT;
       }
-      updateWidget(conf.id, { w: Math.max(160, w), h: Math.max(80, h) });
+      updateWidget(conf.id, autoH ? { w: Math.max(160, w) } : { w: Math.max(160, w), h: Math.max(80, h) });
     };
     const up = () => { document.body.classList.remove('drag-rs'); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
     window.addEventListener('pointermove', mv);
@@ -161,7 +164,7 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
     <div
       ref={ref}
       data-wid={conf.id}
-      className={`wgt ${useSize && conf.w != null ? 'sized' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${className ?? ''}`}
+      className={`wgt ${useSize && conf.w != null ? 'sized' : ''} ${autoH ? 'auto-h' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${className ?? ''}`}
       style={{
         ...style,
         order: mobileOrder,
@@ -181,7 +184,7 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
             ].join(' ').trim() || undefined,
           }),
         width: useSize && conf.w != null ? conf.w : undefined,
-        height: useSize && conf.h != null ? conf.h : undefined,
+        height: useSize && conf.h != null && !autoH ? conf.h : undefined,
         zIndex: conf.z,
       }}
       onPointerDown={onPointerDown}
