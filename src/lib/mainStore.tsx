@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useAuth } from './auth';
 import { getRawSetting, setSetting, onSettingReload } from './settingStore';
-import { isRailPage, sideOf, centerMiddleWidgets } from './widgetZone';
+import { isRailPage, sideOf, centerMiddleWidgets, mirrorSides } from './widgetZone';
 
 export type WidgetType =
   | 'banner'                            // 고정 요소 (삭제 불가)
@@ -45,7 +45,7 @@ interface MainState {
   settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
   pcLayout?: PcLayout;                  // 없으면 top (v2.7)
-  centerBody?: boolean;                 // 가운데 정렬 — 메인 가운데 위젯을 좌우 위젯 사이 한가운데에 (편집모드 버튼 · 좌우 간격을 같게, v2.8)
+  centerBody?: boolean;                 // 가운데 정렬 — 본문·가운데 위젯을 화면 한가운데에 + 좌우 위젯과의 간격도 같게 (편집모드 버튼, v2.8 — 좌우 위젯을 대칭으로 옮김)
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
@@ -163,11 +163,13 @@ interface MainCtx {
 
 const Ctx = createContext<MainCtx | null>(null);
 
-/** 「가운데 정렬」이 켜져 있으면 가운데 위젯을 좌우 위젯 사이 한가운데로 (v2.8 — 왼쪽·오른쪽 간격을 같게).
- *  예전 저장분(캔버스 한가운데 기준)도 불러올 때 새 기준으로 맞춰진다 */
-function recenter(s: MainState): MainState {
+/** 「가운데 정렬」이 켜져 있으면 (v2.8 사용자 확정 — 화면 한가운데 + 좌우 간격 같게, 두 조건 모두)
+ *  ① 좌우 위젯을 가운데선 기준 거울 대칭으로 옮기고 ② 가운데 위젯을 그 사이 한가운데(= 화면 한가운데)로.
+ *  anchor: 편집 중인 쪽 — 그쪽은 그대로 두고 반대쪽이 따라온다. 예전 저장분도 불러올 때 맞춰진다 */
+function recenter(s: MainState, anchor?: 1 | 3): MainState {
   if (!s.centerBody) return s;
-  const widgets = centerMiddleWidgets(s.widgets, s.pcLayout === 'side');
+  const withMenu = s.pcLayout === 'side';
+  const widgets = centerMiddleWidgets(mirrorSides(s.widgets, withMenu, anchor), withMenu);
   return widgets === s.widgets ? s : { ...s, widgets };
 }
 
@@ -275,9 +277,11 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   const updateWidget = useCallback((id: string, patch: Partial<WidgetConf>, opts?: { persist?: boolean }) => {
     setState(s => {
       let n = { ...s, widgets: s.widgets.map(w => (w.id === id ? { ...w, ...patch } : w)) };
-      // 좌우 위젯을 옮기거나 크기를 바꾸면 가운데 정렬도 다시 맞춘다 — 가운데 위젯을 직접 옮길 때는 건드리지 않는다
+      // 좌우 위젯을 옮기거나 크기를 바꾸면 가운데 정렬도 다시 맞춘다 — 옮기는 쪽이 기준, 반대쪽이 거울처럼 따라온다.
+      // 가운데 위젯을 직접 옮길 때는 건드리지 않는다
       const moved = n.widgets.find(w => w.id === id);
-      if (moved && sideOf(moved) !== 2 && ('ax' in patch || 'w' in patch)) n = recenter(n);
+      const side = moved ? sideOf(moved) : 2;
+      if (side !== 2 && ('ax' in patch || 'w' in patch)) n = recenter(n, side);
       if (opts?.persist) persist(n);
       return n;
     });

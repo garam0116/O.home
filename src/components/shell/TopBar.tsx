@@ -169,7 +169,7 @@ export function TopBar() {
         <button className="btn btn-ghost" style={{ height: 27, padding: '0 11px', fontSize: 10.5, whiteSpace: 'nowrap' }}
           onClick={() => window.dispatchEvent(new Event('ohome-add-widget'))}>＋ 위젯</button>
       )}
-      {/* 가운데 정렬 — 메인 가운데 열 위젯을 좌우 위젯 사이 한가운데로 (왼쪽·오른쪽 간격이 같게, v2.8) */}
+      {/* 가운데 정렬 — 본문·가운데 위젯을 화면 한가운데로 + 좌우 위젯을 대칭으로 옮겨 양쪽 간격도 같게 (v2.8) */}
       <KToggle
         className={`grid-chip ${editOn && (pathname === '/' || isRailPage(pathname)) ? 'show' : ''}`}
         label="가운데 정렬"
