@@ -26,6 +26,10 @@ export function DragList<T>({ items, keyOf, render, onReorder, disabled }: {
     const startY = e.clientY;
     const key = keyOf(items[index]);
     setDrag({ key, from: index, to: index, dy: 0, h: heights[index] });
+    // 모바일(터치) — 끄는 동안 화면이 같이 스크롤되면 브라우저가 pointercancel을 보내 드래그가 끊긴다.
+    // 핸들의 touch-action:none(CSS)에 더해, 드래그 중에는 터치 스크롤 자체를 막는다 (v2.9)
+    const blockScroll = (ev: TouchEvent) => { if (ev.cancelable) ev.preventDefault(); };
+    window.addEventListener('touchmove', blockScroll, { passive: false });
 
     const mv = (ev: PointerEvent) => {
       const dy = ev.clientY - startY;
@@ -41,6 +45,8 @@ export function DragList<T>({ items, keyOf, render, onReorder, disabled }: {
     const up = () => {
       window.removeEventListener('pointermove', mv);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('touchmove', blockScroll);
       // 들어 올린 행을 정확한 도착 슬롯 오프셋으로 부드럽게 안착시킨 뒤 커밋
       setDrag(d => {
         if (!d) return null;
@@ -65,6 +71,7 @@ export function DragList<T>({ items, keyOf, render, onReorder, disabled }: {
     };
     window.addEventListener('pointermove', mv);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);   // 터치가 취소돼도 들린 행이 공중에 남지 않게
   };
 
   return (

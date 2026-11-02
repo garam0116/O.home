@@ -977,7 +977,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .dl-row{transition:transform .18s ease}
 .dl-row.lift{transform:scale(1.02) rotate(.4deg);box-shadow:0 14px 34px rgba(0,0,0,.25);cursor:grabbing;position:relative;z-index:10;background:#fff}
 .dl-placeholder{border:1.5px dashed #c3c7cd;border-radius:var(--radius-s);background:rgba(0,0,0,.02)}
-.drag-h{cursor:grab;color:var(--faint);user-select:none;font-size:calc(13px*var(--fs,1))}
+.drag-h{cursor:grab;color:var(--faint);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;font-size:calc(13px*var(--fs,1))}
+/* 터치 화면에서는 ⠿ 핸들이 손가락으로 잡기엔 너무 작아 — 보이는 크기는 그대로, 잡는 영역만 넓힘 (v2.9) */
+@media (pointer:coarse){.drag-h{padding:12px 10px;margin:-12px -10px}}
 .drag-h:active{cursor:grabbing}
 .mw-no{width:18px;height:18px;border-radius:50%;background:#eef0f2;color:var(--sub);font-size:calc(10px*var(--fs,1));display:grid;place-items:center;flex-shrink:0}
 
