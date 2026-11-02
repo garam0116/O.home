@@ -17,7 +17,6 @@ const LABEL: Record<string, string> = {
   comments: '댓글',
   posts: '글',
   roadview: '로드비',
-  characters: '캐릭터',
   relations: '자관',
   trpg_logs: 'TRPG 로그',
   trpg_log_bodies: 'TRPG 로그 본문',

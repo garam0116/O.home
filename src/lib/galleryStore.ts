@@ -1,7 +1,7 @@
 ﻿// 그림 로드뷰(4.10)·그림백업(4.11)·TRPG 백업(4.3) 데이터 — localStorage (→ Supabase/R2 이전 예정)
 import type { Comment, FoldType } from './postStore';
 import type { CropValue } from '@/components/ui/CropEditor';
-import type { Visibility } from './charStore';
+import type { Visibility } from './relStore';
 
 /* ---------- 로드뷰 (4.10) ---------- */
 export interface RoadItem {

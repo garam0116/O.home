@@ -5,7 +5,7 @@ import React, { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
-import { Relation, REL_SEED, relDday, relPath } from '@/lib/charStore';
+import { Relation, REL_SEED, relDday, relPath } from '@/lib/relStore';
 import { useSectionParam, filterSection, sectionSetter, sectionHref, MAIN_SEC, secSubHref } from '@/lib/sectionStore';
 import { SearchBar } from '@/components/ui/Kit';
 import { useToast } from '@/components/ui/Toast';

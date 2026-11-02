@@ -17,7 +17,6 @@ import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList } from '@/lib/postStore';
 import { RoadItem, ROAD_SEED, BackupPost, BACKUP_SEED } from '@/lib/galleryStore';
 import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
-import { StickyMemo, MEMO_SEED, MEMO_SIZE_W, useMemoSettings } from '@/lib/memoStore';
 import { BlobImg, useBlobUrl } from '@/lib/blobStore';
 import { normalizeInternalLink } from '@/lib/link';
 import { itemPath } from '@/lib/itemNo';
@@ -571,35 +570,6 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
   );
 }
 
-/* ---------- 스티커 메모 미니보드 (4.6) — 읽기 전용 축소 보드, 클릭 시 /memo ---------- */
-export function MemoBoardWidget() {
-  const router = useRouter();
-  const { user, isAdmin } = useAuth();
-  const [memos] = useLocalList<StickyMemo>('ohome.memo.v1', MEMO_SEED);
-  const [settings] = useMemoSettings();
-  // 메뉴에서 비공개로 둔 메모장은 위젯에도 안 나온다 (v2.0)
-  const [menuSet] = useMenuSettings();
-  if (!canViewHref(menuSet, '/memo', { loggedIn: !!user, isAdmin, id: user?.id })) return null;
-  return (
-    <div className="panel widget" style={{ display: 'flex', flexDirection: 'column' }}>
-      <h4>STICKY</h4>
-      <div className="memo-mini" onClick={() => router.push('/memo')}>
-        {memos.map(m => (
-          <div key={m.id} className="postit"
-            style={{
-              left: `${m.x}%`, top: `${m.y}%`, zIndex: m.z,
-              transform: `rotate(${m.rot}deg)`, background: m.color,
-              width: Math.round(MEMO_SIZE_W[m.size] * 0.53),
-            }}>
-            {settings.showAuthor && <b>{m.author}</b>}
-            {m.text}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ---------- 게시판 검색 (사용자 요청) ----------
    모든 게시판의 글을 찾는 검색창 — 엔터·돋보기를 누르면 `/search?q=` 결과로 간다.
    결과 화면은 게시판 목록(갤러리형 1)과 같은 모양이다. 제목·안내 문구는 편집모드 우클릭 「설정」에서 */
@@ -662,7 +632,6 @@ export function renderWidget(conf: WidgetConf) {
     case 'todo': return <TodoWidget conf={conf} />;
     case 'freetext': return <FreeTextWidget conf={conf} />;
     case 'deco': return <DecoWidget conf={conf} />;
-    case 'memoboard': return <MemoBoardWidget />;
     case 'search': return <SearchWidget conf={conf} />;
     default: return <div className="panel widget"><h4>{WIDGET_META[conf.type]?.title ?? conf.type}</h4></div>;
   }

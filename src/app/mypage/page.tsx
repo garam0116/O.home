@@ -1,6 +1,6 @@
 'use client';
 // 마이페이지 (v1.9) — 내 정보 수정(닉네임·프로필 이미지·비밀번호) +
-// 일반 회원: 나에게 연동된 캐릭터 리스트 · 내가 쓴 글/댓글 리스트 (관리자는 기본정보만)
+// 일반 회원: 내가 쓴 글/댓글 리스트 (관리자는 기본정보만)
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -8,11 +8,9 @@ import {
   useLocalList, BOARD_SEED, Post, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
-import { Character, CHAR_SEED, charPath } from '@/lib/charStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
 import { useBoards } from '@/lib/boardStore';
 import { collectMyItems, MyItem } from '@/lib/myActivity';
-import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { useBlobUrl, promoteToStorage } from '@/lib/blobStore';
 import { useImageSource, resolveImageRef, type ImageSource } from '@/components/ui/ImageSource';
 import { KInput } from '@/components/ui/Kit';
@@ -26,7 +24,6 @@ export default function MyPage() {
   const router = useRouter();
   const toast = useToast();
   const { user, isAdmin, updateProfile } = useAuth();
-  const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   const [roads] = useLocalList<RoadItem>('ohome.road.v1', ROAD_SEED);
   // 댓글은 글과 따로 저장된다 (v2.0)
@@ -112,9 +109,6 @@ export default function MyPage() {
     toast(r.ok ? '비밀번호가 변경되었습니다' : r.error!);
   };
 
-  // 나에게 연동된 캐릭터 (일반 회원)
-  const myChars = chars.filter(c => c.grants?.some(g => g.userId === user.id));
-
   // 내가 쓴 글/댓글 (일반 회원) — 6개까지만, 나머지는 전체 리스트에서 (v1.9)
   const myItems: MyItem[] = collectMyItems(user.id, posts, roads, boards, cmtRows);
 
@@ -180,30 +174,6 @@ export default function MyPage() {
             </div>
           </div>
         </div>
-
-        {/* 나에게 연동된 캐릭터 — 일반 회원만 (관리자는 전권이라 불필요) */}
-        {!isAdmin && (
-          <div className="panel" style={{ padding: 24 }}>
-            <h4 style={{ fontSize: 11.5, letterSpacing: '.12em', color: 'var(--faint)', marginBottom: 14 }}>MY CHARACTERS</h4>
-            {myChars.length === 0 && <p className="hint" style={{ margin: 0 }}>연동된 캐릭터가 없습니다</p>}
-            {/* 1:1 썸네일 그리드 (v1.9) — 8열 균등(좁으면 자동 감소), 이미지 없으면 캐릭터 테마색, 호버 툴팁 이름 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 10 }}>
-              {myChars.map(c => (
-                <div key={c.id}
-                  data-tip={c.name}
-                  onClick={() => router.push(charPath(c))}
-                  style={{
-                    aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', position: 'relative',
-                    cursor: 'pointer', background: c.color, border: '1px solid var(--line)',
-                  }}>
-                  {(c.thumbId ?? c.arts?.[0]) && (
-                    <CroppedBlobImg fileRef={c.thumbId ?? c.arts?.[0]} crop={c.thumbCrop} ph={c.thumbClass} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 내가 쓴 글/댓글 — 일반 회원만 */}
         {!isAdmin && (

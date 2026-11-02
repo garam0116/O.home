@@ -8,7 +8,7 @@ import {
 import { visFloorOf } from '../visFloor';
 
 const BUCKET = 'ohome';
-const PROBE = ['profiles', 'site_settings', 'posts', 'characters'];
+const PROBE = ['profiles', 'site_settings', 'posts', 'relations'];
 
 export async function createSupabaseBackend(
   cfg: Extract<BackendConfig, { kind: 'supabase' }>,
@@ -159,8 +159,8 @@ export async function createSupabaseBackend(
     async syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null) {
       const { inserts, updates, moves, deletes } = diffList(prev, next);
       const toRow = ({ item, sort }: { item: T; sort: number }) => {
-        const { authorId, visibility, editorIds } = metaOf(item, uid, visFloorOf(coll, item));
-        return { id: item.id, data: item, author_id: authorId, visibility, editor_ids: editorIds, sort };
+        const { authorId, visibility } = metaOf(item, uid, visFloorOf(coll, item));
+        return { id: item.id, data: item, author_id: authorId, visibility, sort };
       };
       // 한 요청에 다 실어 보내면 큰 본문(TRPG 로그 등)이 여럿일 때 요청이 너무 커진다
       // (v2.0 — Firestore와 같은 문제 예방). 대략 크기를 재서 4MB쯤에서 끊어 보낸다.
@@ -198,25 +198,19 @@ export async function createSupabaseBackend(
       }
     },
 
-    /* 공개범위·편집 권한 목록만 다시 계산해 덮어쓰기 (v2.0) — 같은 값이 될 것들끼리 묶어
-       한 번에 UPDATE 한다. data를 다시 쓰지 않으므로 내용·순서가 흔들리지 않는다.
-       editor_ids도 함께 쓴다 (포크 제보 — 업데이트 전에 준 편집 권한이 행에 평평한 목록으로
-       없어서, 최신 규칙을 넣어도 그 회원의 저장이 계속 거부됐다) */
+    /* 공개범위만 다시 계산해 덮어쓰기 (v2.0) — 같은 값이 될 것들끼리 묶어
+       한 번에 UPDATE 한다. data를 다시 쓰지 않으므로 내용·순서가 흔들리지 않는다. */
     async refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number> {
-      // 값이 같은 것끼리 묶는다 — 편집 권한이 있는 항목은 드물어 묶음이 거의 그대로 유지된다
-      const byKey = new Map<string, { vis: string; editorIds: string[]; ids: string[] }>();
+      const byVis = new Map<string, string[]>();
       items.forEach(it => {
-        const { visibility, editorIds } = metaOf(it, uid, visFloorOf(coll, it));
-        const key = visibility + '|' + JSON.stringify(editorIds);
-        const g = byKey.get(key) ?? { vis: visibility, editorIds, ids: [] };
-        g.ids.push(it.id);
-        byKey.set(key, g);
+        const { visibility } = metaOf(it, uid, visFloorOf(coll, it));
+        byVis.set(visibility, [...(byVis.get(visibility) ?? []), it.id]);
       });
       let n = 0;
-      for (const { vis, editorIds, ids } of byKey.values()) {
+      for (const [vis, ids] of byVis.entries()) {
         for (let i = 0; i < ids.length; i += 200) {
           const part = ids.slice(i, i + 200);
-          const { error } = await sb.from(coll).update({ visibility: vis, editor_ids: editorIds }).in('id', part);
+          const { error } = await sb.from(coll).update({ visibility: vis }).in('id', part);
           if (error) throw error;
           n += part.length;
         }

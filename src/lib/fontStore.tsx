@@ -2,7 +2,7 @@
 // 폰트 라이브러리 (5.1) — 내장(구글폰트) + 웹폰트 URL 등록
 // 내장 폰트도 삭제·수정 가능 — 원하는 폰트만 남길 수 있음. 삭제된 폰트를 쓰던 기존 데이터는
 // familyOf가 전체 풀에서 계속 해석하므로 표시가 깨지지 않음.
-// 캐릭터 프로필·자관 이름·시나리오 타이틀 등에서 선택해 사용 (4.4, 4.5, 4.3)
+// 자관 이름·시나리오 타이틀 등에서 선택해 사용 (4.5, 4.3)
 // TODO(후속): 폰트 파일 업로드(woff2 등) · 영문/한글 페어링 저장
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { newId } from './postStore';

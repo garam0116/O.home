@@ -280,7 +280,7 @@ a{color:inherit;text-decoration:none}
 .page-head h1:hover{opacity:.75}
 .page-head p{--fs:var(--fs-subtitle,1);font-family:var(--font-subtitle,var(--sans));font-weight:var(--fw-subtitle,400);font-size:calc(12.5px*var(--fs,1));color:var(--page-desc);margin-top:4px;letter-spacing:.02em;grid-column:1;display:var(--ph-desc,block)} /* 헤더 표시 옵션 (v1.9) */
 /* 헤더 표시 옵션은 편집형 설명(EditableDesc)만 숨김 — 상태·안내 문구(로그인 필요, 권한 없음, 글 메타 등)는 항상 표시
-   (숨김 상태에서 역극 비로그인 안내까지 사라져 빈 페이지처럼 보이던 버그 수정, v1.9) */
+   (숨김 상태에서 안내 문구까지 사라져 빈 페이지처럼 보이던 버그 수정, v1.9) */
 .page-head p:not(.editable){display:block}
 .page-head p.gate{display:block} /* 편집형이지만 항상 표시되는 상태 문구 (EditableDesc always) */
 /* 설명 문구 인라인 편집 — 보기(p)와 동일 크기/여백의 심리스 인풋 (전환 시 덜컹임 없음) */
@@ -438,13 +438,6 @@ a{color:inherit;text-decoration:none}
 .sw{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line),0 2px 6px rgba(0,0,0,.15);cursor:pointer;transition:.15s}
 .sw:hover{transform:scale(1.15)}
 .sw.sel{box-shadow:0 0 0 2px var(--ink)}
-/* 정적 컬러 점 — 호버 시 hex 툴팁만 (4.4) */
-.sw-static{width:18px;height:18px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);position:relative}
-.sw-static[data-hex]:hover::after{
-  content:attr(data-hex);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
-  background:rgba(28,31,37,.96);color:#dfe2e7;font-size:calc(10px*var(--fs,1));letter-spacing:.05em;padding:4px 8px;border-radius:6px;
-  white-space:nowrap;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.3);
-}
 /* 접기(스포일러 — 6.2) */
 .veil{position:relative;overflow:hidden;border-radius:var(--radius-s)}
 .veil .cover{
@@ -471,109 +464,6 @@ a{color:inherit;text-decoration:none}
 /* 드롭다운 색을 따르는 툴팁 변형 (v1.9) */
 .tip-pop.dd{background:var(--dd-bg);color:var(--dd-fg)}
 
-/* ================= TRPG 캐릭터 (v1.9 신규 — 1:1 인장 + 표정 전환) ================= */
-.tc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-@media(max-width:1080px){.tc-grid{grid-template-columns:repeat(3,1fr)}}
-.tc-card{padding:0;overflow:hidden;transition:.15s}
-.tc-card:hover{transform:translateY(-3px)}
-.tc-card .main{aspect-ratio:1/1;position:relative;overflow:hidden;cursor:zoom-in}
-/* 표정 썸네일 스트립 — 균등 그리드로 컨테이너 폭에 딱 맞게 (오른쪽 자투리 공백 없음) */
-.tc-faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:7px}
-.tc-faces .fc{width:auto;aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;border:2px solid transparent;opacity:.68;transition:.14s}
-.tc-faces .fc:hover{opacity:1}
-/* 선택된 표정 — 디자인 탭 「입력 포커스」에서 정한 색·링을 그대로 쓴다 (v2.0 사용자 발견:
-   여기만 포인트색 테두리로 하드코딩돼 있어 설정한 포커스 방식과 달라 보였다) */
-.tc-faces .fc.on{opacity:1;border-color:var(--focus-bd,var(--accent));box-shadow:var(--focus-ring,none)}
-/* 상세 — 좌 큰 인장(1:1 크롭 고정, 원본은 클릭 확대) + 우 정보 */
-.tcd-layout{display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start;max-width:1000px;margin:0 auto}
-.tcd-img{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:1/1}
-.tcd-img .ph{position:absolute;inset:0}
-@media(max-width:960px){.tcd-layout{grid-template-columns:1fr}}
-.tc-card .bd{padding:9px 13px 13px}
-/* 이름이 길면 말줄임 — 뱃지는 유지 (v1.9) */
-.tc-card .bd .nm{font-size:calc(14.5px*var(--fs,1));font-weight:700;display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tc-card .bd .nm .pill{flex-shrink:0}
-.tc-card .bd .meta{display:block;font-size:calc(11px*var(--fs,1));color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 설명 — 두 줄까지만, 넘치면 말줄임 (전체는 상세에서) */
-.tc-card .bd .desc{font-size:calc(11.5px*var(--fs,1));color:var(--sub);line-height:1.65;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px;
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.tc-card .th-actions{position:absolute;top:8px;right:8px;z-index:3;display:flex;gap:4px}
-.tc-card .th-actions button{font-size:10px;letter-spacing:.06em;padding:4px 9px;border-radius:7px;background:rgba(15,17,20,.55);color:#fff;transition:.13s}
-.tc-card .th-actions button:hover{background:rgba(15,17,20,.8)}
-.tc-card .th-actions button.del:hover{background:var(--accent)}
-.tc-card:hover .hv-actions{opacity:1;pointer-events:auto}
-
-/* ================= 역극 (4.9 — 프로토타입 rp-* 계승) ================= */
-.rp-layout{display:grid;grid-template-columns:280px 1fr 170px;gap:16px;height:600px} /* 우측 상태 필터 열 (v1.9) */
-.rp-layout > .tagside{align-self:start} /* PC: 그리드 행 높이만큼 늘어나지 않게 위 정렬 */
-.rp-rooms{padding:12px;display:flex;flex-direction:column;overflow:hidden} /* 헤더 고정 — 리스트만 내부 스크롤 */
-.rp-rooms-list{flex:1;overflow:auto;min-height:0}
-.rp-room{padding:12px 13px;border-radius:10px;cursor:pointer;transition:.14s;margin-bottom:4px}
-.rp-room:hover{background:#eef0f2}
-.rp-room.on{background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff)}
-.rp-room b{font-size:calc(13px*var(--fs,1));display:flex;justify-content:space-between;align-items:center;gap:6px}
-.rp-room small{font-size:calc(10.5px*var(--fs,1));color:var(--faint);display:block;margin-top:3px}
-.rp-room.on small{color:var(--btn-dark-fg,#aab0ba);opacity:.65}
-.rp-room .new{background:var(--accent);color:#fff;font-size:calc(9px*var(--fs,1));padding:1px 6px;border-radius:8px}
-.rp-chat{display:flex;flex-direction:column;padding:0;overflow:hidden}
-.rp-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
-.rp-head b{font-size:calc(14px*var(--fs,1))}
-.rp-head small{color:var(--faint);font-size:calc(10.5px*var(--fs,1));display:block}
-.rp-msgs{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
-/* 역극 스크롤바 — 기본(8px)보다 얇게 */
-.rp-msgs::-webkit-scrollbar,.rp-rooms-list::-webkit-scrollbar{width:5px}
-.rp-msgs::-webkit-scrollbar-thumb,.rp-rooms-list::-webkit-scrollbar-thumb{border-width:1px}
-/* 가로 20px 축소 (v2.0 사용자 요청) — 폭 비율은 그대로 두고 실제 너비만 줄인다 */
-.msg{display:flex;gap:10px;max-width:calc(78% - 20px);--cc:93,99,109;position:relative} /* 말풍선 = 캐릭터 테마색 저알파 (6장) */
-.msg .face{width:38px;height:38px;border-radius:11px;flex-shrink:0;position:relative;overflow:hidden}
-.msg .who{font-size:calc(10.5px*var(--fs,1));color:rgb(var(--cc));font-weight:700;margin-bottom:3px;letter-spacing:.05em}
-.msg .bub{padding:10px 14px;border-radius:13px;border-top-left-radius:4px;font-size:calc(12.5px*var(--fs,1));line-height:1.7;
-  background:rgba(var(--cc),.10);border:1px solid rgba(var(--cc),.22);color:var(--ink);white-space:pre-line}
-.msg.me{margin-left:auto;flex-direction:row-reverse;text-align:right}
-.msg.me .bub{border-radius:13px;border-top-right-radius:4px}
-/* 지문(디스크립션) — 캐릭터 없이 가운데 정렬 서술 (v1.8) */
-.msg-desc{align-self:center;text-align:center;max-width:82%;font-size:calc(12.5px*var(--fs,1));line-height:1.8;color:#4a505a;padding:2px 0;white-space:pre-line;position:relative}
-.rp-input{border-top:1px solid var(--line);padding:12px;display:flex;gap:9px;align-items:flex-end}
-.rp-input .btn{white-space:nowrap}
-.char-pick{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex-shrink:0;position:relative}
-.char-pick .f{width:40px;height:40px;border-radius:11px;border:2px solid var(--ink);position:relative;overflow:hidden}
-.char-pick small{font-size:calc(9px*var(--fs,1));color:var(--sub);white-space:nowrap}
-/* 발화자 선택 팝업 */
-.rp-pick-pop{position:absolute;bottom:calc(100% + 8px);left:0;z-index:80;background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:var(--sh-dd);min-width:150px}
-.rp-pick-pop button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 9px;border-radius:8px;font-size:calc(12px*var(--fs,1));transition:.12s;color:var(--ink)}
-.rp-pick-pop button:hover{background:#eef0f2}
-.rp-pick-pop .f{width:24px;height:24px;border-radius:7px;flex-shrink:0;position:relative;overflow:hidden}
-/* 메시지 액션 (본인 수정/삭제 — 호버) */
-.msg .m-act{position:absolute;top:-8px;right:0;display:flex;gap:2px;background:var(--panel-solid);border:1px solid var(--line);border-radius:7px;padding:1px 2px;opacity:0;transition:.13s}
-.msg.me .m-act{right:auto;left:0}
-.msg:hover .m-act,.msg-desc:hover .m-act{opacity:1}
-.msg-desc .m-act{position:absolute;top:-10px;right:0;display:flex;gap:2px;background:var(--panel-solid);border:1px solid var(--line);border-radius:7px;padding:1px 2px;opacity:0;transition:.13s}
-.m-act button{font-size:9.5px;letter-spacing:.05em;color:var(--sub);padding:2px 7px;border-radius:5px}
-.m-act button:hover{color:var(--ink);background:#eef0f2}
-@media(max-width:1080px){.rp-layout{grid-template-columns:220px 1fr 150px}}
-/* 역극 모바일 (v1.9 사용자 확정) — 방 목록은 위 접힘 바, 입력창 포커스 중엔 역극 영역만 */
-.rp-mfold{display:none}
-@media (max-width:620px){
-  .rp-layout{display:flex;flex-direction:column;height:auto;gap:10px}
-  .rp-mfold{display:flex;align-items:center;justify-content:space-between;gap:10px;order:0;
-    background:var(--panel);border-radius:var(--radius);box-shadow:var(--sh-sm);padding:12px 16px;text-align:left;transition:.15s}
-  .rp-mfold b{font-size:calc(13px*var(--fs,1));min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rp-mfold small{font-size:calc(10px*var(--fs,1));color:var(--faint);letter-spacing:.08em;white-space:nowrap;flex-shrink:0}
-  .rp-rooms{display:none;order:1;max-height:320px}
-  /* 세로 배치에선 전폭으로 — start면 내용 폭만큼 쪼그라든다 (v2.0 사용자 제보) */
-  .rp-layout > .tagside{display:none;order:2;align-self:stretch}
-  .rp-layout.mopen .rp-rooms{display:flex}
-  .rp-layout.mopen > .tagside{display:block}
-  /* 채팅창을 화면 아래까지 (v2.0 사용자 요청 — 「아래 여백 줄이고 채팅창을 더 아래로」)
-     100dvh − 위 요소들(상단바·제목·접힘 바)·BGM 바 여유. 64vh 고정은 아래가 뭉텅 남았다 */
-  .rp-chat{order:3;height:calc(100dvh - 245px);min-height:380px}
-  .page-rp{padding-bottom:14px}
-  /* 입력창 포커스 — 페이지 제목·접힘 바 없이 역극 영역만 (v1.9) */
-  .page.rp-focus .page-head{display:none}
-  .page.rp-focus .rp-mfold{display:none}
-  .page.rp-focus .rp-chat{height:80vh}
-}
-
 /* ================= 이미지 라이트박스 (클릭 확대 보기) ================= */
 .lightbox{position:fixed;inset:0;z-index:5000;background:rgba(10,11,13,.86);display:grid;place-items:center;animation:fade .15s}
 .lightbox img{max-width:92vw;max-height:90vh;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,.6);cursor:default}
@@ -584,31 +474,6 @@ a{color:inherit;text-decoration:none}
 .lightbox .nv.l{left:22px}
 .lightbox .nv.r{right:22px}
 .lightbox .cnt{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:11.5px;letter-spacing:.14em;color:rgba(255,255,255,.75)}
-
-/* ================= 스티커 메모장 (4.6 — 프로토타입 memo-* 계승) ================= */
-.memo-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start}
-.memoboard{position:relative;height:640px;border-radius:var(--radius);background:var(--memo-board,rgba(255,255,255,.06));border:1px solid var(--memo-board-bd,var(--line-dark));overflow:hidden} /* 색은 디자인 탭 (v1.9) */
-.postit{position:absolute;width:158px;padding:14px 14px 18px;font-size:calc(11.5px*var(--fs,1));line-height:1.65;color:#3c3a33;box-shadow:0 8px 20px rgba(0,0,0,.3);cursor:grab;white-space:pre-line;user-select:none}
-.postit b{display:block;font-size:calc(9.5px*var(--fs,1));letter-spacing:.1em;color:rgba(0,0,0,.4);margin-bottom:6px}
-.postit:active{cursor:grabbing}
-.postit.hl{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 50%,transparent),0 8px 20px rgba(0,0,0,.3)}
-.postit.ro{cursor:default}
-.memo-list-item{display:flex;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;transition:.13s;align-items:flex-start}
-.memo-list-item:hover{background:#f0f1f4}
-.memo-list-item .cdot{width:12px;height:12px;border-radius:4px;flex-shrink:0;margin-top:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-.memo-list-item b{font-size:calc(11px*var(--fs,1));color:var(--faint);font-weight:600;display:block}
-.memo-list-item p{font-size:calc(12px*var(--fs,1));color:#33373e;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-/* 색 선택 칩 (등록/수정 모달) */
-.memo-chips{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.memo-chips .c{width:26px;height:26px;border-radius:8px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);transition:.13s}
-.memo-chips .c.on{box-shadow:inset 0 0 0 1px rgba(0,0,0,.1),0 0 0 2.5px var(--accent)}
-/* 메인 미니보드 위젯 */
-.memo-mini{position:relative;flex:1;min-height:150px;border-radius:10px;background:var(--memo-board,rgba(0,0,0,.04));border:1px solid var(--memo-board-bd,transparent);overflow:hidden;cursor:pointer}
-.memo-mini .postit{width:84px;padding:7px 8px 9px;font-size:8.5px;line-height:1.5;box-shadow:0 4px 10px rgba(0,0,0,.2);pointer-events:none}
-.memo-mini .postit b{font-size:6.5px;margin-bottom:3px}
-@media(max-width:1080px){.memo-layout{grid-template-columns:1fr 230px}}
-/* 중간뷰부터 메모 리스트를 보드 아래로 (v1.9 사용자 확정 — 좁아지면 보드가 눌려서) */
-@media(max-width:960px){.memo-layout{grid-template-columns:1fr}}
 
 /* ================= 감상타래 (4.17 — 프로토타입 thr-* 계승) ================= */
 .thr-layout{display:grid;grid-template-columns:1fr 290px;gap:16px;align-items:start}
@@ -966,7 +831,7 @@ body.edit-on .page-main-wrap *:not(.rs):not(.rr):active{cursor:grabbing}
 .wgt .rs::after{content:"";position:absolute;right:3px;bottom:3px;width:6px;height:6px;border-right:2px solid #fff;border-bottom:2px solid #fff}
 body.edit-on .page-main-wrap .wgt .rs{display:block}
 /* 드래그 중 전역 커서 고정 (v1.9 사용자 피드백) — 빠른 드래그로 커서가 다른 요소·페이지 밖을 지나도
-   기본 커서로 튀지 않음 (WidgetFrame·메모장이 body에 클래스 토글) */
+   기본 커서로 튀지 않음 (WidgetFrame이 body에 클래스 토글) */
 body.drag-move, body.drag-move *{cursor:grabbing !important}
 body.drag-rs, body.drag-rs *{cursor:nwse-resize !important}
 /* 기울기 핸들 (v1.9 — 이미지·자유 텍스트): 왼쪽 위, 드래그로 회전 · 더블클릭 초기화 */
@@ -1012,34 +877,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .drag-h:active{cursor:grabbing}
 .mw-no{width:18px;height:18px;border-radius:50%;background:#eef0f2;color:var(--sub);font-size:calc(10px*var(--fs,1));display:grid;place-items:center;flex-shrink:0}
 
-/* ---------- 캐릭터 (4.4) ---------- */
-.char-card{background:var(--panel);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:.22s;box-shadow:var(--sh-sm)}
-.char-card:hover{transform:translateY(-5px)}
-.char-card .thumb{aspect-ratio:3/4;position:relative;overflow:hidden}
-.char-card .thumb img{width:100%;height:100%;object-fit:cover}
-.char-card .nm{padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
-.char-card .nm b{font-size:calc(14px*var(--fs,1));letter-spacing:.04em;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* 긴 이름 말줄임 (v1.9) */
-.char-card .nm i{width:11px;height:11px;border-radius:50%;font-style:normal;flex-shrink:0}
-/* 프로필 상세 — 좌측 탭·아트는 스티키, 정보는 페이지 흐름 (v1.9) */
-.profile-wrap{display:grid;grid-template-columns:64px 1fr 380px;gap:18px;align-items:start;min-height:560px}
-.side-icons{display:flex;flex-direction:column;gap:9px;padding:12px 0;position:sticky;top:10px}
-/* 색 4종은 디자인 탭 「캐릭터 탭 리스트」 · 특수문자 아이콘 확대 16→19 (v1.9 사용자 요청) */
-.side-icons button{width:46px;height:46px;border-radius:12px;background:var(--tab-bg,rgba(255,255,255,.08));color:var(--tab-fg,#aab0ba);font-size:calc(19px*var(--fs,1));display:grid;place-items:center;padding-bottom:4px;border:1px solid var(--line-dark);transition:.18s} /* 딩벳 글리프 아래 쏠림 보정 (v1.9 실측 — 사용자 미세조정 +1) */
-.side-icons button:hover{color:var(--tab-on-fg,#fff);background:var(--tab-on-bg,rgba(255,255,255,.16));opacity:.85}
-.side-icons button.on{background:var(--tab-on-bg,var(--panel-solid));color:var(--tab-on-fg,var(--ink));border-color:transparent;opacity:1}
-.profile-center{border-radius:var(--radius);overflow:hidden;position:sticky;top:10px;height:calc(100vh - 150px);min-height:480px}
-.profile-center img{width:100%;height:100%;object-fit:cover}
-/* 스티키 안정성 (v1.9): 끝까지 스크롤했을 때 아트 하단 == 정보 패널 하단이 되도록
-   하단 여백을 계산값으로 고정 — viewH(100vh-58) - top(10) - artH(100vh-150) = 82px */
-.page-char-detail{padding-bottom:82px}
-.profile-info{padding:24px;overflow:auto}
-/* 세리프는 **탭 제목에만** (v2.0 사용자 제보) — 예전 `.profile-info h3`는 본문(.prose)에
-   직접 쓴 h3까지 잡아서, 본문 폰트를 바꿔도 h3만 세리프로 남았다 */
-.profile-info h3.tab-tt{font-family:var(--serif);font-size:calc(19px*var(--fs,1));letter-spacing:.14em;margin-bottom:4px}
-.profile-info .sub{font-size:calc(11px*var(--fs,1));color:var(--faint);letter-spacing:.1em;margin-top:7px;margin-bottom:16px}
-.spec{display:grid;grid-template-columns:76px 1fr;gap:7px 10px;font-size:calc(12.5px*var(--fs,1));margin-bottom:18px}
-.spec dt{color:var(--faint);letter-spacing:.06em}
-.spec dd{color:var(--ink)}
 .prose{font-size:calc(14px*var(--fs,1));line-height:1.85;color:#3a3f47}
 .prose b{display:block;margin-bottom:4px}
 .tabnote{margin-top:16px;padding:12px;border:1px dashed var(--line);border-radius:var(--radius-s);font-size:calc(11px*var(--fs,1));color:var(--faint)}
@@ -1107,20 +944,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
    「한 줄에 맞춰 줄이기」가 넘침을 감지하지 못한다 */
 .mini-prof .hd > div{min-width:0}
 .mini-prof .hd b{font-family:var(--serif);font-size:calc(17px*var(--fs,1));letter-spacing:.16em;display:block}
-.mini-prof .hd small{display:block;margin-top:5px;font-size:calc(9.5px*var(--fs,1));color:var(--faint);letter-spacing:.1em}
-.mini-prof .specs{padding:11px 16px;font-size:calc(11.5px*var(--fs,1));color:var(--sub)}
-.mini-prof .specs div{display:flex;gap:8px;padding:2.5px 0}
-.mini-prof .specs b{color:var(--faint);font-weight:600;min-width:34px}
 .mini-prof .foot{padding:9px 15px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;font-size:calc(9.5px*var(--fs,1));color:var(--faint)}
-.palette-row{display:flex;gap:6px;padding:0 15px 11px}
-.palette-row .gem{display:inline-block;width:14px;height:14px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);cursor:help;position:relative}
-/* 테두리용 안쪽 마름모 (v2.0) — 바깥 gem이 테두리색, 안쪽이 실제 색 */
-.palette-row .gem i{position:absolute;inset:1px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .kw-row{display:flex;gap:5px;flex-wrap:wrap;padding:0 15px 13px}
 .rel-desc{font-size:calc(11.5px*var(--fs,1));line-height:1.8;color:#454a52;padding:13px 16px;border-top:1px solid var(--line);white-space:pre-line}
-.card-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:11px 15px;border-top:1px dashed var(--line)}
-.card-thumbs .t{aspect-ratio:1;border-radius:7px;overflow:hidden;cursor:pointer;transition:.15s}
-.card-thumbs .t:hover{opacity:.8}
 /* 중앙 일러 — 전신 2장 겹침 / 일러 1장 (2인 한정, v1.8) */
 .rel-center{aspect-ratio:3/4.1;border-radius:var(--radius);overflow:hidden;position:relative}
 .rel-center .fb{position:absolute;top:5%;bottom:-2%;width:62%;border-radius:12px;filter:drop-shadow(0 10px 24px rgba(0,0,0,.4))}
@@ -1160,8 +986,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .mrow .nm i{font-style:normal;font-family:var(--serif);font-size:calc(10.5px*var(--fs,1));color:var(--faint);letter-spacing:.1em;margin-left:6px}
 .mrow .nm small{display:block;font-size:calc(10.5px*var(--fs,1));color:var(--sub);margin-top:2px}
 .mrow .nm .ext{display:block;font-size:calc(10px*var(--fs,1));color:var(--faint);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mrow .gem-mini{margin-left:auto;display:flex;gap:4px;flex-shrink:0}
-.mrow .gem-mini i{width:12px;height:12px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
 .mrow .rm{flex-shrink:0;font-size:calc(10.5px*var(--fs,1));color:var(--accent);margin-left:6px}
 .mrow.add{justify-content:center;color:var(--faint);font-size:calc(12px*var(--fs,1))}
 .multi-illust{position:relative;aspect-ratio:16/10;border-radius:var(--radius);overflow:hidden;box-shadow:var(--sh-md);background:#20242a}
@@ -1484,15 +1308,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 댓글 입력 (v2.2) — 한 줄 높이로 시작해 Shift+Enter 줄바꿈만큼 늘어남 · 너무 길면 안에서 스크롤 */
 .k-textarea.cmt-ta{min-height:0;line-height:1.45;max-height:140px;display:block}
 .cmt-input .btn{align-self:flex-end}
-/* 특수문자 프리셋 팝업 (v1.9) — SymbolInput */
-.sym-pop{position:fixed;z-index:120;padding:8px;background:var(--panel-solid,#fff);border:1px solid var(--line);border-radius:11px;box-shadow:var(--sh-dd)} /* body 포털 — 패널 overflow에 잘리지 않음 (v1.9) */
-.sym-pop .sym-tabs{display:flex;gap:2px;margin-bottom:6px}
-.sym-pop .sym-tabs button{padding:4px 8px;border-radius:7px;font-size:10px;color:var(--faint);transition:.12s;white-space:nowrap}
-.sym-pop .sym-tabs button:hover{color:var(--ink)}
-.sym-pop .sym-tabs button.on{background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff)}
-.sym-pop .sym-grid{display:grid;grid-template-columns:repeat(8,30px);gap:2px}
-.sym-pop .sym-grid button{width:30px;height:30px;border-radius:7px;font-size:15px;display:grid;place-items:center;color:var(--ink);transition:.12s}
-.sym-pop .sym-grid button:hover{background:var(--dd-hv,rgba(127,127,127,.14))}
 /* 게스트 신원 바 (v1.9) — 방문자 댓글 허용 시 GUEST 칩 + 닉네임 한 줄 */
 .guest-id{display:flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:color-mix(in srgb,var(--panel) 55%,transparent)}
 .guest-id .gi-tag{font-size:calc(8.5px*var(--fs,1));letter-spacing:.14em;font-weight:700;color:var(--faint);border:1px dashed var(--line);padding:2.5px 8px;border-radius:999px;flex-shrink:0;font-family:var(--sans)}
@@ -1652,12 +1467,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .trpg-layout{grid-template-columns:1fr 150px}
   .roadview-item{grid-template-columns:1fr}
   .cmt-side{border-left:none;border-top:1px solid var(--line)}
-  /* 예외 — 캐릭터 세부: 960px에서 바로 모바일형 전환 (v1.9)
-     순서: 아트 → 정보 → 아이콘 탭(가로, 맨 아래) */
-  .profile-wrap{grid-template-columns:1fr;min-height:0;height:auto;align-items:start}
-  .profile-center{order:1;position:relative;top:auto;height:auto;min-height:0;aspect-ratio:3/4;width:100%;max-width:560px;margin:0 auto}
-  .profile-info{order:2;max-width:560px;margin:0 auto;width:100%}
-  .side-icons{order:3;position:static;flex-direction:row;flex-wrap:wrap;padding:0;gap:8px;justify-content:center}
   /* 예외 — 자관 세부: 960px에서 바로 세로 스택 전환 (v1.9) */
   /* 일러 위 · 두 캐릭터 카드 나란히 · 왼쪽 인용구는 카드 위, 오른쪽 인용구는 카드 아래 (사용자 요청) */
   .rel-body{grid-template-columns:1fr 1fr;grid-template-areas:"c c" "ql ql" "l r" "qr qr";gap:12px 10px;max-width:560px;margin-left:auto;margin-right:auto}
@@ -1783,15 +1592,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
   .top-btn{width:28px;height:28px}
   .top-btn svg{width:14px;height:14px}
 
-  /* 캐릭터 리스트 — 모바일 1열 3개 (v1.9 사용자 확정) */
-  .chars-grid{grid-template-columns:repeat(3,1fr);gap:10px}
   /* 자관 리스트 — 모바일 1열 2개 (v1.9 사용자 확정) */
   .rels-grid{grid-template-columns:1fr 1fr;gap:10px}
-  /* TRPG 캐릭터 — 모바일 1열 2개 (중간뷰 3개는 1080px 규칙, v1.9 사용자 확정) */
-  .tc-grid{grid-template-columns:repeat(2,1fr);gap:10px}
-  /* 스티커 메모장 — 리스트를 보드 아래로 (v1.9 사용자 확정) */
-  .memo-layout{grid-template-columns:1fr}
-  .memoboard{height:440px}
   /* TRPG 로그 — 필터 사이드는 리스트 아래로 (모바일은 티켓 스킨 대신 기본형, v1.9) */
   .trpg-layout{grid-template-columns:1fr}
 }
@@ -1834,13 +1636,8 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   .mini-prof .hd{flex-direction:column;align-items:center;text-align:center;gap:8px;padding:12px 10px 10px}
   .mini-prof .hd .face{width:60px;height:60px}
   .mini-prof .hd b{font-size:calc(15px*var(--fs,1));letter-spacing:.08em}
-  .mini-prof .specs{padding:9px 10px;font-size:calc(10.5px*var(--fs,1))}
-  .mini-prof .specs div{gap:6px}
-  .mini-prof .specs b{min-width:0;flex-shrink:0}
-  .palette-row{padding:0 10px 9px;justify-content:center}
   .kw-row{padding:0 10px 11px;justify-content:center}
   .rel-desc{padding:11px 10px;font-size:calc(10.5px*var(--fs,1))}
-  .card-thumbs{grid-template-columns:repeat(3,1fr);padding:9px 10px}
 }
 
 /* 전체 게시글 관리 표 — 제목 칸이 남는 폭을 모두 차지하고, 나머지는 내용만큼만 (사용자 요청) */

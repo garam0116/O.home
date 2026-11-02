@@ -56,7 +56,7 @@ export function ThreadForm({ editId }: { editId?: string }) {
   useEffect(() => () => { if (posterUrl.startsWith('blob:')) URL.revokeObjectURL(posterUrl); }, [posterUrl]);
 
   // 수정 모드 — 저장본은 mount 후에 로드되므로, 로드가 끝나면 폼을 한 번 채움
-  // (첫 렌더 시점엔 시드뿐이라 직접 등록한 타래는 폼이 비어 있던 버그 수정 — TCharForm과 동일 패턴)
+  // (첫 렌더 시점엔 시드뿐이라 직접 등록한 타래는 폼이 비어 있던 버그 수정)
   const hydrated = useRef(false);
   useEffect(() => {
     if (!editId || !loaded || hydrated.current) return;

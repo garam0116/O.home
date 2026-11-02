@@ -36,11 +36,6 @@ export interface ThemeVars {
   searchBg?: string; searchFg?: string; searchIc?: string; searchBd?: string;
   // 진한 버튼(btn-dark) — 배경·글씨·호버 3색. 체크박스·선택 필터 칩에도 공통 적용 (v1.9 사용자 피드백)
   btnDark?: string; btnDarkFg?: string; btnDarkHv?: string;
-  // 스티커 메모 보드 (v1.9 사용자 피드백) — 메모장 배치 판·메인 미니보드 배경/테두리
-  // (기존 고정 rgba가 라이트 모드에서 안 보이던 문제)
-  memoBoard?: string; memoBoardBd?: string;
-  // 캐릭터 탭 리스트 (v1.9 사용자 피드백) — 좌측 아이콘 탭: 배경·글씨·선택 배경·선택 글씨
-  tabBg?: string; tabFg?: string; tabOnBg?: string; tabOnFg?: string;
   // 스위치 탭 (v2.0 사용자 요청) — 게시판 말머리·갤러리 보기 전환 등. 고른 쪽은 진한 버튼색을 그대로 따라가고
   // 여기서 정하는 것은 「안 고른 쪽」의 판 배경과 글씨색
   segBg?: string; segFg?: string;
@@ -83,8 +78,6 @@ export const DARK_THEME: ThemeVars = {
   sbThumb: '#565d68', sbBd: '#1a1d22',
   searchBg: '#232830', searchFg: '#e8eaee', searchIc: '#8b919b', searchBd: '#3a404a',
   btnDark: '#1d2025', btnDarkFg: '#ffffff', btnDarkHv: '#33373e',
-  memoBoard: '#2a2f37', memoBoardBd: '#3a404b',
-  tabBg: '#3a4049', tabFg: '#aab0ba', tabOnBg: '#fbfbfc', tabOnFg: '#1d2025',
   cropBg: '#2c313a',
   accent: '#a63a45', accentSoft: '#c96a73',
   radius: 14, radiusS: 9, shadow: 100, ddShadow: 100,
@@ -102,8 +95,6 @@ export const LIGHT_THEME: ThemeVars = {
   sbThumb: '#b8bcc4', sbBd: '#e2e4e8',
   searchBg: '#ffffff', searchFg: '#2b3038', searchIc: '#8a9099', searchBd: '#d7dae0', // 라이트에서 또렷하게
   btnDark: '#5d636d', btnDarkFg: '#ffffff', btnDarkHv: '#6d7480', // 라이트는 뮤트 슬레이트 — 검정이면 대비 과함 (사용자 피드백)
-  memoBoard: '#e7e9ee', memoBoardBd: '#d4d7de', // 흰 카드와 구분되는 밝은 회색 판 (v1.9)
-  tabBg: '#e4e6eb', tabFg: '#6a7078', tabOnBg: '#ffffff', tabOnFg: '#1d2025',
   cropBg: '#e2e5ea', // 라이트 — 투명 이미지가 보이는 밝은 판 (v1.9)
   accent: '#a63a45', accentSoft: '#c96a73',
   radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 밝은 배경에선 그림자를 약하게 (사용자 확정 30%)
@@ -130,8 +121,6 @@ export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
       sbThumb: c(0.22, 0.38), sbBd: c(0.3, 0.1),
       searchBg: c(0.26, 0.14), searchFg: c(0.1, 0.9), searchIc: c(0.12, 0.6), searchBd: c(0.22, 0.24),
       btnDark: c(0.38, 0.12), btnDarkFg: c(0.08, 0.97), btnDarkHv: c(0.38, 0.19), /* 채도 살짝↑ 명도 아주 약간↓ — 컬러감 (v1.9 사용자 피드백) */
-      memoBoard: c(0.26, 0.17), memoBoardBd: c(0.22, 0.27),
-      tabBg: c(0.26, 0.22), tabFg: c(0.14, 0.68), tabOnBg: c(0.12, 0.985), tabOnFg: c(0.4, 0.14),
       cropBg: c(0.24, 0.19),
       accent, accentSoft,
       radius: 14, radiusS: 9, shadow: 100, ddShadow: 100,
@@ -150,8 +139,6 @@ export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
     sbThumb: c(0.2, 0.72), sbBd: c(0.25, 0.88),
     searchBg: c(0.3, 0.99), searchFg: c(0.4, 0.24), searchIc: c(0.2, 0.55), searchBd: c(0.25, 0.84),
     btnDark: c(0.33, 0.4), btnDarkFg: c(0.1, 0.99), btnDarkHv: c(0.33, 0.46), // 라이트 톤 — 뮤트 버튼 (대비 완화 · 채도 살짝↑ 명도 약간↓, v1.9)
-    memoBoard: c(0.2, 0.9), memoBoardBd: c(0.22, 0.8),
-    tabBg: c(0.22, 0.88), tabFg: c(0.3, 0.42), tabOnBg: c(0.15, 0.99), tabOnFg: c(0.4, 0.14),
     cropBg: c(0.2, 0.89),
     accent, accentSoft,
     radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤도 그림자 약하게 (30%)
@@ -248,9 +235,6 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     '--btn-dark': t.btnDark ?? '#1d2025',
     '--btn-dark-fg': t.btnDarkFg ?? '#ffffff',
     '--btn-dark-hv': t.btnDarkHv ?? adjust(t.btnDark ?? '#1d2025', cc => ({ l: Math.min(1, cc.l + 0.07) })),
-    // 스티커 메모 보드 (v1.9)
-    '--memo-board': t.memoBoard ?? '#2a2f37',
-    '--memo-board-bd': t.memoBoardBd ?? '#3a404b',
     // 이미지 편집(크롭) 배경 (v1.9)
     '--crop-bg': t.cropBg ?? '#2c313a',
     // 입력 포커스 (v1.9) — 테두리색 + 링(글로우: 반투명 번짐 / 라인: 선명한 테두리 / 없음)
@@ -260,11 +244,6 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
       : focusRing === 'line'
         ? `0 0 0 ${focusW}px ${focusC}`
         : `0 0 0 ${focusW}px ${withAlpha(focusC, 0.16)}`,
-    // 캐릭터 탭 리스트 (v1.9) — 배경·글씨·선택 배경·선택 글씨
-    '--tab-bg': t.tabBg ?? '#3a4049',
-    '--tab-fg': t.tabFg ?? '#aab0ba',
-    '--tab-on-bg': t.tabOnBg ?? '#fbfbfc',
-    '--tab-on-fg': t.tabOnFg ?? '#1d2025',
     // 스위치 탭 — 안 고른 쪽 (v2.0) · 고른 쪽은 --btn-dark 3색을 그대로 쓴다
     '--seg-bg': t.segBg ?? '#f0f1f3',
     '--seg-fg': t.segFg ?? '#8a8f98',

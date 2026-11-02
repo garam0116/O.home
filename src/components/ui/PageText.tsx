@@ -72,7 +72,7 @@ export function setPageText(k: string, v: string) {
   try { setSetting(STORAGE_KEY, map); } catch { /* 무시 */ }
 }
 
-/** always — 헤더 표시 옵션(제목만/안 띄움)에도 숨지 않는 상태·안내 문구용 (예: 역극 비로그인 안내, v1.9) */
+/** always — 헤더 표시 옵션(제목만/안 띄움)에도 숨지 않는 상태·안내 문구용 (예: 로그인 필요 안내, v1.9) */
 export function EditableDesc({ k, def, always }: { k: string; def: string; always?: boolean }) {
   const { isAdmin } = useAuth();
   const [text, setText] = useState(def);
@@ -81,7 +81,7 @@ export function EditableDesc({ k, def, always }: { k: string; def: string; alway
 
   useEffect(() => {
     const v = load()[k];
-    setText(v !== undefined ? v : def); // 키 변경 시(다른 캐릭터 등) 기본값으로 리셋
+    setText(v !== undefined ? v : def); // 키 변경 시(다른 항목 등) 기본값으로 리셋
   }, [k, def]);
 
   const save = () => {

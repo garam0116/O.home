@@ -14,7 +14,7 @@
 import { currentMenuSettings, hrefAccess } from './menuStore';
 import { MAIN_SEC, sectionHref, type SectionKind } from './sectionStore';
 import { MAIN_BOARD_ID, boardHref } from './boardStore';
-import type { Visibility } from './charStore';
+import type { Visibility } from './relStore';
 import type { ListItem } from './backend/types';
 
 /** 컬렉션 → 그 목록이 걸린 메뉴. 섹션형은 종류만 주고 소속은 항목의 `secId`에서 읽는다 */
@@ -26,11 +26,7 @@ const AREA: Record<string, { kind?: SectionKind; href?: string; board?: boolean 
   trpg_log_bodies: { kind: 'trpg' },   // 본문은 별도 문서 — 목록만 막으면 본문이 그대로 남는다
   diary: { kind: 'diary' },
   threads: { kind: 'threads' },
-  memos: { href: '/memo' },
-  rp_rooms: { href: '/rp' },
-  characters: { kind: 'chars' },
   relations: { kind: 'rels' },
-  trpg_chars: { href: '/tchars' },
 };
 
 /** 이 항목이 걸린 메뉴 주소 — 어디에도 안 걸리는 컬렉션(댓글·답변 등)은 null */

@@ -2,7 +2,7 @@
 /**
  * 항목 번호 (v2.4 사용자 요청) — 홈의 모든 글·항목은 **올린 순서대로 고정된 번호 주소**를 갖는다.
  *
- *   /board/1 · /gallery/3 · /diary/2 · /trpg/5 · /chars/4 (별명이 있으면 /chars/eden) …
+ *   /board/1 · /gallery/3 · /diary/2 · /trpg/5 · /rels/4 (별명이 있으면 /rels/eden) …
  *
  * · 번호는 종류마다 따로 이어진다(게시판은 모든 게시판을 통틀어 하나, 갤러리는 모든 갤러리를 통틀어 하나).
  *   그래서 게시판·갤러리 목록을 옮겨도 주소가 바뀌지 않는다.
@@ -23,8 +23,6 @@ export const NUMBERED: Record<string, string> = {
   'ohome.diary.v1': 'diary',
   'ohome.threads.v1': 'threads',
   'ohome.trpg.v1': 'trpg_logs',
-  'ohome.tchars.v1': 'trpg_chars',
-  'ohome.chars.v1': 'characters',
   'ohome.rels.v1': 'relations',
 };
 
@@ -173,7 +171,7 @@ export function withNumbers<T extends NoRow>(rows: T[]): T[] | null {
  * 페이지의 `const { id } = useParams()`를 `const { id: rawKey } = useParams()`로 바꾸고,
  * 목록을 불러온 다음 `const id = useNoKey(rows, rawKey, k => `/gallery/${k}`)`로 쓰면
  * 나머지 코드(`x.id === id`)는 그대로 둘 수 있다.
- * slug: 캐릭터·자관처럼 별명 주소가 있는 종류 — 별명이 있으면 별명이 대표 주소다.
+ * slug: 자관처럼 별명 주소가 있는 종류 — 별명이 있으면 별명이 대표 주소다.
  */
 export function useNoKey<T extends NoRow & { slug?: string }>(
   rows: T[], rawKey: string, hrefOf: (key: string) => string, opts?: { slug?: boolean; ready?: boolean; force?: boolean },

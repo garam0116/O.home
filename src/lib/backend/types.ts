@@ -55,7 +55,7 @@ export interface Backend {
   updateProfile(patch: { nickname?: string; avatarUrl?: string | null; avatarColor?: string | null }): Promise<{ ok: boolean; error?: string }>;
   /** 첫 계정을 이 홈의 관리자로 등록 (관리자가 아직 없을 때만) */
   claimOwner(): Promise<{ ok: boolean; error?: string }>;
-  /** 가입 회원 목록 — 역극 참여자 선택·회원 관리 화면용.
+  /** 가입 회원 목록 — 회원 관리 화면용.
    *  avatarUrl도 내준다 (v2.0 사용자 제보) — 이미지 정리가 콘텐츠·설정만 훑던 시절, 프로필 사진은
    *  어디에도 참조가 안 잡혀 「아무도 안 쓰는 파일」로 지워졌다. */
   listMembers(): Promise<{ id: string; nickname: string; role: 'admin' | 'member'; email?: string; avatarUrl?: string; no?: number; createdAt?: number }[]>;
@@ -101,7 +101,6 @@ export interface Backend {
 /** 콘텐츠 컬렉션 이름 (localStorage 키 → 컬렉션/테이블) — 두 백엔드가 같은 이름을 쓴다 */
 export const COLLECTION_OF: Record<string, string> = {
   'ohome.board.v1': 'posts',
-  'ohome.chars.v1': 'characters',
   'ohome.rels.v1': 'relations',
   'ohome.backup.v1': 'gallery',
   'ohome.road.v1': 'roadview',
@@ -110,17 +109,11 @@ export const COLLECTION_OF: Record<string, string> = {
   // Firestore에서는 같은 read 규칙을 타므로(질의로 노출된 문서는 단일 조회도 전부 읽힌다),
   // "나만보기여도 목록엔 표시" 조건을 안전하게 만족하려면 본문을 아예 다른 문서에 둬야 한다
   'ohome.trpgbody.v1': 'trpg_log_bodies',
-  'ohome.tchars.v1': 'trpg_chars',
-  'ohome.rp.v1': 'rp_rooms',
   'ohome.threads.v1': 'threads',
   'ohome.diary.v1': 'diary',
-  'ohome.memo.v1': 'memos',
   // 댓글 — 글 안이 아니라 자기 문서로 (v2.0). 글 안에 두면 댓글을 달 때마다 글을 UPDATE 해야 해서
   // 「글 수정은 작성자·관리자만」 규칙에 걸려 일반 회원이 관리자 글에 댓글을 달 수 없었다
   'ohome.comments.v1': 'comments',
-  // 역극 발화 — 방 안이 아니라 자기 문서로 (v2.0). 같은 이유로, 방 안에 두면 말할 때마다
-  // 방을 UPDATE 해야 해서 남이 만든 방에서 참여자가 발화할 수 없었다
-  'ohome.rpmsgs.v1': 'rp_messages',
 };
 
 export const CONTENT_COLLECTIONS = Object.values(COLLECTION_OF);
@@ -167,25 +160,5 @@ export function metaOf(item: ListItem, uid: string | null, floor = 'public') {
      종류도 여기서 정해지므로, 서버가 내주지 않는 것은 화면과 무관하게 보장된다. */
   const rank: Record<string, number> = { public: 0, member: 1, private: 2 };
   const visibility = (rank[floor] ?? 0) > (rank[own] ?? 0) ? floor : own;
-  return { authorId, visibility, editorIds: editorIdsOf(item) };
-}
-
-/**
- * 이 항목을 작성자가 아니어도 수정할 수 있는 회원 목록 (v2.0).
- *
- * 캐릭터의 grants에서 「편집까지」를 준 회원을 뽑아 **평평한 문자열 배열**로 따로 저장한다.
- * 보안 규칙은 grants처럼 객체가 든 배열에서 "어떤 원소의 userId가 나와 같은가"를 물을 수단이
- * 없어서(Firestore 규칙에 some()이 없다), 규칙이 그대로 확인할 수 있는 형태가 따로 필요하다.
- * 이게 없으면 편집 권한을 줘도 서버가 저장을 거부해 「편집 화면은 뜨는데 SAVE가 먹지 않는」다
- * (v2.0 사용자 발견 — 댓글 문제와 같은 뿌리).
- */
-export function editorIdsOf(item: ListItem): string[] {
-  const grants = item.grants;
-  if (!Array.isArray(grants)) return [];
-  return grants
-    .filter((g): g is { userId: string; level: string } =>
-      !!g && typeof g === 'object'
-      && typeof (g as { userId?: unknown }).userId === 'string'
-      && (g as { level?: unknown }).level === 'edit')
-    .map(g => g.userId);
+  return { authorId, visibility };
 }

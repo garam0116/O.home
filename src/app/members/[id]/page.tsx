@@ -1,7 +1,7 @@
 'use client';
 // 회원 정보 페이지 (v1.9 사용자 요청) — 관리자 전용.
 // 회원/보안 목록에서 이름을 누르면 진입: 프로필(아바타·닉네임·이메일·태그) ·
-// 연동된 캐릭터(권한 부여분) · 작성한 글/댓글 전체 (myActivity 공용 수집).
+// 작성한 글/댓글 전체 (myActivity 공용 수집).
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth, mockMemberInfo, User } from '@/lib/auth';
@@ -9,12 +9,10 @@ import {
   useLocalList, BOARD_SEED, Post, fmtDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED,
 } from '@/lib/postStore';
-import { Character, CHAR_SEED, charGrant, charPath } from '@/lib/charStore';
 import { RoadItem, ROAD_SEED } from '@/lib/galleryStore';
 import { useBoards } from '@/lib/boardStore';
 import { collectMyItems } from '@/lib/myActivity';
 import { useBlobUrl } from '@/lib/blobStore';
-import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { PageTitle } from '@/components/ui/PageText';
 import { getSetting } from '@/lib/settingStore';
 import { useMembers, memberNumbers } from '@/lib/members';
@@ -31,7 +29,6 @@ export default function MemberDetailPage() {
   const [roads] = useLocalList<RoadItem>('ohome.road.v1', ROAD_SEED);
   // 댓글은 글과 따로 저장된다 (v2.0)
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
-  const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   const { boards } = useBoards();
   const members = useMembers();
   /* 주소는 회원 번호 (v2.4) — /members/{번호}. 예전 계정 id 주소로 들어오면 번호 주소로 바꿔 둔다 */
@@ -75,11 +72,6 @@ export default function MemberDetailPage() {
     );
   }
 
-  // 연동된 캐릭터 — 권한(play/edit)이 부여된 캐릭터
-  const linked = chars
-    .map(c => ({ c, level: charGrant(c, member.id) }))
-    .filter((x): x is { c: Character; level: 'play' | 'edit' } => x.level !== null);
-
   const items = collectMyItems(member.id, posts, roads, boards, cmtRows);
   const pageItems = items.slice((page - 1) * PER, page * PER);
 
@@ -111,25 +103,6 @@ export default function MemberDetailPage() {
             </div>
           </div>
         </div>
-
-        {/* 연동된 캐릭터 (3차 회원-캐릭터 연결) */}
-        <h3 style={{ marginTop: 20 }}>연동된 캐릭터</h3>
-        {linked.length ? (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-            {linked.map(({ c, level }) => (
-              <div key={c.id} onClick={() => router.push(charPath(c))}
-                style={{ display: 'flex', gap: 8, alignItems: 'center', border: '1px solid var(--line)', borderRadius: 10, padding: '6px 12px 6px 6px', cursor: 'pointer' }}>
-                <div className={`ph ${c.thumbClass}`} style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                  {(c.thumbId ?? c.arts?.[0]) && <CroppedBlobImg fileRef={c.thumbId ?? c.arts?.[0]} crop={c.thumbCrop} ph={c.thumbClass} />}
-                </div>
-                <b style={{ fontSize: 12.5 }}>{c.name}</b>
-                <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{level === 'edit' ? '편집까지' : '역극 플레이'}</small>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="hint" style={{ marginTop: 6 }}>권한이 연동된 캐릭터가 없습니다</p>
-        )}
 
         {/* 작성한 글·댓글 — 마이페이지와 같은 수집 (myActivity 공용) */}
         <h3 style={{ marginTop: 20 }}>작성한 글 · 댓글 <small style={{ color: 'var(--faint)', fontWeight: 400 }}>{items.length}건</small></h3>

@@ -108,7 +108,7 @@ export default function UiKitPage() {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <KSelect minWidth={120} value={cropAspect} onChange={v => setCropAspect(v as CropAspect)}
               options={[
-                { value: '3:4', label: '3:4 (캐릭터)' },
+                { value: '3:4', label: '3:4' },
                 { value: '4:3', label: '4:3 (자관)' },
                 { value: '16:9', label: '16:9 (티켓)' },
                 { value: '1:1', label: '1:1' },

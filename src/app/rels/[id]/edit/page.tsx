@@ -5,7 +5,7 @@ import React, { Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
-import { Character, CHAR_SEED, Relation, REL_SEED, findByKey, auIdOf, auKeyOf, relPath } from '@/lib/charStore';
+import { Relation, REL_SEED, findByKey, auIdOf, auKeyOf, relPath } from '@/lib/relStore';
 import { REL_RESERVED } from '@/lib/sectionStore';
 import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
@@ -19,7 +19,6 @@ function RelEditInner() {
   const toast = useToast();
   const params = useSearchParams();
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
-  const [chars] = useLocalList<Character>('ohome.chars.v1', CHAR_SEED);
   /* 주소 (v2.4) — /rels/{별명 또는 번호}/edit, AU는 /rels/{…}/au/{AU 번호}/edit.
      옛 주소(`/rels/id/edit`, `?au=AUid`)로 들어오면 새 주소로 바꿔 둔다 */
   const legacyAu = params.get('au');
@@ -52,8 +51,7 @@ function RelEditInner() {
       <RelForm
         initial={rel}
         auId={auObj?.id}
-        myChars={chars.filter(c => c.own)}
-        memberNames={Object.fromEntries(rel.members.map(m => [m.charId, chars.find(c => c.id === m.charId)?.name ?? m.charId]))}
+        memberNames={Object.fromEntries(rel.members.map(m => [m.charId, m.name || '멤버']))}
         onCancel={() => router.push(relPath(rel))}
         existingIds={rels.filter(r => r.id !== rel.id).flatMap(r => [r.id, ...(r.slug ? [r.slug] : [])]).concat(REL_RESERVED)}
         onSave={v => {

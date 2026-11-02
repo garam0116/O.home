@@ -20,7 +20,7 @@ import { getRawSetting, setSetting } from './settingStore';
 import { newId } from './postStore';
 
 export type SectionKind =
-  | 'gallery' | 'roadview' | 'trpg' | 'diary' | 'threads' | 'chars' | 'rels';
+  | 'gallery' | 'roadview' | 'trpg' | 'diary' | 'threads' | 'rels';
 
 /** 섹션 종류별 기본 정보 — 설정 탭 이름과 페이지 주소 */
 export const SECTION_META: Record<SectionKind, { label: string; href: string; defName: string }> = {
@@ -29,7 +29,6 @@ export const SECTION_META: Record<SectionKind, { label: string; href: string; de
   trpg:     { label: '로그 백업', href: '/trpg',     defName: '로그 백업' },
   diary:    { label: '다이어리',  href: '/diary',    defName: '다이어리' },
   threads:  { label: '감상타래',  href: '/threads',  defName: '감상타래' },
-  chars:    { label: '캐릭터',    href: '/chars',    defName: '캐릭터' },
   rels:     { label: '자관',      href: '/rels',     defName: '자관' },
 };
 
@@ -72,16 +71,14 @@ export function secKeyOf(kind: SectionKind, id: string): string {
 }
 
 /** 쿼리 대신 **경로**로 갈리는 목록 (v2.4 사용자 요청) — `/gallery?s=fan` 대신 `/gallery/g/fan`.
- *  가운데 한 칸은 주소 첫 글자(사용자 확정) — 상세 주소(`/gallery/3`, `/chars/eden`)와 겹치지 않게 둔다. */
+ *  가운데 한 칸은 주소 첫 글자(사용자 확정) — 상세 주소(`/gallery/3`, `/rels/eden`)와 겹치지 않게 둔다. */
 export const PATH_SEC: Record<SectionKind, string> = {
   gallery: 'g', roadview: 'l', trpg: 't',
-  diary: 'd', threads: 't', chars: 'c', rels: 'r',
+  diary: 'd', threads: 't', rels: 'r',
 };
 
 /** 자관 상세 주소(`/rels/{별명}`)로 쓸 수 없는 값 — 목록 주소 `/rels/r/…`·새로 만들기 `/rels/new`와 겹친다 */
 export const REL_RESERVED = ['r', 'new'];
-/** 캐릭터 상세 주소(`/chars/{별명}`)로 쓸 수 없는 값 — 같은 이유 */
-export const CHAR_RESERVED = ['c', 'new'];
 
 /** 이 섹션의 주소 — 기본은 원래 주소 그대로, 나머지는 `/gallery/g/별명`(별명이 없으면 id) (v2.4) */
 export const sectionHref = (kind: SectionKind, id: string) =>
