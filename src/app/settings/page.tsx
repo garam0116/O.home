@@ -1182,12 +1182,10 @@ function SecurityRulesRow() {
             {copied === 'st' ? '복사됨 ✓' : 'Storage 규칙 복사'}
           </button>
           <button className="btn btn-ghost" onClick={() => setOpen(o => !o)}>{open ? '내용 접기' : '내용 보기'}</button>
-          {/* 규칙을 붙여넣을 콘솔 화면으로 바로 (사용자 요청) — 새 탭. 프로젝트 id를 알면 그 프로젝트의
-              Firestore 규칙 화면으로, 모르면 콘솔 첫 화면으로. 로그인 안 돼 있으면 구글 로그인부터 뜬다 */}
+          {/* Firebase 콘솔로 (사용자 요청) — 새 탭. 특정 프로젝트 주소를 박지 않고 콘솔 첫 화면으로 —
+              로그인한 계정의 프로젝트 목록에서 고르면 된다 */}
           <a className="btn btn-ghost" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}
-            href={!cfg.projectId ? 'https://console.firebase.google.com/'
-              : `https://console.firebase.google.com/project/${encodeURIComponent(cfg.projectId)}/firestore/${
-                cfg.databaseId ? `databases/${encodeURIComponent(cfg.databaseId)}/` : ''}rules`}>
+            href="https://console.firebase.google.com/">
             Firebase 콘솔 열기 ↗
           </a>
         </div>
