@@ -352,6 +352,8 @@ a{color:inherit;text-decoration:none}
 /* 관리자: 설명 편집 힌트 — 좌우반전 연필 + 여백 (v1.8) */
 /* 연필 표시는 실제 편집 가능한 문구(.editable)에만 — 동적 메타 문구에는 표시하지 않음 */
 .page-head p.editable.can-edit{cursor:text}
+/* 비워 둔 설명 — 편집모드의 관리자에게만 입력 자리를 보인다(방문자에겐 빈칸) */
+.page-head p.editable.empty.can-edit::before{content:"설명 없음 · 눌러서 입력";opacity:.45;font-style:normal}
 .page-head p.editable.can-edit:hover::after{content:"✎";font-size:calc(11px*var(--fs,1));color:#c9cdd4;display:inline-block;margin-left:8px;transform:scaleX(-1)}
 /* 우측 액션(검색·등록)은 절대배치 — 높이가 커도 제목·설명 줄 간격을 벌리지 않음 (v1.9 사용자 발견) */
 .head-actions{position:absolute;right:0;bottom:0;display:flex;gap:8px;align-items:center}

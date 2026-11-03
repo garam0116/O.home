@@ -90,11 +90,12 @@ export function EditableDesc({ k, def, always }: { k: string; def: string; alway
   }, [k, def]);
 
   const save = () => {
+    // 비워 두면 기본 문구로 돌아가지 않고 빈칸으로 둔다 (사용자 요청) — 빈 문자열도 저장한다
     const v = draft.trim();
     const map = load();
-    if (v) map[k] = v; else delete map[k];
+    map[k] = v;
     try { setSetting(STORAGE_KEY, map); } catch { /* 무시 */ }
-    setText(v || def);
+    setText(v);
     setEditing(false);
   };
 
@@ -121,7 +122,8 @@ export function EditableDesc({ k, def, always }: { k: string; def: string; alway
 
   return (
     // .editable — 관리자 연필 표시는 이 클래스에만 (동적 메타 문구에는 연필 없음)
-    <p className={`editable${always ? ' gate' : ''}${canEdit ? ' can-edit' : ''}`} onClick={() => { if (canEdit) { setDraft(text); setEditing(true); } }}>
+    // 빈 설명 — 방문자에겐 빈칸, 편집모드의 관리자에겐 눌러서 입력할 자리 표시(CSS .empty)
+    <p className={`editable${always ? ' gate' : ''}${canEdit ? ' can-edit' : ''}${text ? '' : ' empty'}`} onClick={() => { if (canEdit) { setDraft(text); setEditing(true); } }}>
       {text}
     </p>
   );
