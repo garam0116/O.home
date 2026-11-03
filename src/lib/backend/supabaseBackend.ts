@@ -201,7 +201,9 @@ export async function createSupabaseBackend(
     },
 
     /* 공개범위만 다시 계산해 덮어쓰기 (v2.0) — 같은 값이 될 것들끼리 묶어
-       한 번에 UPDATE 한다. data를 다시 쓰지 않으므로 내용·순서가 흔들리지 않는다. */
+       한 번에 UPDATE 한다. data를 다시 쓰지 않으므로 내용·순서가 흔들리지 않는다.
+       좁히는 쪽도 넓히는 쪽도 맞추고(메뉴를 다시 공개로 돌린 경우), 이미 같은 행은 건드리지 않는다.
+       돌려주는 값은 실제로 바뀐 행 수 (firebaseBackend와 같다) */
     async refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number> {
       const byVis = new Map<string, string[]>();
       items.forEach(it => {
@@ -212,9 +214,10 @@ export async function createSupabaseBackend(
       for (const [vis, ids] of byVis.entries()) {
         for (let i = 0; i < ids.length; i += 200) {
           const part = ids.slice(i, i + 200);
-          const { error } = await sb.from(coll).update({ visibility: vis }).in('id', part);
+          const { data, error } = await sb.from(coll).update({ visibility: vis })
+            .in('id', part).neq('visibility', vis).select('id');
           if (error) throw error;
-          n += part.length;
+          n += data?.length ?? 0;
         }
       }
       return n;

@@ -73,8 +73,9 @@ export interface Backend {
   /* ---- 목록(콘텐츠) ---- */
   fetchList<T extends ListItem>(coll: string): Promise<T[]>;
   syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null): Promise<void>;
-  /** 이미 저장된 행의 공개범위만 다시 계산해 덮어쓴다 (v2.0) — 메뉴를 비공개로 바꾼 뒤
-   *  「글에도 적용」을 누르면 돈다. 내용(data)·순서(sort)는 건드리지 않는다. */
+  /** 이미 저장된 행의 공개범위만 다시 계산해 덮어쓴다 (v2.0) — 메뉴 공개범위를 바꿔 저장하면 돈다.
+   *  좁히는 쪽·넓히는 쪽 모두 맞추고, 서버 값과 이미 같은 행은 건너뛴다. 실제로 바꾼 행 수를 돌려준다.
+   *  내용(data)·순서(sort)는 건드리지 않는다. */
   refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number>;
   subscribe(coll: string, onChange: () => void): () => void;
   /** 문서 하나를 주소(id)로 직접 읽는다 (보안 검토) — 비밀번호 로그 본문처럼 **목록 질의로는

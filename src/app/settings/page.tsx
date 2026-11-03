@@ -57,7 +57,6 @@ import {
 import { isServerMode, createBackend, backend } from '@/lib/backend';
 import type { BackendConfig, BackendKind } from '@/lib/backend/types';
 import { CONTENT_COLLECTIONS } from '@/lib/backend/types';
-import { visFloorOf } from '@/lib/visFloor';
 import { validateConfig, configFileText, saveLocalConfig, parseFirebaseSnippet, serverConfig, serverConfigSource } from '@/lib/serverConfig';
 import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
@@ -2071,7 +2070,9 @@ function MenuPane() {
   /* 이미 올라간 글의 공개범위를 서버에 적용 (v2.0 사용자 요청).
      화면에서 가리는 것만으로는 API를 직접 부르는 사람에게 그대로 보인다 — 서버(RLS)가
      내주지 않게 하려면 행의 공개범위 칸 자체가 좁아야 한다.
-     컬렉션을 하나씩 훑어 **비공개 메뉴에 걸린 것만** 골라 그 칸만 갱신한다(내용·순서는 그대로).
+     컬렉션을 하나씩 훑어 그 칸만 갱신한다(내용·순서는 그대로). **좁히기만 하지 않고 넓히기도 한다** —
+     예전엔 비공개 메뉴에 걸린 글만 골라서, 메뉴를 다시 공개로 돌려도 그동안 좁혀진 글이 서버에선 계속
+     비공개로 남아 방문자에게 안 보였다. 서버 값과 같은 글은 백엔드가 건너뛰므로 다시 쓰지 않는다.
      새 글은 저장할 때마다 같은 기준이 자동으로 걸리므로(visFloor) 이 버튼은 **이미 있는 글**용이다. */
   const applyVis = async (quiet = false) => {
     const be = backend();
@@ -2083,10 +2084,9 @@ function MenuPane() {
       let n = 0;
       for (const coll of CONTENT_COLLECTIONS) {
         const rows = await be.fetchList(coll);
-        const targets = rows.filter(r => visFloorOf(coll, r) !== 'public');
-        if (targets.length) n += await be.refreshVis(coll, targets, user?.id ?? null);
+        if (rows.length) n += await be.refreshVis(coll, rows, user?.id ?? null);
       }
-      if (!quiet) toast(n ? `글 ${n}건을 서버에서도 가렸습니다` : '비공개로 둔 메뉴에 글이 없습니다');
+      if (!quiet) toast(n ? `글 ${n}건의 서버 공개범위를 메뉴에 맞췄습니다` : '이미 메뉴 공개범위와 맞습니다');
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : '적용하지 못했습니다');
     }
