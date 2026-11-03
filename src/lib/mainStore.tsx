@@ -190,7 +190,9 @@ function recenter(s: MainState, anchor?: 1 | 3): MainState {
 }
 
 export function MainStoreProvider({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useAuth();
+  // 편집모드는 서버가 관리자로 확인한 뒤에만 — 확인 전의 사용자 정보는 지난 접속의 저장본(표시용)이다
+  const { isAdmin: adminShown, ready: authReady } = useAuth();
+  const isAdmin = adminShown && authReady;
   const pathname = usePathname();
   const router = useRouter();
   const [state, setState] = useState<MainState>(DEFAULT_STATE);

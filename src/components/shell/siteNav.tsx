@@ -16,12 +16,13 @@ export type SiteMenuItem = ReturnType<typeof buildMenu>[number];
 
 /** 메뉴 관리(노출·순서·이름) + 게시판·섹션·커스텀 링크 반영. 저장 설정 로드 전에는 빈 목록 (깜빡임 방지, v1.9) */
 export function useSiteMenu(): { menu: SiteMenuItem[]; ready: boolean } {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, known } = useAuth();
   const [menuSet, , menuLoaded] = useMenuSettings();
   const { boards, loaded: boardsLoaded } = useBoards();
   const { map: secMap } = useSections();
   const { links } = useCustomLinks();
-  const ready = menuLoaded && boardsLoaded;
+  // 누구인지 알기 전에 그리면 회원 메뉴가 빠졌다가 나중에 끼어든다
+  const ready = menuLoaded && boardsLoaded && known;
   const menu = ready
     ? buildMenu(menuSet, [...boardEntries(boards), ...sectionMenuEntries(secMap), ...linkEntries(links)], { loggedIn: !!user, isAdmin, id: user?.id })
     : [];
@@ -68,7 +69,7 @@ export function UserArea({ nav, onOpen, className }: {
   onOpen?: () => void;
   className?: string;
 }) {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, logout, known } = useAuth();
   const { editOn, editAvailable, toggleEdit } = useMainStore();
   const pathname = usePathname();
   const avatarSrc = useBlobUrl(user?.avatarUrl);     // 프로필 이미지 (마이페이지, v1.9)
@@ -83,6 +84,8 @@ export function UserArea({ nav, onOpen, className }: {
   }, [open]);
   useEffect(() => { setOpen(false); }, [pathname]);
 
+  // 누구인지 아직 모르면 같은 크기의 빈칸 — 로그인한 사람에게 「로그인」 버튼이 번쩍이지 않게
+  if (!user && !known) return <span className={`login-link auth-wait ${className ?? ''}`} aria-hidden="true">로그인</span>;
   if (!user) return <button className={`login-link ${className ?? ''}`} onClick={() => nav('/login')}>로그인</button>;
   return (
     <div className={`user-wrap ${className ?? ''}`} ref={ref}>

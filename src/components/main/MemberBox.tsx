@@ -8,7 +8,7 @@ import { useBlobUrl } from '@/lib/blobStore';
 
 export function MemberBox() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, known } = useAuth();
   const avatarSrc = useBlobUrl(user?.avatarUrl);
 
   return (
@@ -40,8 +40,10 @@ export function MemberBox() {
           </div>
         </>
       ) : (
-        /* 비로그인 — 남는 높이 안에서 세로 가운데 정렬 (v1.9) */
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        /* 비로그인 — 남는 높이 안에서 세로 가운데 정렬 (v1.9)
+           누구인지 아직 모르면 같은 자리를 비워 둔다 — 로그인한 사람에게 비로그인 상자가 번쩍이지 않게 */
+        <div className={known ? undefined : 'auth-wait'} aria-hidden={known ? undefined : true}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <p style={{ fontSize: 11.5, color: 'var(--faint)', margin: '0 0 12px', lineHeight: 1.6 }}>
             로그인 후 멤버 전용 콘텐츠를 열람할 수 있습니다
           </p>
