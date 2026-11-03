@@ -69,10 +69,9 @@ export function useCustomLinks(): {
   useEffect(() => {
     const h = () => force();
     window.addEventListener(EVT, h);
-    window.addEventListener('ohome-setting', h);
     // 서버에서 새 값이 오거나 설정 드래프트를 취소하면 모듈 캐시를 저장본으로 다시 채운다 (v2.5)
     const offReload = onSettingReload(KEY, () => { cache = []; loaded = false; load(); force(); });
-    return () => { window.removeEventListener(EVT, h); window.removeEventListener('ohome-setting', h); offReload(); };
+    return () => { window.removeEventListener(EVT, h); offReload(); };
   }, []);
   load();
 
