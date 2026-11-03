@@ -10,11 +10,12 @@ import { runSecurityMigration } from '@/lib/securityMigrate';
 const ran = new Set<string>();   // 세션(탭) 안에서 계정마다 한 번
 
 export function SecurityMigrate() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, ready } = useAuth();
   const toast = useToast();
   useEffect(() => {
     const be = backend();
-    if (!isServerMode() || !be || !user || !isAdmin || ran.has(user.id)) return;
+    // ready 전의 user는 지난 접속의 저장본(표시용)이다 — 서버가 확인한 관리자에게만 돌린다
+    if (!ready || !isServerMode() || !be || !user || !isAdmin || ran.has(user.id)) return;
     ran.add(user.id);
     void runSecurityMigration(be, user.id).then(r => {
       if (r.newInviteCode) {
@@ -23,6 +24,6 @@ export function SecurityMigrate() {
         toast(`가입코드를 새로 만들었습니다: ${r.newInviteCode} — 환경설정 > 회원에서 확인·변경할 수 있습니다`);
       }
     });
-  }, [user, isAdmin, toast]);
+  }, [ready, user, isAdmin, toast]);
   return null;
 }

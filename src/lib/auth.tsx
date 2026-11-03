@@ -35,6 +35,10 @@ interface AuthCtx {
   /** 누가 보고 있는지 확인이 끝났는지 (v2.0) — 처음 한 박자는 늘 「비로그인」으로 보인다.
    *  그 사이에 권한을 판정하면 관리자에게도 「비공개」 화면이 번쩍인다. */
   ready: boolean;
+  /** 누구인지 화면에 보여 줄 수 있는지 — 확인이 끝났거나, 지난 접속 때 확인한 저장본이 있으면 true.
+   *  false인 동안 사용자 자리(로그인 버튼·회원정보창)는 빈칸으로 둔다 — 「로그인」이 번쩍이지 않게.
+   *  ready 전의 user는 저장본이다: 화면 표시용이며, 권한이 걸린 동작은 ready를 확인해야 한다. */
+  known: boolean;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -56,6 +60,27 @@ export function isSetupDone(): boolean {
 }
 export function markSetupDone() {
   try { localStorage.setItem(SETUP_KEY, JSON.stringify({ done: true, at: new Date().toISOString() })); } catch { /* 무시 */ }
+}
+
+/* ---------- 지난 접속의 사용자 (표시용 저장본) ----------
+   로그인 자체는 Firebase/Supabase가 유지한다. 다만 「누구인지」 확인에 서버 왕복이 한 번 더 필요해서
+   그 사이 화면이 비로그인으로 그려졌다. 확인될 때마다 닉네임·아바타·역할만 적어 두고 먼저 보여 준다.
+   이메일은 남기지 않는다. 권한은 서버가 판정하므로 이 값으로는 아무것도 열리지 않는다. */
+const SHOWN_KEY = 'ohome.authShown.v1';
+
+function readShownUser(): User | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(SHOWN_KEY) ?? 'null') as User | null;
+    return v && typeof v.id === 'string' && (v.role === 'admin' || v.role === 'member') ? v : null;
+  } catch { return null; }
+}
+
+function writeShownUser(u: User | null) {
+  try {
+    if (!u) { localStorage.removeItem(SHOWN_KEY); return; }
+    const { id, nickname, role, avatarUrl, avatarColor } = u;
+    localStorage.setItem(SHOWN_KEY, JSON.stringify({ id, nickname, role, avatarUrl, avatarColor }));
+  } catch { /* 무시 */ }
 }
 
 /* ---------- 로컬 계정 (백엔드 없이 개발할 때) ---------- */
@@ -101,8 +126,13 @@ export function completeSetup(v: SetupInput): { ok: boolean; error?: string } {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const server = isServerMode();
   const be = backend();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);   // 서버가 확인한 사용자
   const [ready, setReady] = useState(false);   // 확인이 끝났는지 (v2.0)
+  // 지난 접속 때 확인한 사용자 — 확인을 기다리는 동안 닉네임·아바타를 먼저 보여 주는 데만 쓴다.
+  // ServerBoot가 브라우저에서만 자식을 그리므로 첫 렌더에서 바로 읽어도 서버 HTML과 어긋나지 않는다.
+  const [cached] = useState<User | null>(() => (server ? readShownUser() : null));
+  // 확인 전에는 저장본, 확인 후에는 서버 결과 — 권한 판정(MenuGuard 등)은 여전히 ready를 기다린다
+  const shown = ready ? user : cached;
 
   // 목록 캐시가 기준으로 삼은 사용자 (undefined = 아직 첫 확인 전)
   const listOwner = useRef<string | undefined>(undefined);
@@ -118,6 +148,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     listOwner.current = key;
     invalidateListCache();
   }, [server, ready, user?.id, user?.role]);
+
+  // 확인이 끝날 때마다 저장본을 맞춘다 — 로그아웃·다른 기기에서 로그아웃이면 지운다
+  useEffect(() => {
+    if (server && ready) writeShownUser(user);
+  }, [server, ready, user]);
 
   useEffect(() => {
     if (!server || !be) {
@@ -251,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      user, isAdmin: user?.role === 'admin', ready,
+      user: shown, isAdmin: shown?.role === 'admin', ready, known: ready || !!cached,
       login, signup, findId, resetPassword, logout, updateProfile, mock: !server,
     }}>
       {children}

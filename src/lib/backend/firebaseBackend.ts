@@ -187,8 +187,19 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
   const listQuery = (coll: string, cs: Cons[]) =>
     (cs.length ? query(collection(db, coll), ...cs) : query(collection(db, coll)));
 
-  const toUser = async (u: { uid: string; email?: string | null; displayName?: string | null } | null): Promise<BackendUser | null> => {
-    if (!u) return null;
+  // 같은 계정의 사용자 정보 조회가 이미 진행 중이면 그 결과를 함께 쓴다 — 첫 접속 때
+  // currentUser()와 onAuthChange()가 동시에 불러 프로필을 두 번 읽고 화면을 두 번 다시 그리던 것.
+  // 끝난 조회는 재사용하지 않는다 (가입 직후 프로필 저장 뒤 다시 읽는 경로는 새 값을 받아야 한다).
+  const toUserInflight = new Map<string, Promise<BackendUser | null>>();
+  const toUser = (u: { uid: string; email?: string | null; displayName?: string | null } | null): Promise<BackendUser | null> => {
+    if (!u) return Promise.resolve(null);
+    const hit = toUserInflight.get(u.uid);
+    if (hit) return hit;
+    const p = readUser(u).finally(() => { if (toUserInflight.get(u.uid) === p) toUserInflight.delete(u.uid); });
+    toUserInflight.set(u.uid, p);
+    return p;
+  };
+  const readUser = async (u: { uid: string; email?: string | null; displayName?: string | null }): Promise<BackendUser> => {
     // 이메일을 그대로 이름으로 쓰지 않는다 — 회원 목록·댓글에 남의 메일 주소가 그대로 노출된다.
     // (프로필 저장 직후에는 displayName이 아직 비어 있어 여기로 떨어질 수 있다)
     let nickname = u.displayName || (u.email ? u.email.split('@')[0] : 'user');
@@ -324,6 +335,8 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
           setDoc(doc(db, 'profiles', cred.user.uid), { nickname, createdAt: Date.now() }, { merge: true }));
         // 계정(Auth)은 이미 만들어졌으므로 그 사실을 알려 준다 — 다시 시도하면 "이미 사용 중"이 뜬다
         if (r === TIMEOUT) return { ok: false, error: `${NO_REACH} (로그인 계정은 이미 만들어졌습니다)` };
+        // 프로필 저장 전에 시작된 조회를 공유하지 않게 — 다음 currentUser()는 저장된 닉네임을 새로 읽는다
+        toUserInflight.delete(cred.user.uid);
         return { ok: true };
       } catch (e) { return { ok: false, error: humanError(e) }; }
     },

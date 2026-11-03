@@ -149,6 +149,8 @@ a{color:inherit;text-decoration:none}
 .edit-flag.show{display:inline-block}
 .login-link{font-size:calc(12px*var(--fs,1));color:var(--top-fg);padding:7px 15px;border:1px solid var(--line-dark);border-radius:999px;transition:.15s;white-space:nowrap}
 .login-link:hover{color:var(--top-hv,#fff);border-color:var(--top-hv,#fff)}
+/* 로그인 확인 전 사용자 자리 — 크기만 차지하고 보이지 않는다 (로그인 버튼 번쩍임 방지) */
+.auth-wait{visibility:hidden;pointer-events:none}
 /* 모바일 메뉴 (≡) — 620px 이하에서만. 패널은 body 포털 (TopBar MobileNav) */
 .m-nav-btn{display:none;place-items:center;width:34px;height:34px;margin-right:-6px;border-radius:8px;color:var(--top-fg);transition:.15s}
 .m-nav-btn:hover,.m-nav-btn[aria-expanded="true"]{color:var(--top-hv,#fff);background:rgba(127,127,127,.14)}
