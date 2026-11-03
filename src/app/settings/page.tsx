@@ -30,7 +30,7 @@ import { FEATURES } from '@/lib/menu';
 import { SectionsBlock } from '@/components/settings/SectionList';
 import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection, cleanSlug } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
-import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf, MOBILE_NAV_STYLES } from '@/lib/siteStore';
+import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf, MOBILE_NAV_STYLES, MENU_CARD_STYLES } from '@/lib/siteStore';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
@@ -422,6 +422,9 @@ function DesignPane() {
 
       {/* 모바일 메뉴 모양 (v2.9 사용자 요청) — Cover를 고르면 상위 메뉴별 커버 이미지 칸이 이어서 나온다 */}
       <MobileNavRow />
+
+      {/* PC 2단형 메뉴 카드 모양 (v3.0 사용자 요청) */}
+      <MenuCardRow />
 
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>페이지 타이틀</b><small>각 메뉴 상단 큰 제목과 설명 문구</small></div>
@@ -1323,6 +1326,27 @@ function SiteImageControl({ field, accept, emptyText, failText, wide }: {
 function FaviconControl() {
   return <SiteImageControl field="favicon" emptyText="기본" failText="아이콘"
     accept="image/png,image/x-icon,image/svg+xml,image/webp,.ico" />;
+}
+
+/** PC 2단형 메뉴 카드 모양 (v3.0 사용자 요청) — 5종 중 하나. 디자인 탭 SAVE로 저장 (사이트 드래프트) */
+function MenuCardRow() {
+  const { site, set } = useSiteDraft();
+  const cur = site.mCard ?? 'basic';
+  return (
+    <div className="set-row" style={{ flexWrap: 'wrap' }}>
+      <div className="l"><b>메뉴 카드 모양</b><small>PC 2단형에서 쓰는 메뉴 카드의 꾸밈 — 색은 상단메뉴·하위메뉴 드롭다운·포인트 컬러를 따름 · 1단형과 모바일에는 영향 없음</small></div>
+      <div className="mnav-opts mcard-opts" role="radiogroup" aria-label="메뉴 카드 모양">
+        {MENU_CARD_STYLES.map(o => (
+          <button key={o.value} type="button" role="radio" aria-checked={cur === o.value}
+            className={`mnav-opt ${cur === o.value ? 'on' : ''}`} title={o.desc}
+            onClick={() => set({ mCard: o.value })}>
+            <span className={`mnav-th mcard-th mcard-th-${o.value}`} aria-hidden><i /><i /><i /><i /><i /></span>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /** 모바일 메뉴 모양 (v2.9 사용자 요청) — 휴대폰 ≡ 패널 4종 중 하나. 디자인 탭 SAVE로 저장 (사이트 드래프트) */

@@ -30,7 +30,19 @@ export interface SiteSettings {
   // Cover 모양에서 쓰는 상위 메뉴별 커버 이미지 — 메뉴 트리 그룹 id → 파일 주소.
   // 다른 모양을 골라도 지우지 않고 보관한다(다시 Cover를 고르면 그대로 쓰임)
   mNavCovers?: Record<string, string>;
+  // PC 2단형 메뉴 카드 모양 (v3.0 사용자 요청) — 구성은 같고 장식만 다르다. 비우면 basic(지금 모양)
+  mCard?: MenuCardStyle;
 }
+
+/** PC 2단형 메뉴 카드 모양 5종 (v3.0) — 기본 · Ink · Halo · Prism · Thread */
+export type MenuCardStyle = 'basic' | 'ink' | 'halo' | 'prism' | 'thread';
+export const MENU_CARD_STYLES: { value: MenuCardStyle; label: string; desc: string }[] = [
+  { value: 'basic', label: '기본', desc: '지금 모양' },
+  { value: 'ink', label: 'Ink', desc: '포인트 색 머리 띠 · 밑줄이 번지는 색인 · 하위 메뉴 글 수 막대' },
+  { value: 'halo', label: 'Halo', desc: '유리 카드 · 마우스 가까운 테두리만 빛남' },
+  { value: 'prism', label: 'Prism', desc: '유리 카드 · 왼쪽 빛줄기가 마우스를 따라감' },
+  { value: 'thread', label: 'Thread', desc: '상자 없이 점선 실과 ◆ 마디 · 하위 메뉴까지 점선이 이어짐' },
+];
 
 /** 모바일 메뉴 모양 4종 (v2.9) — Accordion · Stage · Cover · Ledger */
 export type MobileNavStyle = 'accordion' | 'stage' | 'cover' | 'ledger';

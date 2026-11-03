@@ -1671,6 +1671,32 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
 .cf-row .k-step,.cf-row .pill{flex-shrink:0}
 .cf-stack{display:grid;gap:8px}
 
+/* 메뉴 카드 모양 미리보기 (v3.0) — 모바일 메뉴 썸네일과 같은 틀, 세로 4:5 */
+.mnav-opts.mcard-opts{grid-template-columns:repeat(5,minmax(50px,64px))}
+.mcard-th{aspect-ratio:4/5}
+.mcard-th::before{content:"";position:absolute;left:14%;right:14%;top:12%;bottom:12%}
+.mcard-th i{left:26%;width:44%;height:2px}
+.mcard-th i:nth-child(1){top:22%;width:30%;height:3px;background:rgba(255,255,255,.85)}
+.mcard-th i:nth-child(2){top:40%}
+.mcard-th i:nth-child(3){top:52%;background:rgba(255,255,255,.9)}
+.mcard-th i:nth-child(4){top:64%}
+.mcard-th i:nth-child(5){top:76%;width:24%}
+.mcard-th-basic::before{border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18)}
+.mcard-th-basic i:nth-child(3){box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.mcard-th-ink::before{background:rgba(255,255,255,.06);border-top:3px solid var(--accent);border-bottom:1px solid rgba(255,255,255,.25)}
+.mcard-th-ink i:nth-child(3){box-shadow:0 3px 0 -1px var(--accent)}
+.mcard-th-halo::before{border-radius:7px;background:radial-gradient(60% 40% at 30% 52%,color-mix(in srgb,var(--accent) 45%,transparent),transparent 70%),rgba(255,255,255,.06);
+  border:1px solid color-mix(in srgb,var(--accent) 70%,rgba(255,255,255,.2))}
+.mcard-th-halo i:nth-child(3)::before{content:"";position:absolute;left:-5px;top:-1px;width:3px;height:3px;border-radius:50%;background:var(--accent)}
+.mcard-th-prism::before{border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.7)}
+.mcard-th-prism i:nth-child(3){box-shadow:-6px 0 0 -0px var(--accent),-6px 0 6px var(--accent)}
+.mcard-th-thread::before{left:16%;right:auto;width:0;border-left:1px dashed rgba(255,255,255,.4)}
+.mcard-th-thread i{left:30%}
+.mcard-th-thread i:nth-child(3){width:20%}
+.mcard-th-thread i:nth-child(3)::before{content:"";position:absolute;left:-12px;top:-2px;width:5px;height:5px;transform:rotate(45deg);background:var(--gold)}
+.mcard-th-thread i:nth-child(3)::after{content:"";position:absolute;left:calc(100% + 3px);top:0;width:90%;border-top:1px dashed var(--gold)}
+@media (max-width:620px){.mnav-opts.mcard-opts{grid-template-columns:repeat(5,1fr)}}
+
 /* 중간 폭 (621~960px): 구조 유지, 폭만 축소 (v1.8) */
 @media (max-width:960px){
   body:not(.main-fixed) .main-grid{grid-template-columns:190px 1fr 220px}
@@ -1944,10 +1970,10 @@ body.no-topbar .topbar{display:none}
 .mc-item:hover > .mc-top{color:var(--top-hv,#fff);background:rgba(127,127,127,.12)}
 .mc-item.on > .mc-top{color:var(--top-hv,#fff);background:rgba(127,127,127,.18)}
 /* 하위 메뉴 — 지금 상단바 드롭다운과 같은 색·그림자, 카드 옆으로 (오른쪽 열이면 왼쪽으로) */
-.mc-sub{position:absolute;left:calc(100% + 14px);top:-5px;min-width:140px;display:none;z-index:5;
+.mc-sub{position:absolute;left:calc(100% + var(--mc-gap,14px));top:-5px;min-width:140px;display:none;z-index:5;
   background:var(--dd-bg);border:1px solid var(--line-dark);border-radius:11px;padding:5px;box-shadow:var(--sh-dd);--fs:var(--fs-dropdown,1)}
-.mc-sub::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:16px} /* 카드↔펼침 사이 호버 다리 */
-.mc-right .mc-sub{left:auto;right:calc(100% + 14px)}
+.mc-sub::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:calc(var(--mc-gap,14px) + 2px)} /* 카드↔펼침 사이 호버 다리 */
+.mc-right .mc-sub{left:auto;right:calc(100% + var(--mc-gap,14px))}
 .mc-right .mc-sub::before{right:auto;left:100%}
 /* 키보드는 :focus-visible일 때만 — 마우스로 누른 버튼에 남은 포커스 때문에 펼침이 남아 다른 펼침과 겹치지 않게.
    메뉴를 눌러 이동하면 .shut으로 접고, 마우스가 그 대메뉴를 벗어나면 다시 펼칠 수 있다 */
@@ -1964,6 +1990,129 @@ body.no-topbar .topbar{display:none}
 .menu-card .user-menu{left:0;right:auto}
 .menu-card.mc-right .user-menu{left:auto;right:0}
 .menu-card .login-link{display:block;width:100%;text-align:center}
+
+/* ---------- 메뉴 카드 모양 (v3.0 사용자 요청) — 환경설정 > 디자인 「메뉴 카드 모양」 ----------
+   구성(로고 · 대메뉴 · 옆 펼침 하위 메뉴 + 글 수 · 사용자 영역)은 그대로, 장식만 바꾼다.
+   색은 모두 테마 변수(상단메뉴 · 드롭다운 · 포인트 컬러)를 따른다. Thread의 금색만 --gold.
+   --mc-gap = 카드와 하위 메뉴 사이 간격 (호버 다리 폭도 같이) */
+@keyframes mcRise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Ink — 머리에 포인트 색 띠 · 로마 숫자 색인 · 올리면 밑줄이 끝까지 번짐 · 하위 메뉴 글 수 막대 */
+.mc-s-ink{--mc-gap:26px;padding:16px 14px 10px;border:0;border-radius:0;border-top:3px solid var(--accent);border-bottom:1px solid var(--line-dark)}
+.mc-s-ink .mc-brand{padding:2px 2px 12px}
+.mc-s-ink .mc-hr{margin:0 0 4px}
+.mc-s-ink .mc-list{gap:0}
+.mc-s-ink .mc-top{position:relative;gap:12px;padding:8px 2px;border-radius:0}
+.mc-s-ink .mc-item:hover > .mc-top,.mc-s-ink .mc-item.on > .mc-top{background:none}
+.mc-s-ink .mc-top::before{content:"";position:absolute;left:0;right:0;bottom:2px;height:1px;background:var(--accent-soft);transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.mc-s-ink.mc-right .mc-top::before{transform-origin:right}
+.mc-s-ink .mc-grp > .mc-top::after{content:none}
+.mc-s-ink .mc-no{width:18px;flex-shrink:0;font-family:var(--serif);font-style:italic;font-size:calc(14px*var(--fs,1));letter-spacing:0;opacity:.45;transition:opacity .2s,color .2s}
+.mc-s-ink .mc-top .mc-lbl{flex:1}
+.mc-s-ink .mc-arw{flex-shrink:0;font-family:var(--serif);color:var(--accent-soft);opacity:0;transform:translateX(-4px);transition:.25s}
+.mc-s-ink .mc-item:hover > .mc-top::before,.mc-s-ink .mc-item.on > .mc-top::before{transform:scaleX(1)}
+.mc-s-ink .mc-item:hover > .mc-top .mc-arw,.mc-s-ink .mc-item.on > .mc-top .mc-arw{opacity:1;transform:none}
+.mc-s-ink .mc-item.on > .mc-top .mc-no{color:var(--accent-soft);opacity:1}
+.mc-s-ink .mc-cnt{font-family:var(--serif);font-style:italic}
+.mc-s-ink .mc-sub{top:0;min-width:180px;padding:10px 14px;border:0;border-radius:0;border-top:3px solid var(--accent)}
+.mc-s-ink .mc-sub button{display:grid;grid-template-columns:minmax(0,1fr) auto;row-gap:5px;padding:7px 0;border-radius:0;opacity:.82}
+.mc-s-ink .mc-sub button:hover,.mc-s-ink .mc-sub button.on{background:none;opacity:1}
+.mc-s-ink .mc-sub .mc-cnt{font-size:calc(13px*var(--fs,1))}
+.mc-s-ink .mc-sub button.on .mc-cnt{color:var(--accent-soft);opacity:1}
+.mc-s-ink .mc-bar{grid-column:1/-1;position:relative;height:2px;background:var(--dd-hv)}
+.mc-s-ink .mc-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--dd-fg);opacity:.45;transition:opacity .2s}
+.mc-s-ink .mc-sub button:hover .mc-bar i{opacity:.8}
+.mc-s-ink .mc-sub button.on .mc-bar i{background:var(--accent-soft);opacity:1}
+
+/* Halo — 유리 카드. 마우스 가까운 테두리와 바탕만 빛나고(--mx/--my, MenuCard가 넣음), 손을 떼면 현재 메뉴 자리로 */
+.mc-s-halo{--mc-gap:16px;--mx:50%;--my:-300px;border:1px solid transparent;border-radius:18px;
+  background:radial-gradient(160px 120px at var(--mx) var(--my),color-mix(in srgb,var(--accent-soft) 24%,transparent),transparent 70%) padding-box,
+    linear-gradient(var(--top-bg),var(--top-bg)) padding-box,
+    radial-gradient(150px 150px at var(--mx) var(--my),var(--accent-soft),color-mix(in srgb,var(--gold) 40%,transparent) 45%,var(--line-dark) 75%) border-box}
+.mc-s-halo .mc-top{padding:8px 12px;border-radius:10px}
+.mc-s-halo .mc-item:hover > .mc-top,.mc-s-halo .mc-item.on > .mc-top{background:none}
+.mc-s-halo .mc-top .mc-lbl{flex:1}
+.mc-s-halo .mc-dot{display:none;width:5px;height:5px;flex-shrink:0;margin-right:-2px;border-radius:50%;background:var(--accent-soft);box-shadow:0 0 8px 2px color-mix(in srgb,var(--accent-soft) 70%,transparent)}
+.mc-s-halo .mc-item.on > .mc-top .mc-dot{display:block}
+.mc-s-halo .mc-cnt{min-width:24px;padding:2px 7px;border-radius:999px;text-align:center;background:var(--dd-hv);opacity:1;font-size:calc(10.5px*var(--fs,1))}
+.mc-s-halo .mc-sub{--mx:-300px;--my:-300px;border:1px solid transparent;border-radius:14px;
+  background:radial-gradient(130px 100px at var(--mx) var(--my),color-mix(in srgb,var(--accent-soft) 20%,transparent),transparent 70%) padding-box,
+    linear-gradient(var(--dd-bg),var(--dd-bg)) padding-box,
+    radial-gradient(130px 130px at var(--mx) var(--my),var(--accent-soft),var(--line-dark) 70%) border-box}
+.mc-s-halo .mc-sub button.on .mc-cnt{background:var(--accent);color:#fff;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
+
+/* Prism — 위쪽 가장자리에 빛이 맺히는 유리 · 왼쪽 빛줄기(.mc-beam)가 마우스를 따라감 · 하위 메뉴는 차례로 떠오름 */
+.mc-s-prism{--mc-gap:16px;border:1px solid transparent;border-radius:18px;
+  background:linear-gradient(var(--top-bg),var(--top-bg)) padding-box,
+    linear-gradient(180deg,color-mix(in srgb,var(--top-hv) 55%,transparent),var(--line-dark) 30%,var(--line-dark) 70%,color-mix(in srgb,var(--accent-soft) 45%,transparent)) border-box}
+.mc-s-prism::before{content:"";position:absolute;left:18%;right:18%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--top-hv),transparent);opacity:.8;pointer-events:none}
+.mc-s-prism .mc-list{position:relative}
+.mc-s-prism .mc-item{z-index:1}
+.mc-s-prism .mc-top{padding:8px 14px}
+.mc-s-prism .mc-item:hover > .mc-top,.mc-s-prism .mc-item.on > .mc-top{background:none}
+.mc-s-prism .mc-item.lit > .mc-top{color:var(--top-hv,#fff)}
+.mc-s-prism .mc-glow,.mc-s-prism .mc-beam{position:absolute;top:0;height:38px;pointer-events:none;transition:transform .35s cubic-bezier(.3,.8,.25,1),height .35s,opacity .2s}
+.mc-s-prism .mc-glow{left:0;right:0;border-radius:9px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent-soft) 18%,transparent),transparent 75%)}
+.mc-s-prism .mc-beam{left:1px;width:2px;border-radius:2px;z-index:2;background:var(--accent-soft);
+  box-shadow:0 0 10px 1px color-mix(in srgb,var(--accent-soft) 80%,transparent),0 0 26px 4px color-mix(in srgb,var(--accent) 35%,transparent)}
+.mc-s-prism.mc-right .mc-glow{background:linear-gradient(270deg,color-mix(in srgb,var(--accent-soft) 18%,transparent),transparent 75%)}
+.mc-s-prism.mc-right .mc-beam{left:auto;right:1px}
+.mc-s-prism .mc-sub{border-top-color:color-mix(in srgb,var(--top-hv) 40%,transparent)}
+.mc-s-prism .mc-item:hover > .mc-sub button,.mc-s-prism .mc-item:has(:focus-visible) > .mc-sub button{animation:mcRise .3s backwards}
+.mc-s-prism .mc-sub button:nth-child(2){animation-delay:.04s}
+.mc-s-prism .mc-sub button:nth-child(3){animation-delay:.08s}
+.mc-s-prism .mc-sub button:nth-child(4){animation-delay:.12s}
+.mc-s-prism .mc-sub button:nth-child(n+5){animation-delay:.16s}
+.mc-s-prism .mc-sub button.on{background:linear-gradient(90deg,color-mix(in srgb,var(--accent-soft) 24%,transparent),transparent)}
+.mc-s-prism .mc-cnt{opacity:1;background:linear-gradient(90deg,var(--accent-soft),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* Thread — 상자 없이 점선 실과 ◆ 마디. 대메뉴에 올리면 이름 끝에서 점선이 하위 메뉴까지 뻗음(--lw = 이름 폭, MenuCard가 잼).
+   하위 메뉴는 본문 위젯 위에 겹쳐도 읽히도록 드롭다운 배경을 옅게 깐다 */
+.mc-s-thread{--mc-gap:30px;padding:6px 0 4px 22px;background:none;border:0;border-radius:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.mc-s-thread::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:1px;opacity:.5;pointer-events:none;
+  background:linear-gradient(180deg,var(--top-fg) 50%,transparent 0) 0 0/1px 5px repeat-y;
+  -webkit-mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent);mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent)}
+.mc-s-thread .mc-brand{padding:0 0 4px}
+.mc-s-thread .mc-hr{height:10px;margin:0;background:none}
+.mc-s-thread .mc-list{gap:0}
+.mc-s-thread .mc-top{position:relative;padding:8px 0;border-radius:0}
+.mc-s-thread .mc-item:hover > .mc-top,.mc-s-thread .mc-item.on > .mc-top{background:none}
+.mc-s-thread .mc-grp > .mc-top::after{content:none}
+.mc-s-thread .mc-top::before{content:"";position:absolute;left:-21px;top:50%;width:7px;height:7px;margin-top:-3.5px;transform:rotate(45deg);
+  background:var(--bg-g2,#121418);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--top-fg) 70%,transparent);transition:.25s}
+.mc-s-thread .mc-item:hover > .mc-top::before{box-shadow:inset 0 0 0 1px var(--gold);transform:rotate(45deg) scale(1.2)}
+.mc-s-thread .mc-item.on > .mc-top::before{background:var(--gold);box-shadow:0 0 12px 2px color-mix(in srgb,var(--gold) 55%,transparent);transform:rotate(45deg) scale(1.25)}
+.mc-s-thread .mc-top .mc-lbl{transition:transform .25s}
+.mc-s-thread .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(3px)}
+.mc-s-thread .mc-wire{position:absolute;top:50%;right:calc(-1 * var(--mc-gap));width:calc(100% - var(--lw,40px) - 10px + var(--mc-gap));
+  border-top:1px dashed var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.3,.8,.25,1);pointer-events:none}
+.mc-s-thread .mc-grp:hover > .mc-top .mc-wire,.mc-s-thread .mc-grp:has(:focus-visible) > .mc-top .mc-wire{transform:scaleX(1)}
+.mc-s-thread .mc-item.shut > .mc-top .mc-wire{transform:scaleX(0)}
+.mc-s-thread .mc-sub{top:-2px;min-width:150px;padding:4px 14px 4px 18px;border:0;border-radius:0 10px 10px 0;box-shadow:none;
+  background:color-mix(in srgb,var(--dd-bg) 82%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mc-s-thread .mc-sub::after{content:"";position:absolute;left:0;top:20px;bottom:20px;border-left:1px dashed var(--gold)}
+.mc-s-thread .mc-sub button{position:relative;padding:8px 0;border-radius:0;opacity:.85}
+.mc-s-thread .mc-sub button:hover,.mc-s-thread .mc-sub button.on{background:none;opacity:1}
+.mc-s-thread .mc-sub button::before{content:"";position:absolute;left:-21px;top:50%;width:5px;height:5px;margin-top:-2.5px;transform:rotate(45deg);
+  background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
+.mc-s-thread .mc-sub button.on::before{background:var(--gold);box-shadow:0 0 8px color-mix(in srgb,var(--gold) 70%,transparent)}
+.mc-s-thread .mc-cnt{color:var(--gold);opacity:.85}
+.mc-s-thread .mc-foot{position:relative;margin-top:14px;padding-top:10px;border-top:0}
+.mc-s-thread .mc-foot::before{content:"";position:absolute;left:-21px;top:-1px;width:5px;height:5px;transform:rotate(45deg);background:var(--gold)}
+/* 오른쪽 열 — 실을 카드 오른쪽으로, 점선은 이름 앞에서 왼쪽으로 */
+.mc-s-thread.mc-right{padding:6px 22px 4px 0}
+.mc-s-thread.mc-right::before{left:auto;right:4px}
+.mc-s-thread.mc-right .mc-top,.mc-s-thread.mc-right .mc-sub button{flex-direction:row-reverse}
+.mc-s-thread.mc-right .mc-top::before,.mc-s-thread.mc-right .mc-sub button::before{left:auto;right:-21px}
+.mc-s-thread.mc-right .mc-wire{right:auto;left:calc(-1 * var(--mc-gap));transform-origin:right}
+.mc-s-thread.mc-right .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(-3px)}
+.mc-s-thread.mc-right .mc-sub{padding:4px 18px 4px 14px;border-radius:10px 0 0 10px}
+.mc-s-thread.mc-right .mc-sub::after{left:auto;right:0}
+.mc-s-thread.mc-right .mc-foot{display:flex;justify-content:flex-end}
+.mc-s-thread.mc-right .mc-foot::before{left:auto;right:-21px}
+@media (prefers-reduced-motion:reduce){
+  .menu-card[class*="mc-s-"] *,.menu-card[class*="mc-s-"]::before{transition:none !important;animation:none !important}
+}
 
 /* ---------- 뒤로가기 화살표 (v2.8 사용자 요청 — 자관 상세 왼쪽 위) ----------
    테두리·배경 없이 1px 선만. 평소엔 마름모(사이트의 ◆ 장식), 올리면(모바일은 누르는 순간) 왼쪽 두 변이
