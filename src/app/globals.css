@@ -1058,10 +1058,10 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-tabs{display:flex;gap:16px}
 .rw-tabs button{background:none;border:0;padding:3px 0 2px;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;opacity:.5;border-bottom:1px solid transparent}
 .rw-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--rw-tab,var(--accent))}
-/* 키보드 포커스 — 바깥 테두리(outline)는 위젯 경계에 잘려 오른쪽·아래 변만 남아 빨간 세로선처럼 보였다 (v3.3 사용자 제보).
-   위젯 안쪽에 옅은 바탕으로 표시한다 */
+/* 포커스 테두리(outline)를 그리지 않는다 — 위젯 경계에 잘려 오른쪽 변만 남아 빨간 세로선처럼 보였다 (v3.3 사용자 제보).
+   고른 탭은 밑줄 하나로만 표시한다(사용자 요청 — 다른 표시를 더하지 않는다). 키보드로 옮겨 간 탭은 글자만 또렷하게 */
 .rw-tabs button:focus{outline:none}
-.rw-tabs button:focus-visible{background:color-mix(in srgb,currentColor 14%,transparent);border-radius:3px}
+.rw-tabs button:focus-visible{opacity:1}
 .rw-all{letter-spacing:.12em;font-size:calc(10.5px*var(--fs,1));color:inherit;text-decoration:none;white-space:nowrap}
 .rw-all:hover{text-decoration:underline;text-underline-offset:3px}
 .rw-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-top:9px;border-top:1px solid var(--rw-line);
