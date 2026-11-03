@@ -128,50 +128,48 @@ export function softAccent(accent: string): string {
 }
 
 /**
- * 포인트 자동 모드 — 포인트 컬러 하나로 전체 팔레트 파생 (v3.6 재설계, 시안 C).
- * - 명도는 HSL이 아니라 지각 명도(OKLCH)로 고정 — 어떤 색을 골라도 화면 밝기·대비가 같게 나온다.
- * - 포인트 색은 배경·상단바·버튼 같은 **면**에 쓰고, 글씨는 거의 무채색으로 둔다.
+ * 포인트 자동 모드 — 포인트 컬러 하나로 전체 팔레트 파생 (v3.6 재설계, 시안 B).
+ * - 명도는 HSL이 아니라 지각 명도(OKLCH)로 역할마다 고정 — 어떤 색을 골라도 화면 밝기·대비가 같게 나온다.
+ * - 채도는 예전 파생과 비슷한 은은한 정도 — 면과 글씨 모두 포인트 색조가 옅게 비친다.
  * - 마지막에 글씨마다 대비율을 검사해 단계(level) 기준에 못 미치면 명도를 밀어 준다.
  * 톤(다크/라이트) 선택 가능, 파생값은 세부 항목 hex 란에 전부 채워짐 (v1.9).
  */
 export function derivePointTheme(accent: string, tone: PointTone, level: ReadLevel = 'std'): ThemeVars {
   const T = READ_TARGETS[level];
   const { H, C } = toOklch(accent);
-  const c0 = Math.min(C, 0.15);
-  // 면: 포인트 색조를 지각 명도 L, 채도 배율 m으로
+  const c0 = Math.min(C, 0.14);
+  // 포인트 색조를 지각 명도 L, 채도 배율 m으로
   const n = (L: number, m: number) => oklchToHex({ L, C: c0 * m, H });
-  // 글씨: 색조만 살짝 비친 무채색
-  const ink = (L: number) => oklchToHex({ L, C: Math.min(0.01, c0 * 0.07), H });
   const accentSoft = softAccent(accent);
 
   const t: ThemeVars = tone === 'dark'
     ? {
-      bgG1: n(0.3, 0.6), bgG2: n(0.17, 0.5),
+      bgG1: n(0.29, 0.32), bgG2: n(0.17, 0.3),
       bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-      cardBg: n(0.985, 0.05), cardFg: ink(0.22),
-      topBg: n(0.2, 0.62), topFg: ink(0.82), topHv: ink(0.98), topBrand: ink(0.96),
-      ddBg: n(0.23, 0.5), ddFg: ink(0.88), ddHv: '#ffffff',
-      pageTitle: ink(0.96), pageDesc: ink(0.8),
-      bgmBg: n(0.19, 0.55), bgmFg: ink(0.96), bgmIc: ink(0.84), bgmVol: ink(0.9),
-      sbThumb: n(0.45, 0.35), sbBd: n(0.2, 0.5),
-      searchBg: n(0.26, 0.45), searchFg: ink(0.93), searchIc: ink(0.72), searchBd: n(0.38, 0.45),
-      btnDark: n(0.34, 0.8), btnDarkFg: ink(0.99), btnDarkHv: n(0.4, 0.8),
-      cropBg: n(0.3, 0.4),
+      cardBg: n(0.985, 0.04), cardFg: n(0.25, 0.25),
+      topBg: n(0.19, 0.34), topFg: n(0.8, 0.12), topHv: n(0.97, 0.06), topBrand: n(0.95, 0.08),
+      ddBg: n(0.22, 0.3), ddFg: n(0.86, 0.1), ddHv: '#ffffff',
+      pageTitle: n(0.95, 0.06), pageDesc: n(0.77, 0.12),
+      bgmBg: n(0.18, 0.32), bgmFg: n(0.95, 0.06), bgmIc: n(0.82, 0.12), bgmVol: n(0.9, 0.1),
+      sbThumb: n(0.45, 0.22), sbBd: n(0.2, 0.3),
+      searchBg: n(0.25, 0.3), searchFg: n(0.92, 0.06), searchIc: n(0.7, 0.12), searchBd: n(0.37, 0.25),
+      btnDark: n(0.31, 0.45), btnDarkFg: n(0.98, 0.04), btnDarkHv: n(0.37, 0.45),
+      cropBg: n(0.3, 0.24),
       accent, accentSoft, readLevel: level,
       radius: 14, radiusS: 9, shadow: 100, ddShadow: 100,
     }
     : {
-      bgG1: n(0.955, 0.22), bgG2: n(0.89, 0.32),
+      bgG1: n(0.965, 0.1), bgG2: n(0.91, 0.15),
       bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-      cardBg: n(0.995, 0.04), cardFg: ink(0.22),
-      topBg: n(0.975, 0.14), topFg: ink(0.42), topHv: ink(0.22), topBrand: ink(0.26),
-      ddBg: n(0.985, 0.08), ddFg: ink(0.33), ddHv: '#000000',
-      pageTitle: ink(0.24), pageDesc: ink(0.45),
-      bgmBg: n(0.985, 0.1), bgmFg: ink(0.26), bgmIc: ink(0.44), bgmVol: ink(0.32),
-      sbThumb: n(0.75, 0.25), sbBd: n(0.9, 0.25),
-      searchBg: n(0.99, 0.05), searchFg: ink(0.26), searchIc: ink(0.56), searchBd: n(0.85, 0.3),
-      btnDark: n(0.46, 0.75), btnDarkFg: ink(0.99), btnDarkHv: n(0.53, 0.75),
-      cropBg: n(0.9, 0.2),
+      cardBg: n(0.995, 0.03), cardFg: n(0.25, 0.25),
+      topBg: n(0.985, 0.06), topFg: n(0.45, 0.25), topHv: n(0.42, 1), topBrand: n(0.3, 0.35),
+      ddBg: n(0.99, 0.04), ddFg: n(0.36, 0.2), ddHv: '#000000',
+      pageTitle: n(0.28, 0.35), pageDesc: n(0.48, 0.2),
+      bgmBg: n(0.99, 0.05), bgmFg: n(0.28, 0.25), bgmIc: n(0.46, 0.2), bgmVol: n(0.36, 0.25),
+      sbThumb: n(0.76, 0.2), sbBd: n(0.9, 0.2),
+      searchBg: n(0.995, 0.03), searchFg: n(0.28, 0.2), searchIc: n(0.58, 0.12), searchBd: n(0.86, 0.15),
+      btnDark: n(0.46, 0.5), btnDarkFg: n(0.99, 0.03), btnDarkHv: n(0.52, 0.5),
+      cropBg: n(0.9, 0.15),
       accent, accentSoft, readLevel: level,
       radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤은 그림자 약하게 (30%)
     };
