@@ -142,32 +142,81 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
     </span>
   ) : null;
 
+  /* 카테고리 헤더 모양 (v3.2 사용자 요청 — 환경설정 > 디자인 「카테고리 헤더」, 모든 게시판 공통).
+     통합 검색 화면은 게시판 하나의 표지가 아니라서 늘 지금 모양을 쓴다 */
+  const headStyle = searchAll ? 'basic' : (boardSet.headStyle ?? 'basic');
+  const title = (
+    <PageTitle href={boardHref(board.id, boards)}>{board.id === MAIN_BOARD_ID ? 'BOARD' : board.name}</PageTitle>
+  );
+  const desc = <EditableDesc k={board.id === MAIN_BOARD_ID ? 'board-desc' : `board-desc-${board.id}`} def={board.desc} />;
+  const tabs = ['전체', '공지'].map(c => (
+    <button key={c} className={cat === c ? 'on' : ''} onClick={() => { setCat(c); setPage(1); }}>{c}</button>
+  ));
+  const search = <SearchBar key={searchAll ? q : bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />;
+  const canWrite = !searchAll && allow(board.permWrite) && !!user;
+  const goWrite = () => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`);
+  const penIcon = (
+    <svg viewBox="0 0 24 24" aria-hidden className="bh-ico"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+  );
+  // 머리글의 글 수 — 분류·검색과 상관없이 이 게시판에 있는 글 전부
+  const postCount = headStyle === 'mast'
+    ? posts.filter(p => (p.boardId ?? MAIN_BOARD_ID) === board.id).length : 0;
+
   return (
-    <section className="page board-page">
+    <section className={`page board-page bhs-${headStyle}`}>
       {searchAll ? (
         <div className="page-head">
           <PageTitle href="/search">SEARCH</PageTitle>
           <p>{q ? `‘${q}’ 검색 결과 ${visible.length}개` : '검색어를 입력하세요'}</p>
         </div>
+      ) : headStyle === 'mast' ? (
+        /* A 마스트헤드 — 머리글(BOARD · 글 수) · 이탤릭 큰 제목 · 설명(PC는 제목 오른쪽 끝, 모바일은 아래) */
+        <div className="page-head bhead">
+          <div className="bh-eyebrow">Board · {postCount} {postCount === 1 ? 'post' : 'posts'}</div>
+          <div className="bh-mast">{title}{desc}</div>
+        </div>
+      ) : headStyle === 'emblem' ? (
+        /* C 각인 — 가운데 장식(✦) · 넓은 자간 제목 · 이탤릭 설명 */
+        <div className="page-head bhead">
+          <div className="bh-orn" aria-hidden>✦</div>
+          {title}
+          {desc}
+        </div>
       ) : (
         <div className="page-head">
-          <PageTitle href={boardHref(board.id, boards)}>{board.id === MAIN_BOARD_ID ? 'BOARD' : board.name}</PageTitle>
-          <EditableDesc k={board.id === MAIN_BOARD_ID ? 'board-desc' : `board-desc-${board.id}`} def={board.desc} />
+          {title}
+          {desc}
         </div>
       )}
-      <div className="toolrow">
-        <div className="seg">
-          {['전체', '공지'].map(c => (
-            <button key={c} className={cat === c ? 'on' : ''} onClick={() => { setCat(c); setPage(1); }}>{c}</button>
-          ))}
+      {headStyle === 'mast' ? (
+        /* 가는 선 위에 밑줄 탭 · 검색 · 글자 버튼 WRITE */
+        <div className="toolrow bh-row">
+          <div className="bh-tabs">{tabs}</div>
+          <div className="toolrow-act">
+            {search}
+            {canWrite && <button className="bh-write" onClick={goWrite}>{penIcon}WRITE</button>}
+          </div>
         </div>
-        <div className="toolrow-act">
-          <SearchBar key={searchAll ? q : bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />
-          {!searchAll && allow(board.permWrite) && !!user && (
-            <button className="btn btn-dark" onClick={() => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`)}>WRITE</button>
-          )}
+      ) : headStyle === 'emblem' ? (
+        /* 검색 · 탭 · 글쓰기를 가운데 한 묶음으로 (모바일은 버튼이 양 끝) */
+        <div className="toolrow bh-row">
+          <div className="bh-side">{search}</div>
+          <div className="bh-tabs">
+            {tabs.map((t, i) => <React.Fragment key={i}>{i > 0 && <span className="bh-dot" aria-hidden>·</span>}{t}</React.Fragment>)}
+          </div>
+          <div className="bh-side">
+            {canWrite && <button className="bh-round" onClick={goWrite} aria-label="글쓰기" title="WRITE">{penIcon}</button>}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="toolrow">
+          <div className="seg">{tabs}</div>
+          <div className="toolrow-act">
+            {search}
+            {canWrite && <button className="btn btn-dark" onClick={goWrite}>WRITE</button>}
+          </div>
+        </div>
+      )}
 
       {skin === 'gallery' || skin === 'gallery2' ? (
         /* 갤러리형 스킨 (v2.3 — 티켓형 대체) — 3열 5:6 카드, 그림 위에 제목·날짜.
