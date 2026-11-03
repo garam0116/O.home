@@ -6,7 +6,7 @@
 // TODO(0차→): Supabase 연결 시 site_settings 테이블로 저장 위치 이동
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  ThemeMode, PointTone, ThemeVars, ThemeState, ThemeStore, ThemePreset,
+  ThemeMode, PointTone, ReadLevel, ThemeVars, ThemeState, ThemeStore, ThemePreset,
   DARK_THEME, DEFAULT_THEME_STORE, defaultVarsFor, derivePointTheme, themeToCssVars,
   composeVars, sharedEdits,
 } from './theme';
@@ -29,6 +29,9 @@ interface ThemeCtx {
   setMode: (m: ThemeMode) => void;             // 모드 전환 — 그 모드의 수정본 로드 (리셋 아님)
   setPointAccent: (hex: string) => void;       // 포인트 자동: 변경 시에만 재파생
   setPointTone: (t: PointTone) => void;
+  /** 포인트 자동 가독성 단계 (v3.6) — 표준(AA) / 높음(AAA) */
+  pointLevel: ReadLevel;
+  setPointLevel: (l: ReadLevel) => void;
   setVar: <K extends keyof ThemeVars>(key: K, value: ThemeVars[K]) => void; // 현재 모드의 수정본에 반영
   resetMode: (m: ThemeMode) => void;           // 선택 리셋 — 해당 모드만 초기값으로
   save: () => void;                            // 드래프트 → 실제 저장 (localStorage + FOUC 맵)
@@ -61,6 +64,10 @@ const normalize = (s: Partial<ThemeStore> | null | undefined): ThemeStore => {
   // 지정 항목 기록이 없던 예전 저장본 — 지금 보이는 값에서 모드와 상관없는 항목을 이어받는다.
   // 예전 기록에 섞여 있던 색 구성 값은 버린다 (모드 전환 때 다른 모드 위에 섞이던 원인)
   st.edits = sharedEdits(s?.edits ?? st.perMode[st.mode]);
+  /* 포인트 자동은 늘 「기준색 + 톤 + 단계」에서 파생된 값이다(손대면 커스텀으로 넘어가므로).
+     로드할 때마다 다시 파생해, 파생 공식이 바뀌면(v3.6 가독성 재설계) 저장본에도 바로 반영되게 한다 */
+  st.pointLevel = st.pointLevel ?? 'std';
+  st.perMode.point = composeVars('point', st.pointAccent, st.pointTone, st.edits, st.perMode.custom, st.pointLevel);
   return st;
 };
 
@@ -125,7 +132,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const site = draft.perMode[draft.mode];
     applyToDom(pageColor
       ? {
-        ...derivePointTheme(pageColor.color, pageColor.tone ?? draft.pointTone),
+        ...derivePointTheme(pageColor.color, pageColor.tone ?? draft.pointTone, draft.pointLevel ?? 'std'),
         pageHead: site.pageHead, pageHeadM: site.pageHeadM,
         /* 카드 불투명도도 사이트 설정 그대로 (v3.5 사용자 제보 — 테마컬러 자관에서만 94%로 돌아갔다) */
         cardAlpha: site.cardAlpha,
@@ -189,7 +196,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const fresh = mode === 'custom' && sameVars(d.perMode.custom, DEFAULT_THEME_STORE.perMode.custom);
       const vars = fresh
         ? d.perMode[d.mode]
-        : composeVars(mode, d.pointAccent, d.pointTone, d.edits, d.perMode.custom);
+        : composeVars(mode, d.pointAccent, d.pointTone, d.edits, d.perMode.custom, d.pointLevel);
       return { ...d, mode, perMode: { ...d.perMode, [mode]: vars } };
     }), []);
 
@@ -200,15 +207,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       delete edits.accentSoft;
       return {
         ...d, mode: 'point', pointAccent: hex, edits,
-        perMode: { ...d.perMode, point: composeVars('point', hex, d.pointTone, edits, d.perMode.custom) },
+        perMode: { ...d.perMode, point: composeVars('point', hex, d.pointTone, edits, d.perMode.custom, d.pointLevel) },
       };
     }), []);
 
   const setPointTone = useCallback((tone: PointTone) =>
     setDraft(d => ({
       ...d, mode: 'point', pointTone: tone,
-      perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, tone, d.edits, d.perMode.custom) },
+      perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, tone, d.edits, d.perMode.custom, d.pointLevel) },
     })), []);
+
+  /* 가독성 단계 (v3.6) — 포인트 자동이면 다시 파생. 포인트 자동을 이어받은 커스텀이면
+     보정 단계만 바꾼다(직접 고른 색은 그대로, 대비 보정만 새 단계로) */
+  const setPointLevel = useCallback((level: ReadLevel) =>
+    setDraft(d => {
+      const next = { ...d, pointLevel: level };
+      if (d.mode === 'custom' && d.perMode.custom.readLevel) {
+        return { ...next, perMode: { ...d.perMode, custom: { ...d.perMode.custom, readLevel: level } } };
+      }
+      return {
+        ...next, mode: 'point',
+        perMode: { ...d.perMode, point: composeVars('point', d.pointAccent, d.pointTone, d.edits, d.perMode.custom, level) },
+      };
+    }), []);
 
   // 세부 수정 (v1.9 확정) — 프리셋 모드(라이트/다크/포인트)에서 뭐 하나라도 바꾸면
   // 현재 보이는 값 전체를 커스텀으로 복사하며 커스텀 모드로 전환. 커스텀에서는 그대로 반영.
@@ -232,7 +253,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setDraft(d => ({
       ...d,
       edits: m === d.mode ? {} : d.edits,
-      perMode: { ...d.perMode, [m]: defaultVarsFor(m, d.pointAccent, d.pointTone) },
+      perMode: { ...d.perMode, [m]: defaultVarsFor(m, d.pointAccent, d.pointTone, d.pointLevel) },
     })), []);
 
   const save = useCallback(() => {
@@ -290,6 +311,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, dirty, setMode, setPointAccent, setPointTone, setVar,
+      pointLevel: draft.pointLevel ?? 'std', setPointLevel,
       resetMode, save, discard, presets, savePreset, applyPreset, removePreset, setPageTheme, setPageBg,
     }}>
       {children}

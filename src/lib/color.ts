@@ -122,3 +122,87 @@ export function normalizeColor(v: string): string {
   }
   return `rgba(${r},${g},${b},${+a.toFixed(3)})`;
 }
+
+/* ---------- 가독성 (v3.6 사용자 요청 — 「포인트 자동 색이 가독성이 나쁘다」) ----------
+   HSL 명도는 눈에 보이는 밝기와 다르다 — 같은 L이어도 노랑·라임은 훨씬 밝게 보인다.
+   그래서 포인트 자동 팔레트는 지각 명도(OKLCH)로 만들고, 글씨는 WCAG 대비율로 검사해
+   기준에 못 미치면 명도만 밀어 올린다(내린다). */
+
+const lin = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+const unlin = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+
+/** WCAG 상대 휘도 (투명도는 무시) */
+export function luminance(color: string): number {
+  const { r, g, b } = toRgba(color);
+  return 0.2126 * lin(r / 255) + 0.7152 * lin(g / 255) + 0.0722 * lin(b / 255);
+}
+
+/** WCAG 대비율 1~21 */
+export function contrastRatio(a: string, b: string): number {
+  const x = luminance(a), y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+export interface OKLCH { L: number; C: number; H: number }   // H = 라디안
+
+export function toOklch(color: string): OKLCH {
+  const { r: R, g: G, b: B } = toRgba(color);
+  const r = lin(R / 255), g = lin(G / 255), b = lin(B / 255);
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const Bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return { L, C: Math.hypot(A, Bb), H: Math.atan2(Bb, A) };
+}
+
+/** OKLCH → #rrggbb. sRGB 밖이면 색조·명도는 두고 채도만 줄여 안으로 넣는다 */
+export function oklchToHex({ L, C, H }: OKLCH): string {
+  const LL = clamp(L, 0, 1);
+  const at = (c: number) => {
+    const A = c * Math.cos(H), B = c * Math.sin(H);
+    const l = (LL + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+    const m = (LL - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+    const s = (LL - 0.0894841775 * A - 1.291485548 * B) ** 3;
+    return [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    ];
+  };
+  const inGamut = (v: number[]) => v.every(x => x >= -1e-4 && x <= 1 + 1e-4);
+  let c = Math.max(0, C);
+  if (!inGamut(at(c))) {
+    let lo = 0, hi = c;
+    for (let i = 0; i < 22; i++) { const mid = (lo + hi) / 2; if (inGamut(at(mid))) lo = mid; else hi = mid; }
+    c = lo;
+  }
+  const to = (v: number) => Math.round(clamp(unlin(clamp(v, 0, 1)), 0, 1) * 255).toString(16).padStart(2, '0');
+  return '#' + at(c).map(to).join('');
+}
+
+/**
+ * 글씨색 fg가 배경(들) bg와 target 이상의 대비를 갖도록 지각 명도만 움직인다.
+ * 이미 넘으면 그대로, 아니면 기준을 넘는 가장 가까운 명도. 끝까지 가도 안 되면 흰색/검정.
+ * 배경이 여러 개(그라데이션 양 끝 등)면 가장 불리한 쪽 기준.
+ */
+export function ensureContrast(fg: string, bg: string | string[], target: number): string {
+  const bgs = Array.isArray(bg) ? bg : [bg];
+  const worst = (c: string) => Math.min(...bgs.map(b => contrastRatio(c, b)));
+  if (worst(fg) >= target) return fg;
+  const up = worst('#ffffff') > worst('#000000');
+  const o = toOklch(fg);
+  let lo = o.L, hi = up ? 1 : 0;
+  if (worst(oklchToHex({ ...o, L: hi })) < target) return up ? '#ffffff' : '#000000';
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (worst(oklchToHex({ ...o, L: mid })) >= target) hi = mid; else lo = mid;
+  }
+  return oklchToHex({ ...o, L: hi });
+}
+
+/** 색 면 위의 글씨 — 흰색과 먹색 중 더 잘 읽히는 쪽 */
+export function onColor(fill: string): string {
+  return contrastRatio('#ffffff', fill) >= contrastRatio('#111317', fill) ? '#ffffff' : '#111317';
+}
