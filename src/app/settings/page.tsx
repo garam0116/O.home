@@ -176,7 +176,7 @@ function WidgetStyleRow() {
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>위젯 카드 색</b>
         <small>메인·사이드에 얹히는 카드 — 비워 두면 카드 색을 그대로 따라갑니다</small></div>
-      <div className="cp-group">
+      <div className="cp-grid2">
         <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
         <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
         <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
@@ -199,7 +199,7 @@ function BgmStyleRow() {
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>플레이어 색</b>
         <small>화면 구석 미니 플레이어와 팝업 리스트의 색</small></div>
-      <div className="cp-group">
+      <div className="cp-grid2">
         <CP label="배경" k="bgmBg" />
         <CP label="글씨" k="bgmFg" />
         <CP label="아이콘" k="bgmIc" />
@@ -380,6 +380,8 @@ function ThemePane() {
                   onClick={() => setVar('bgImageId', undefined)}>REMOVE</button>
               )}
               </Line>
+              {/* 블러·덮개는 한 줄에 (v3.4 사용자 요청) */}
+              <Line>
               <Item label="블러">
                 <KStep value={state.vars.bgBlur ?? 0} min={0} max={30} step={2} suffix="px"
                   onChange={v => setVar('bgBlur', v)} />
@@ -389,6 +391,7 @@ function ThemePane() {
                 <KStep value={state.vars.bgDim ?? BG_DIM} min={0} max={80} step={5} suffix="%"
                   onChange={v => setVar('bgDim', v)} />
               </Item>
+              </Line>
             </>
           )}
         </Ctl>
