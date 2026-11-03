@@ -16,7 +16,7 @@ import { useConfirmDelete, ConfirmModal, Modal } from '@/components/ui/Modal';
 import { exportBackup, importBackup, resetGroups, RESET_CONTENT, RESET_EXTRA } from '@/lib/backup';
 import { newId } from '@/lib/postStore';
 import {
-  useBoardSettings, boardBadgeStyle, BoardBadge,
+  useBoardSettings, boardBadgeStyle, BoardBadge, BoardHeadStyle,
   useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf, BOARD_BOX_DEF, boxAlphaOf,
   boardHref, boardKeys, findBoardByKey,
 } from '@/lib/boardStore';
@@ -75,7 +75,7 @@ const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[]
   ] },
   { id: 'design', label: '디자인', icon: '◈', sections: [
     { id: 'theme', label: '테마·색' }, { id: 'layout', label: '레이아웃' },
-    { id: 'detail', label: '세부 요소' }, { id: 'fonts', label: '폰트 설정' }, { id: 'fontlib', label: '폰트 라이브러리' },
+    { id: 'detail', label: '세부 요소' }, { id: 'boardhead', label: '카테고리 헤더' }, { id: 'fonts', label: '폰트 설정' }, { id: 'fontlib', label: '폰트 라이브러리' },
   ] },
   { id: 'content', label: '콘텐츠', icon: '▤', sections: [
     { id: 'menu', label: '메뉴' }, { id: 'board', label: '카테고리' }, { id: 'trpg', label: 'TRPG' },
@@ -504,6 +504,39 @@ function LayoutPane() {
 }
 
 /** 세부 요소 — 입력 포커스·스크롤바·검색창·버튼·모서리·그림자 (v3.1) */
+/** 카테고리 헤더 (v3.2 사용자 요청) — 카테고리 목록 맨 위 제목·탭·버튼의 모양. 모든 게시판 공통.
+ *  값은 게시판 공통 설정(ohome.boardset.v1)에 들어가 맨 위 [저장]으로 함께 저장된다 */
+const HEAD_STYLES: { id: BoardHeadStyle; name: string; sub: string; desc: string }[] = [
+  { id: 'basic', name: '기본', sub: '지금 모양', desc: '왼쪽 제목 · 분류 버튼 · 검색 · WRITE 버튼' },
+  { id: 'mast', name: 'A 마스트헤드', sub: '잡지 표지형', desc: '「BOARD · 글 수」 머리글 · 이탤릭 큰 제목 · 가는 선 위 밑줄 탭과 글자 버튼' },
+  { id: 'emblem', name: 'C 각인', sub: '가운데 엠블럼', desc: '✦ 장식선 · 넓은 자간의 가운데 제목 · 이탤릭 설명 · 둥근 검색/글쓰기 버튼' },
+];
+function BoardHeadPane() {
+  const { st, setHeadStyle } = useBoardSettings();
+  const cur = st.headStyle ?? 'basic';
+  return (
+    <div className="set-sec">
+      <div className="set-row" style={{ flexWrap: 'wrap' }}>
+        <div className="l"><b>헤더 모양</b><small>모든 카테고리 목록에 공통 적용 — 글씨색은 「테마·색 &gt; 페이지 타이틀」, 제목·설명 표시 여부는 같은 칸의 표시 옵션을 따릅니다. 통합 검색 화면은 늘 기본 모양입니다.</small></div>
+        <div className="bh-pick" role="radiogroup" aria-label="카테고리 헤더 모양">
+          {HEAD_STYLES.map(h => (
+            <button key={h.id} type="button" role="radio" aria-checked={cur === h.id}
+              className={`bh-pick-card${cur === h.id ? ' on' : ''}`} onClick={() => setHeadStyle(h.id)}>
+              <span className={`bh-thumb bh-thumb-${h.id}`} aria-hidden>
+                {h.id === 'basic' && <><i className="t" /><span className="r"><i className="seg" /><i className="btn" /></span></>}
+                {h.id === 'mast' && <><i className="eb" /><i className="t" /><span className="r"><i className="tab" /><i className="w" /></span></>}
+                {h.id === 'emblem' && <><i className="orn" /><i className="t" /><i className="d" /><span className="r"><i className="c" /><i className="tab" /><i className="c" /></span></>}
+              </span>
+              <b>{h.name}<small>{h.sub}</small></b>
+              <span className="bh-pick-desc">{h.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DetailPane() {
   const { state, setVar } = useTheme();
   return (
@@ -3234,6 +3267,7 @@ function SettingsInner() {
       case 'theme': return <ThemePane />;
       case 'layout': return <LayoutPane />;
       case 'detail': return <DetailPane />;
+      case 'boardhead': return <BoardHeadPane />;
       case 'fonts': return <FontsPane />;
       case 'fontlib': return <FontPane />;
       case 'menu': return <MenuPane />;

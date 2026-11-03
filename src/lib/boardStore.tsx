@@ -26,7 +26,11 @@ export interface BoardSettings {
   boxAlpha?: number;
   /** 박스 안 글씨색 — 'keep': 지금처럼 어두운 글씨(기본) / 'theme': 테마 따라감(다크면 밝게, 라이트면 어둡게) */
   boxText?: 'keep' | 'theme';
+  /** 카테고리 목록 상단 헤더 모양 (v3.2 사용자 요청) — 모든 게시판 공통, 환경설정 > 디자인 「카테고리 헤더」.
+   *  'basic' 지금 모양(기본) · 'mast' 마스트헤드(머리글 + 이탤릭 큰 제목 + 밑줄 탭) · 'emblem' 각인(가운데 정렬 + 장식) */
+  headStyle?: BoardHeadStyle;
 }
+export type BoardHeadStyle = 'basic' | 'mast' | 'emblem';
 const DEFAULTS: BoardSettings = {
   system: DEFAULT_BOARD_SYSTEM,
 };
@@ -76,12 +80,17 @@ export function useBoardSettings() {
           perPage: p.perPage,
           boxAlpha: p.boxAlpha,
           boxText: p.boxText,
+          headStyle: p.headStyle,
         });
       } else setSt(DEFAULTS);
     } catch { /* 기본값 */ } };
     load();
     setLoaded(true);
-    return onSettingReload(KEY, load);
+    /* 같은 설정을 다른 칸에서 바꿨을 때도 다시 읽는다 (v3.2) — 「카테고리 헤더」(디자인)와
+       「페이지당 포스팅 수」(카테고리)가 같은 키를 따로 고치므로, 서로의 옛 값으로 덮어쓰지 않게 */
+    const offChange = onSettingChange(k => { if (k === KEY) queueMicrotask(load); });
+    const offReload = onSettingReload(KEY, load);
+    return () => { offChange(); offReload(); };
   }, []);
   const apply = useCallback((fn: (s: BoardSettings) => BoardSettings) => {
     setSt(s => {
@@ -94,8 +103,10 @@ export function useBoardSettings() {
     apply(s => ({ ...s, system: s.system.map(b => (b.id === id ? { ...b, ...p } : b)) })), [apply]);
   const setPerPage = useCallback((n: number) => apply(s => ({ ...s, perPage: n })), [apply]);
   const setBox = useCallback((p: Pick<BoardSettings, 'boxAlpha' | 'boxText'>) => apply(s => ({ ...s, ...p })), [apply]);
+  const setHeadStyle = useCallback((v: BoardHeadStyle) =>
+    apply(s => ({ ...s, headStyle: v === 'basic' ? undefined : v })), [apply]);
   return {
-    st, loaded, patchSystem, setPerPage, setBox,
+    st, loaded, patchSystem, setPerPage, setBox, setHeadStyle,
   };
 }
 
@@ -249,4 +260,4 @@ export function boardBadgeStyle(b?: BoardBadge): React.CSSProperties {
   };
 }
 import type React from 'react';
-import { getRawSetting, setSetting, onSettingReload } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload, onSettingChange } from './settingStore';

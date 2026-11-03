@@ -2368,3 +2368,115 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
 .set-fold-head .caret.open{transform:rotate(90deg)}
 .set-fold-head button:hover .caret{color:var(--ink)}
 .set-fold-head button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+/* ---------- 카테고리 헤더 모양 (v3.2 사용자 요청) ----------
+   환경설정 > 디자인 「카테고리 헤더」 — 모든 게시판 공통. 기본(.bhs-basic)은 위의 .page-head·.toolrow 그대로.
+   글씨색은 페이지 타이틀·설명 색(--page-title / --page-desc)을 따르고, 선은 제목색을 옅게 쓴다.
+   제목·설명 표시 옵션(--ph-title 등)은 h1·p의 display 규칙이 그대로 처리한다 */
+.board-page .bhead{display:block;min-height:0}
+.bh-ico{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linejoin:round;display:block;flex-shrink:0}
+.bh-row{--bh-line:color-mix(in srgb,var(--page-title) 35%,transparent)}
+.bh-tabs button{font-size:calc(13px*var(--fs,1));font-weight:500;color:color-mix(in srgb,var(--page-title) 58%,transparent);transition:color .15s}
+.bh-tabs button:hover,.bh-tabs button.on{color:var(--page-title)}
+.bh-row .searchbar{background:none;border-color:transparent}
+.bh-row .searchbar.open{border-color:var(--bh-line)}
+.bh-row .searchbar button{color:var(--page-title)}
+.bh-row .searchbar input{color:var(--page-title)}
+
+/* A 마스트헤드 — 머리글 · 이탤릭 큰 제목(오른쪽 끝에 설명) · 가는 선 위 밑줄 탭 */
+.bhs-mast .bhead{padding-top:12px;margin-bottom:22px}
+.bh-eyebrow{font-size:calc(11px*var(--fs,1));letter-spacing:.28em;text-transform:uppercase;color:color-mix(in srgb,var(--page-title) 75%,transparent)}
+.bh-mast{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 28px;margin-top:12px}
+.bhs-mast .page-head h1{font-size:calc(64px*var(--fs,1));font-style:italic;font-weight:500;letter-spacing:.01em;line-height:1;min-width:0;max-width:100%;overflow-wrap:break-word}
+/* 설명은 제목 오른쪽 끝 — 자리가 모자라면 다음 줄 오른쪽으로 내려간다 */
+.bhs-mast .page-head p{margin:0 0 8px auto;max-width:min(100%,460px);text-align:right;font-size:calc(13px*var(--fs,1));letter-spacing:.04em}
+.bhs-mast .bh-row{align-items:flex-end;flex-wrap:nowrap;border-bottom:1px solid var(--bh-line);margin-bottom:16px}
+.bhs-mast .bh-tabs{display:flex;gap:28px}
+.bhs-mast .bh-tabs button{padding:0 0 11px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.bhs-mast .bh-tabs button.on{border-bottom-color:var(--page-title)}
+.bhs-mast .bh-row .toolrow-act{gap:18px;padding-bottom:5px}
+.bh-write{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-pagetitle,var(--serif));font-size:calc(15px*var(--fs,1));letter-spacing:.22em;color:var(--page-title);padding:6px 0;transition:opacity .15s}
+.bh-write:hover{opacity:.7}
+.bh-write:focus-visible,.bh-round:focus-visible,.bh-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+/* C 각인 — 가운데 정렬 · 양옆 장식선 ✦ · 넓은 자간 제목 · 이탤릭 설명 · 검색/탭/글쓰기 한 묶음 */
+.bhs-emblem .bhead{text-align:center;padding-top:16px;margin-bottom:22px}
+.bh-orn{display:flex;align-items:center;justify-content:center;gap:16px;font-size:calc(12px*var(--fs,1));color:color-mix(in srgb,var(--page-title) 80%,transparent)}
+.bh-orn::before,.bh-orn::after{content:"";height:1px;width:140px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--page-title) 55%,transparent))}
+.bh-orn::after{transform:scaleX(-1)}
+.bhs-emblem .page-head h1{font-size:calc(46px*var(--fs,1));letter-spacing:.24em;padding-left:.24em;margin-top:10px;line-height:1.15;overflow-wrap:break-word}
+.bhs-emblem .page-head p{font-family:var(--font-pagetitle,var(--serif));font-style:italic;font-size:calc(17px*var(--fs,1));margin-top:4px}
+.bhs-emblem .page-head .desc-edit{text-align:center}
+.bhs-emblem .bh-row{justify-content:center;flex-wrap:nowrap;gap:22px;margin-bottom:18px}
+.bhs-emblem .bh-row > :last-child{margin-left:0}
+.bhs-emblem .bh-side{display:flex;flex:1 1 0;min-width:0}
+.bhs-emblem .bh-side:first-child{justify-content:flex-end}
+.bhs-emblem .bh-tabs{display:flex;align-items:center;gap:6px}
+.bhs-emblem .bh-tabs button{padding:4px 12px}
+.bh-dot{color:color-mix(in srgb,var(--page-title) 35%,transparent)}
+.bhs-emblem .searchbar{border-color:var(--bh-line);border-radius:999px;height:38px;min-width:38px}
+.bhs-emblem .searchbar button{border-radius:50%;width:32px;height:32px}
+.bh-round{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--bh-line);display:grid;place-items:center;color:var(--page-title);transition:background .15s}
+.bh-round:hover{background:color-mix(in srgb,var(--page-title) 12%,transparent)}
+
+@media (min-width:621px){
+  /* PC에서는 검색 아이콘 옆에 「검색」 글자 — 넓은 화면에서도 버튼으로 보이게 */
+  .bhs-mast .searchbar:not(.open) button{width:auto;padding:0 4px;gap:7px;display:inline-flex;font-size:calc(13px*var(--fs,1));color:color-mix(in srgb,var(--page-title) 80%,transparent)}
+  .bhs-mast .searchbar:not(.open) button::after{content:"검색"}
+}
+@media (max-width:620px){
+  .bhs-mast .bhead{padding-top:6px;margin-bottom:16px}
+  .bh-eyebrow{font-size:calc(9.5px*var(--fs,1));letter-spacing:.24em}
+  .bh-mast{display:block;margin-top:10px}
+  .bhs-mast .page-head h1{font-size:calc(40px*var(--fs,1))}
+  .bhs-mast .page-head p{text-align:left;margin:6px 0 0;max-width:none;font-size:calc(11.5px*var(--fs,1))}
+  .bhs-mast .bh-tabs{gap:18px}
+  .bhs-mast .bh-tabs button{font-size:calc(12px*var(--fs,1));padding-bottom:8px}
+  .bhs-mast .bh-row .toolrow-act{gap:12px;padding-bottom:3px}
+  .bh-write{font-size:calc(13px*var(--fs,1));gap:6px;letter-spacing:.2em}
+  .bhs-emblem .bhead{padding-top:8px;margin-bottom:16px}
+  .bh-orn::before,.bh-orn::after{width:56px}
+  .bhs-emblem .page-head h1{font-size:calc(32px*var(--fs,1));letter-spacing:.2em;padding-left:.2em;margin-top:6px}
+  .bhs-emblem .page-head p{font-size:calc(13px*var(--fs,1))}
+  /* 모바일은 검색·글쓰기가 양 끝 — 가운데 탭은 그대로 */
+  .bhs-emblem .bh-row{gap:8px}
+  .bhs-emblem .bh-side:first-child{justify-content:flex-start}
+  .bhs-emblem .bh-side:last-child{justify-content:flex-end}
+  .bhs-emblem .searchbar,.bh-round{height:34px;min-width:34px}
+  .bh-round{width:34px}
+  .bhs-emblem .searchbar.open input{width:90px}
+}
+
+/* 환경설정 > 디자인 「카테고리 헤더」 고르기 (v3.2) — 작은 모형 그림 + 이름 + 설명 */
+.bh-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;margin-top:10px}
+.bh-pick-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px;border:1.5px solid var(--line);border-radius:12px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.bh-pick-card:hover{border-color:var(--line-dark)}
+.bh-pick-card.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.bh-pick-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bh-pick-card b{font-size:12.5px;font-weight:600;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.bh-pick-card b small{font-size:10.5px;font-weight:400;color:var(--faint)}
+.bh-pick-desc{font-size:11px;line-height:1.5;color:var(--sub)}
+/* 모형 — 어두운 사진 위 헤더를 선과 막대로 */
+.bh-thumb{display:flex;flex-direction:column;gap:5px;height:74px;border-radius:8px;padding:10px;background:linear-gradient(160deg,#5a4a3e,#2a211d);--tc:rgba(246,239,230,.92);--tl:rgba(246,239,230,.4)}
+.bh-thumb i{display:block;font-style:normal}
+.bh-thumb .t{height:8px;width:52%;background:var(--tc);border-radius:2px}
+.bh-thumb .r{display:flex;align-items:center;gap:5px;margin-top:auto}
+.bh-thumb-basic .seg{width:34px;height:12px;background:#f0f1f3;border-radius:4px}
+.bh-thumb-basic .btn{margin-left:auto;width:26px;height:12px;background:#1d1517;border-radius:4px}
+.bh-thumb-mast .eb{height:3px;width:30%;background:var(--tl)}
+.bh-thumb-mast .t{height:11px;width:58%;transform:skewX(-12deg)}
+.bh-thumb-mast .r{border-bottom:1px solid var(--tl);padding-bottom:3px}
+.bh-thumb-mast .tab{width:22px;height:4px;background:var(--tc);box-shadow:0 4px 0 -2px var(--tc)}
+.bh-thumb-mast .w{margin-left:auto;width:22px;height:4px;background:var(--tc)}
+.bh-thumb-emblem{align-items:center}
+.bh-thumb-emblem .orn{width:44%;height:1px;background:linear-gradient(90deg,transparent,var(--tl),transparent)}
+.bh-thumb-emblem .t{width:56%}
+.bh-thumb-emblem .d{width:34%;height:3px;background:var(--tl)}
+.bh-thumb-emblem .r{gap:8px}
+.bh-thumb-emblem .c{width:10px;height:10px;border:1px solid var(--tl);border-radius:50%}
+.bh-thumb-emblem .tab{width:26px;height:4px;background:var(--tc)}
+@media (max-width:620px){
+  .bh-pick{grid-template-columns:1fr}
+  .bh-pick-card{display:grid;grid-template-columns:96px 1fr;column-gap:12px;row-gap:4px}
+  .bh-pick-card .bh-thumb{grid-row:1 / span 2;height:64px}
+}
