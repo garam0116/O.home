@@ -66,7 +66,7 @@ function RelEditInner() {
             // 헤더는 AU 편집이면 그 AU에만 저장 — base 헤더는 유지 (v1.9 AU별 헤더 분리)
             ...(auObj ? {} : { headerImgId: v.headerImgId, headerCrop: v.headerCrop, slug: v.slug }),
             // 페이지 테마 — AU 편집이면 그 AU에만 (base 테마는 유지, v1.9)
-            ...(auObj ? {} : { themeMode: v.themeMode, themeColor: v.themeColor, themeTone: v.themeTone, illuBg: v.illuBg, illuOn: v.illuOn, nameColor: v.nameColor, cpColor: v.cpColor, ddayColor: v.ddayColor, cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg,
+            ...(auObj ? {} : { themeMode: v.themeMode, themeColor: v.themeColor, themeTone: v.themeTone, illuBg: v.illuBg, illuOn: v.illuOn, nameColor: v.nameColor, cpColor: v.cpColor, ddayColor: v.ddayColor, cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg, wgtColor: v.wgtColor,
                 nameShadowColor: v.nameShadowColor, nameShadow: v.nameShadow,
                 headerBgG1: v.headerBgG1, headerBgG2: v.headerBgG2, headerBgAngle: v.headerBgAngle,
                 pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle }),
@@ -105,7 +105,7 @@ function RelEditInner() {
                   // 자관 값으로 되돌아간다(auStyle이 묶음 단위로 판정한다)
                   style: {
                     nameColor: v.nameColor, cpColor: v.cpColor, ddayColor: v.ddayColor,
-                    cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg,
+                    cpTagBg: v.cpTagBg, cpTagFg: v.cpTagFg, wgtColor: v.wgtColor,
                     nameShadowColor: v.nameShadowColor, nameShadow: v.nameShadow,
                     headerBgG1: v.headerBgG1, headerBgG2: v.headerBgG2, headerBgAngle: v.headerBgAngle,
                     pageBgG1: v.pageBgG1, pageBgG2: v.pageBgG2, pageBgAngle: v.pageBgAngle,

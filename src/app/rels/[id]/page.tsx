@@ -539,7 +539,7 @@ export default function RelDetailPage() {
       {/* 모바일 — 기념일은 이름 아래 가로 띠 (PC는 왼쪽 카드 아래 세로 타임라인) */}
       {isDuo && annivOn && (
         <div className="rw-m rw-m-strip">
-          <RelAnnivStrip startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} />
+          <RelAnnivStrip startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} tab={auSt.wgtColor} />
         </div>
       )}
 
@@ -559,7 +559,7 @@ export default function RelDetailPage() {
               : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
           {annivOn && (
             <div className="rw-slot rw-pc">
-              <RelAnnivColumn startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} />
+              <RelAnnivColumn startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} tab={auSt.wgtColor} />
             </div>
           )}
           </div>
@@ -628,14 +628,14 @@ export default function RelDetailPage() {
               : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
           {feedOn && (
             <div className="rw-slot rw-pc">
-              <RelFeedWidget log={logFeed} lore={loreFeed} fit />
+              <RelFeedWidget log={logFeed} lore={loreFeed} fit tab={auSt.wgtColor} />
             </div>
           )}
           </div>
           {/* 모바일 — LOG/LOREBOOK은 카드 아래 전체 폭 */}
           {feedOn && (
             <div className="rw-m rw-m-feed">
-              <RelFeedWidget log={logFeed} lore={loreFeed} />
+              <RelFeedWidget log={logFeed} lore={loreFeed} tab={auSt.wgtColor} />
             </div>
           )}
         </div>

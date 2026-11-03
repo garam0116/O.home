@@ -2,7 +2,8 @@
  * 자관 상세 위젯의 기념일 (v3.3 사용자 확정 — 시안 「오늘 마디」).
  *
  * 따로 등록하지 않아도 자관 디데이 기준일 하나로 계산되는 기념일만 쓴다. 사용자가 고른 네 묶음:
- *  - 기본      100일 단위 · N주년 · N개월
+ *  - 기본      100일 단위 · N주년 (N개월은 너무 자주 나와 뺐다 — v3.3 사용자 요청.
+ *              365일도 1주년과 하루 차이로 겹쳐 넣지 않는다)
  *  - 숫자 놀이  111·222…999일, 1111·2222…일, 1234일
  *  - 계절      함께 맞는 N번째 봄·여름·가을·겨울 (3·6·9·12월 1일 시작)
  *  - 로그      첫 로그 N주년 — 로그 위젯이 읽은 첫 글 날짜에서
@@ -81,14 +82,10 @@ export function anniversaries(startStr?: string, firstLog?: number, now = new Da
   };
   const nth = (n: number) => addDays(start, n - 1);
 
-  // 기본 — 100일 단위 · N주년 · N개월(12의 배수는 주년으로)
+  // 기본 — 100일 단위 · N주년
   const span = daysBetween(start, until) + 1;
   for (let n = 100; n <= span; n += 100) put(`${n}일`, nth(n));
   for (let y = 1; ; y++) { const d = addMonths(start, 12 * y); if (d > until) break; put(`${y}주년`, d); }
-  for (let m = 1; ; m++) {
-    const d = addMonths(start, m); if (d > until) break;
-    if (m % 12) put(`${m}개월`, d);
-  }
   // 숫자 놀이
   for (const n of PLAY_DAYS) put(`${n}일`, nth(n));
   // 계절 — 시작일이 속한 계절이 첫 번째
