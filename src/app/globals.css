@@ -1057,23 +1057,34 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-lbl{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:2px;font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.42em;opacity:.7}
 .rw-tabs{display:flex;gap:16px}
 .rw-tabs button{background:none;border:0;padding:3px 0 2px;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;opacity:.5;border-bottom:1px solid transparent}
-.rw-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--accent)}
-.rw-tabs button:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+.rw-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--rw-tab,var(--accent))}
+/* 키보드 포커스 — 바깥 테두리(outline)는 위젯 경계에 잘려 오른쪽·아래 변만 남아 빨간 세로선처럼 보였다 (v3.3 사용자 제보).
+   위젯 안쪽에 옅은 바탕으로 표시한다 */
+.rw-tabs button:focus{outline:none}
+.rw-tabs button:focus-visible{background:color-mix(in srgb,currentColor 14%,transparent);border-radius:3px}
 .rw-all{letter-spacing:.12em;font-size:calc(10.5px*var(--fs,1));color:inherit;text-decoration:none;white-space:nowrap}
 .rw-all:hover{text-decoration:underline;text-underline-offset:3px}
 .rw-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-top:9px;border-top:1px solid var(--rw-line);
   font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.16em;line-height:1;opacity:.85;white-space:nowrap}
-.rw-foot b{color:var(--rw-hot);font-weight:600;letter-spacing:.02em}
+/* 고비 숫자 — 세리프의 옛 숫자꼴(작고 아래로 내려가는 5)이 흐려 보여 반듯한 숫자꼴로 (v3.3 사용자 제보) */
+.rw-foot b{color:var(--rw-tab,var(--accent));font-weight:600;letter-spacing:.02em;font-variant-numeric:lining-nums tabular-nums}
 .rw-flow .rw-foot{margin-top:8px}
 /* 기념일 — 세로 타임라인 (남는 높이만큼 줄 간격을 벌려 끝선에서 끝난다) */
-.rw-tl{flex:1;display:flex;flex-direction:column;justify-content:space-between;list-style:none;margin:6px 0 8px;padding:0 0 0 18px;position:relative}
-.rw-tl::before{content:"";position:absolute;left:4.5px;top:10px;bottom:10px;width:1px;background:var(--rw-line)}
-.rw-tl li{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:4px 0;font-size:calc(13px*var(--fs,1))}
+/* 세로선은 한 줄로 긋지 않고 줄마다 점 위아래만 그린다 — 속이 빈 점 위로 선이 지나가 관통해 보였다 (v3.3 사용자 제보).
+   줄(li)이 남는 높이를 나눠 가져 서로 붙어 있으므로 조각이 이어져 한 줄로 보인다 */
+.rw-tl{flex:1;display:flex;flex-direction:column;list-style:none;margin:6px 0 8px;padding:0 0 0 18px;position:relative}
+.rw-tl li{flex:1 1 auto;position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;font-size:calc(13px*var(--fs,1))}
+.rw-tl li::after{content:"";position:absolute;left:-13.5px;top:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,var(--rw-line) calc(50% - 10px),transparent calc(50% - 10px),transparent calc(50% + 10px),var(--rw-line) calc(50% + 10px))}
+.rw-tl li:first-child::after{top:calc(50% + 10px);background:var(--rw-line)}
+.rw-tl li:last-child::after{bottom:calc(50% + 10px);background:var(--rw-line)}
+.rw-tl li:only-child::after{display:none}
 .rw-tl li::before{content:"";position:absolute;left:-18px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;
   border:1px solid color-mix(in srgb,currentColor 60%,transparent);background:color-mix(in srgb,currentColor 15%,transparent)}
-.rw-tl li.past{opacity:.45}
-.rw-tl li.past::before{background:color-mix(in srgb,currentColor 60%,transparent)}
-.rw-tl li.today::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+/* 지난 기념일은 글자·점만 흐리게 — 줄 전체를 흐리면 선도 그 칸만 옅어져 끊겨 보인다 */
+.rw-tl li.past > *{opacity:.45}
+.rw-tl li.past::before{background:color-mix(in srgb,currentColor 30%,transparent);border-color:color-mix(in srgb,currentColor 30%,transparent)}
+.rw-tl li.today::before{background:var(--rw-tab,var(--accent));border-color:var(--rw-tab,var(--accent));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--accent)) 22%,transparent)}
 .rw-tl .when,.rw-strip .when{opacity:.5;font-family:var(--serif);font-size:calc(12px*var(--fs,1));margin-left:6px;font-variant-numeric:tabular-nums}
 .rw-tl b{font-family:var(--serif);font-weight:600;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums;white-space:nowrap}
 .rw-tl b.near,.rw-strip b.near{color:var(--rw-hot)}
@@ -1099,17 +1110,19 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 모바일 가로 띠 */
 .rw-strip{overflow-x:auto;scrollbar-width:none;margin:0 calc(-1*var(--rw-gutter,14px));padding:0 var(--rw-gutter,14px)}
 .rw-strip::-webkit-scrollbar{display:none}
+/* 가로선도 점과 점 사이만 그린다 (세로 타임라인과 같은 이유) */
 .rw-strip ol{list-style:none;margin:0;padding:22px 0 4px;display:flex;position:relative;width:max-content}
-.rw-strip ol::before{content:"";position:absolute;left:0;right:0;top:27px;height:1px;background:var(--rw-line)}
+.rw-strip li::after{content:"";position:absolute;top:5px;left:15px;right:5px;height:1px;background:var(--rw-line)}
+.rw-strip li:last-child::after{display:none}
 .rw-strip li{position:relative;width:92px;padding-top:16px;font-size:calc(12px*var(--fs,1));line-height:1.35}
 .rw-strip li::before{content:"";position:absolute;left:0;top:0;width:10px;height:10px;border-radius:50%;
   border:1px solid color-mix(in srgb,currentColor 60%,transparent);background:color-mix(in srgb,currentColor 15%,transparent)}
-.rw-strip li.past{opacity:.45}
-.rw-strip li.past::before{background:color-mix(in srgb,currentColor 60%,transparent)}
+.rw-strip li.past > *{opacity:.45}
+.rw-strip li.past::before{background:color-mix(in srgb,currentColor 30%,transparent);border-color:color-mix(in srgb,currentColor 30%,transparent)}
 .rw-strip li.today{width:118px}
-.rw-strip li.today::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.rw-strip li.today::before{background:var(--rw-tab,var(--accent));border-color:var(--rw-tab,var(--accent));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--accent)) 22%,transparent)}
 .rw-strip li b{display:block;font-family:var(--serif);font-weight:600;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums}
-.rw-strip li .when{display:block;margin-left:0}
+.rw-strip li .when,.rw-strip li .lb{display:block;margin-left:0}
 .rw-strip li.today .rw-big{display:block;font-size:calc(32px*var(--fs,1))}
 /* 간단 프로필 카드 */
 .mini-prof{padding:0;overflow:hidden}

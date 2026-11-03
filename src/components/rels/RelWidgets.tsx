@@ -152,7 +152,17 @@ interface AnnivProps {
   firstLog?: number;
   /** 디데이 글씨색 (자관 수정 「디데이 글씨색」) — 가까운 기념일 강조에 쓴다 */
   color?: string;
+  /** 위젯 탭 색 (자관 수정 「위젯 탭 색」) — 오늘 표시 점 */
+  tab?: string;
 }
+
+/** 자관별 색 → 위젯 CSS 변수 (지정 안 한 것은 CSS 기본값 = 포인트색) */
+const rwVars = (color?: string, tab?: string) => {
+  const v: Record<string, string> = {};
+  if (color) v['--rw-hot'] = color;
+  if (tab) v['--rw-tab'] = tab;
+  return Object.keys(v).length ? v as React.CSSProperties : undefined;
+};
 
 function useAnniv(startDate?: string, firstLog?: number) {
   // 날짜는 화면을 연 날 기준 — 렌더마다 새로 만들지 않게 한 번만
@@ -163,7 +173,7 @@ function useAnniv(startDate?: string, firstLog?: number) {
 const near = (x: Anniv) => x.diff >= 0 && x.diff <= 7;
 
 /** PC — 카드 아래 세로 타임라인. 넘치면 지난 것(오래된 것부터) → 다가올 것(먼 것부터) 순서로 뺀다 */
-export function RelAnnivColumn({ startDate, firstLog, color }: AnnivProps) {
+export function RelAnnivColumn({ startDate, firstLog, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
   const box = useRef<HTMLDivElement>(null);
   const past = a ? a.past.slice(0, 2).reverse() : [];
@@ -177,7 +187,7 @@ export function RelAnnivColumn({ startDate, firstLog, color }: AnnivProps) {
   const since = relDdayDate(startDate);
   const dd = relDday(startDate, now);
   return (
-    <div className={`rw rw-anniv${gone ? ' rw-gone' : ''}`} ref={box} style={color ? { ['--rw-hot' as string]: color } as React.CSSProperties : undefined}>
+    <div className={`rw rw-anniv${gone ? ' rw-gone' : ''}`} ref={box} style={rwVars(color, tab)}>
       <div className="rw-lbl"><span>ANNIVERSARY</span></div>
       <ul className="rw-tl">
         {shownPast.map(x => (
@@ -210,18 +220,18 @@ const sinceFull = (v?: string) => {
 };
 
 /** 모바일 — 이름 아래 가로 띠 (옆으로 밀어 보기) */
-export function RelAnnivStrip({ startDate, firstLog, color }: AnnivProps) {
+export function RelAnnivStrip({ startDate, firstLog, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
   if (!a) return null;
   const past = a.past.slice(0, 1);
   const future = a.future.slice(0, 6);
   return (
-    <div className="rw rw-strip" style={color ? { ['--rw-hot' as string]: color } as React.CSSProperties : undefined}
+    <div className="rw rw-strip" style={rwVars(color, tab)}
       role="region" aria-label="기념일 — 옆으로 밀어 보기">
       <ol>
         {past.map(x => (
           <li key={x.date.getTime()} className="past">
-            <b>{annivBadge(x.diff)}</b>{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span>
+            <b>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
           </li>
         ))}
         <li className="today">
@@ -230,7 +240,7 @@ export function RelAnnivStrip({ startDate, firstLog, color }: AnnivProps) {
         </li>
         {future.map(x => (
           <li key={x.date.getTime()}>
-            <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b>{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span>
+            <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
           </li>
         ))}
       </ol>
@@ -290,7 +300,7 @@ function FeedPane({ kind, feed, rows, now, box }: {
  * LOG / LOREBOOK 탭 위젯. fit이면(PC) 칸 높이에 맞춰 한 줄 목록 → 펼친 글 미리보기 순서로 줄인다.
  * 주소가 비었거나 볼 수 없는 탭은 숨기고, 둘 다 없으면 위젯 자체를 그리지 않는다.
  */
-export function RelFeedWidget({ log, lore, fit }: { log: Feed; lore: Feed; fit?: boolean }) {
+export function RelFeedWidget({ log, lore, fit, tab: tabColor }: { log: Feed; lore: Feed; fit?: boolean; tab?: string }) {
   const tabs = ([['log', log], ['lore', lore]] as [TabKey, Feed][]).filter(([, f]) => f.state !== 'none');
   const [tab, setTab] = useState<TabKey | null>(null);
   const cur = tabs.find(([k]) => k === tab) ?? tabs[0];
@@ -305,7 +315,7 @@ export function RelFeedWidget({ log, lore, fit }: { log: Feed; lore: Feed; fit?:
   const rows = Math.max(0, maxRows - drop);
   const hideExcerpt = drop > maxRows;
   return (
-    <div className={`rw rw-feed${fit ? '' : ' rw-flow'}${gone ? ' rw-gone' : ''}`} ref={box}>
+    <div className={`rw rw-feed${fit ? '' : ' rw-flow'}${gone ? ' rw-gone' : ''}`} ref={box} style={rwVars(undefined, tabColor)}>
       <div className="rw-lbl">
         <span className="rw-tabs" role="tablist">
           {tabs.map(([k]) => (

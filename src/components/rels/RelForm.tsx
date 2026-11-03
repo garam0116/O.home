@@ -45,6 +45,7 @@ export interface RelFormValue {
   ddayColor?: string;        // 디데이 글씨색 (v2.0 사용자 요청 — 미지정: var(--faint))
   cpTagBg?: string;          // LOG/LOREBOOK 버튼 배경색 (예전 CP/NCP 뱃지 색을 그대로 이어 씀)
   cpTagFg?: string;          // LOG/LOREBOOK 버튼 글씨색
+  wgtColor?: string;         // 2인 자관 위젯 탭 색 (v3.3)
   nameShadowColor?: string;  // 자관명 그림자 색 (v2.0 사용자 요청)
   nameShadow?: number;       // 자관명 그림자 강도 %
   headerBgG1?: string;       // 헤더 이미지 없을 때 배경 그라데이션 (v2.0 사용자 요청)
@@ -263,6 +264,9 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
   const [tagCustom, setTagCustom] = useState(!!(st?.cpTagBg || st?.cpTagFg));
   const [cpTagBg, setCpTagBg] = useState(st?.cpTagBg ?? '#eef0f2');
   const [cpTagFg, setCpTagFg] = useState(st?.cpTagFg ?? '#5d636d');
+  // 2인 자관 위젯 탭 색 (v3.3 사용자 선택 · 시안 C) — 2인 자관에는 LOG/LOREBOOK 버튼이 없어 버튼 색 대신 이것
+  const [wgtCustom, setWgtCustom] = useState(!!st?.wgtColor);
+  const [wgtColor, setWgtColor] = useState(st?.wgtColor ?? '#c9b78f');
   // 그림자 (v2.0) — 색·강도. 자관명과 전신 이미지에 함께 걸린다 (사용자 요청). 미지정이면 기존 그대로
   const [shadowCustom, setShadowCustom] = useState(!!(st?.nameShadowColor || st?.nameShadow));
   const [nameShadowColor, setNameShadowColor] = useState(st?.nameShadowColor ?? '#000000');
@@ -415,6 +419,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
       pageBgAngle: pageBgCustom ? pageBgAngle : undefined,
       cpTagBg: tagCustom ? cpTagBg : undefined,
       cpTagFg: tagCustom ? cpTagFg : undefined,
+      wgtColor: wgtCustom ? wgtColor : undefined,
       themeMode,
       themeColor: themeMode === 'custom' ? themeColor : undefined,
       themeTone: themeMode === 'custom' ? themeTone : undefined,
@@ -882,8 +887,22 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
                 )}
               </div>
             )}
-            {/* LOG / LOREBOOK 버튼 색 — 자관명 위에 뜨는 바로가기 버튼. AU마다 따로 */}
-            {(
+            {/* 2인 자관 위젯 탭 색 (v3.3) — 2인 자관에는 자관명 위 버튼이 없어 버튼 색 대신 이것만 보인다.
+                이미 저장한 버튼 색은 지우지 않는다(다인으로 바꾸면 다시 쓰인다) */}
+            {kind === 'pair' && (
+              <div>
+                <KCheck label="위젯 탭 색 직접 지정" checked={wgtCustom} onChange={setWgtCustom} />
+                {wgtCustom && (
+                  <div className="cf-row" style={{ marginTop: 8 }}>
+                    <span className="cp-lb">탭</span>
+                    <ColorField value={wgtColor} onChange={setWgtColor} />
+                  </div>
+                )}
+                <p className="hint" style={{ margin: '4px 0 0' }}>LOG · LOREBOOK 탭 밑줄, 오늘 표시 점, 로그 고비 숫자에 쓰입니다 (지정 안 하면 포인트색)</p>
+              </div>
+            )}
+            {/* LOG / LOREBOOK 버튼 색 — 자관명 위에 뜨는 바로가기 버튼. AU마다 따로. 다인 자관만 (2인은 위젯 탭으로 대체) */}
+            {kind !== 'pair' && (
               <div>
                 <KCheck label="LOG / LOREBOOK 버튼 색 직접 지정" checked={tagCustom} onChange={setTagCustom} />
                 {tagCustom && (

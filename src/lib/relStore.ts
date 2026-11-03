@@ -83,6 +83,8 @@ export interface RelAuStyle {
   ddayColor?: string;
   cpTagBg?: string;
   cpTagFg?: string;
+  /** 2인 자관 위젯 탭 색 (v3.3) — 탭 밑줄·오늘 점·로그 고비 숫자. 미지정: 포인트색 */
+  wgtColor?: string;
   nameShadowColor?: string;
   nameShadow?: number;
   headerBgG1?: string; headerBgG2?: string; headerBgAngle?: number;
@@ -95,7 +97,7 @@ export function auStyle(rel: Relation, au?: RelAu): RelAuStyle {
   const s = au?.style;
   const base: RelAuStyle = {
     nameColor: rel.nameColor, cpColor: rel.cpColor, ddayColor: rel.ddayColor,
-    cpTagBg: rel.cpTagBg, cpTagFg: rel.cpTagFg,
+    cpTagBg: rel.cpTagBg, cpTagFg: rel.cpTagFg, wgtColor: rel.wgtColor,
     nameShadowColor: rel.nameShadowColor, nameShadow: rel.nameShadow,
     headerBgG1: rel.headerBgG1, headerBgG2: rel.headerBgG2, headerBgAngle: rel.headerBgAngle,
     pageBgG1: rel.pageBgG1, pageBgG2: rel.pageBgG2, pageBgAngle: rel.pageBgAngle,
@@ -113,6 +115,9 @@ export function auStyle(rel: Relation, au?: RelAu): RelAuStyle {
   }
   if (s.cpTagBg !== undefined || s.cpTagFg !== undefined) {
     out.cpTagBg = s.cpTagBg; out.cpTagFg = s.cpTagFg;
+  }
+  if (s.wgtColor !== undefined) {
+    out.wgtColor = s.wgtColor;
   }
   if (s.nameShadowColor !== undefined || s.nameShadow !== undefined) {
     out.nameShadowColor = s.nameShadowColor; out.nameShadow = s.nameShadow;
@@ -206,6 +211,7 @@ export interface Relation {
   ddayColor?: string;            // 디데이 글씨색 — 미지정: 기존 var(--faint) (v2.0 사용자 요청)
   cpTagBg?: string;              // LOG/LOREBOOK 버튼 배경색 (예전 CP/NCP 뱃지 색 — 미지정: 기본 pill)
   cpTagFg?: string;              // LOG/LOREBOOK 버튼 글씨색
+  wgtColor?: string;             // 2인 자관 위젯 탭 색 (v3.3 — 탭 밑줄·오늘 점·로그 고비 숫자, 미지정: 포인트색)
   nameShadowColor?: string;      // 자관명 그림자 색 (v2.0 — 미지정: 검정)
   nameShadow?: number;           // 자관명 그림자 강도 % — 0~200, 미지정 100(기존 세기와 동일)
   // 헤더 이미지가 없을 때 대신 깔 배경 그라데이션 (v2.0 사용자 요청) — 색 2개 + 각도.
