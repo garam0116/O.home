@@ -16,6 +16,7 @@ import { useCardSort, mergeOrder } from '@/lib/cardSort';
 import { OrderMenu, orderNoOf, moveToOrder } from '@/components/ui/OrderMenu';
 import { useLatestUpdates, fmtUpdate } from '@/lib/relUpdates';
 import { safeLink } from '@/lib/link';
+import { AppLink } from '@/components/ui/AppLink';
 
 
 function RelsInner() {
@@ -119,10 +120,10 @@ function RelsInner() {
                 </span>}
                 {(logUrl || lorebookUrl) && (
                   <div className="rel-card-links">
-                    {logUrl && <a href={logUrl}
-                      onClick={e => e.stopPropagation()}>LOG</a>}
-                    {lorebookUrl && <a href={lorebookUrl}
-                      onClick={e => e.stopPropagation()}>LOREBOOK</a>}
+                    {logUrl && <AppLink href={logUrl}
+                      onClick={e => e.stopPropagation()}>LOG</AppLink>}
+                    {lorebookUrl && <AppLink href={lorebookUrl}
+                      onClick={e => e.stopPropagation()}>LOREBOOK</AppLink>}
                     {/* 두 게시판 중 가장 최근 업데이트 (v2.1 사용자 요청) — 링크 줄 오른쪽 빈 자리 */}
                     {upd != null && (
                       <em className="rel-card-upd" title="LOG · LOREBOOK 중 가장 최근 업데이트">

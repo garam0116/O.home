@@ -30,6 +30,7 @@ import { useNoKey, maxNo } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 import { useHeaderTone } from '@/lib/headerTone';
 import { useRelFeeds, RelAnnivColumn, RelAnnivStrip, RelFeedWidget } from '@/components/rels/RelWidgets';
+import { AppLink } from '@/components/ui/AppLink';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -528,9 +529,9 @@ export default function RelDetailPage() {
         {!isDuo && (logHref || lorebookHref) && (
           <div className="rel-links">
             {[['LOG', logHref], ['LOREBOOK', lorebookHref]].map(([lb, href]) => href && (
-              <a key={lb} href={href} className="pill" style={auSt.cpTagBg || auSt.cpTagFg
+              <AppLink key={lb} href={href} className="pill" style={auSt.cpTagBg || auSt.cpTagFg
                 ? { background: auSt.cpTagBg, color: auSt.cpTagFg, borderColor: auSt.cpTagBg }
-                : undefined}>{lb}</a>
+                : undefined}>{lb}</AppLink>
             ))}
           </div>
         )}
