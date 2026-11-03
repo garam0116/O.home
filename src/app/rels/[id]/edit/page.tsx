@@ -1,7 +1,7 @@
 'use client';
 // 자관 수정 페이지 (4.5) — 이름/캐치프레이즈/유형/공개범위/폰트/썸네일. 멤버는 상세에서.
 // /rels/{…}/au/{AU 번호}/edit 로 진입하면 그 AU의 일러·캐치프레이즈를 편집 (v1.9 — AU 선택 상태에서 EDIT, 주소 v2.4)
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useLocalList } from '@/lib/postStore';
@@ -11,6 +11,8 @@ import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 import { useNoKey } from '@/lib/itemNo';
+import { useMainStore } from '@/lib/mainStore';
+import { BackArrow } from '@/components/ui/BackArrow';
 
 function RelEditInner() {
   const { id: rawKey, au: auParam } = useParams<{ id: string; au?: string }>();
@@ -19,6 +21,13 @@ function RelEditInner() {
   const toast = useToast();
   const params = useSearchParams();
   const [rels, setRels, loaded] = useLocalList<Relation>('ohome.rels.v1', REL_SEED);
+  /* PC 2단형이면 상단바 대신 자관 상세와 같은 자리의 뒤로가기 화살표로 (사용자 요청 — 상세에서 EDIT을 누르면
+     상단바가 갑자기 생겼다). 상단바를 숨기는 건 621px 이상에서만(CSS) — 모바일·1단형은 상단바 그대로 */
+  const { pcSide } = useMainStore();
+  useEffect(() => {
+    document.body.classList.toggle('rel-edit-bare', pcSide);
+    return () => document.body.classList.remove('rel-edit-bare');
+  }, [pcSide]);
   /* 주소 (v2.4) — /rels/{별명 또는 번호}/edit, AU는 /rels/{…}/au/{AU 번호}/edit.
      옛 주소(`/rels/id/edit`, `?au=AUid`)로 들어오면 새 주소로 바꿔 둔다 */
   const legacyAu = params.get('au');
@@ -43,7 +52,9 @@ function RelEditInner() {
   }
 
   return (
-    <section className="page">
+    <section className="page page-rel-edit">
+      {/* 화살표는 이 자관 상세로 (지금 CANCEL과 같은 곳) — 2단형 PC에서만 보인다 */}
+      <div className="rel-edit-back"><BackArrow to={relPath(rel)} label="자관 상세로" /></div>
       <div className="page-head">
         <PageTitle>EDIT — {rel.name}{auObj ? ` · ${auObj.label}` : ''}</PageTitle>
         <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·AU는 상세 페이지에서 관리합니다" />

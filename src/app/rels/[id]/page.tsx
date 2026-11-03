@@ -281,7 +281,7 @@ export default function RelDetailPage() {
     return (
       <section className="page">
         {/* 상단바가 없는 화면이라(v2.8) 여기에도 뒤로가기 */}
-        <div style={{ margin: '4px 0 10px' }}><BackArrow fallback={tt.href} /></div>
+        <div style={{ margin: '4px 0 10px' }}><BackArrow to={tt.href} label="자관 목록으로" /></div>
         <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>자관을 찾을 수 없거나 열람 권한이 없습니다</p></div>
       </section>
     );
@@ -453,9 +453,10 @@ export default function RelDetailPage() {
       )}
 
       {/* 왼쪽 위 — 뒤로가기(누구에게나, v2.8) + 관리자 액션.
-          자관 상세는 상단바 없이 전체 화면이라(v2.8, 모바일 포함) 목록으로 돌아갈 길을 여기 둔다 */}
+          자관 상세는 상단바 없이 전체 화면이라(v2.8, 모바일 포함) 목록으로 돌아갈 길을 여기 둔다.
+          브라우저 뒤로가기가 아니라 늘 이 자관의 목록으로 (사용자 요청 — 수정·저장 뒤 누르면 수정 화면으로 되돌아갔다) */}
       <div className="rel-tl">
-      <BackArrow fallback={tt.href} />
+      <BackArrow to={tt.href} label="자관 목록으로" />
       {isAdmin && (
         <div className="rel-admin-actions">
           {/* AU 선택 중이면 그 AU의 일러·캐치프레이즈를 편집 (v1.9) */}
