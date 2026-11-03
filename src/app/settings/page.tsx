@@ -2970,6 +2970,12 @@ function SettingsInner() {
   const hiddenSet = new Set(hiddenIds);
   const [peek, setPeek] = useState<string | null>(null);
   const [hidOpen, setHidOpen] = useState(false);
+  /* 휴대폰 2단 탭 (v3.2 사용자 요청) — 1차(그룹) 탭 아래에 2차(항목) 칩 줄.
+     지금 그룹 탭을 다시 누르면 접히고, 칩은 스크롤 위치를 따라간다. 「숨김」을 누르면 2차 줄에 숨긴 항목 */
+  const [subOpen, setSubOpen] = useState(true);
+  const [subHidden, setSubHidden] = useState(false);
+  const subRef = useRef<HTMLElement>(null);
+  const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches;
   const curSecs = cur.sections.filter(s => !hiddenSet.has(s.id));
   const viewGroup: GroupId = peek ? groupOfSec(peek).id : group;
   const openPeek = (id: string) => {
@@ -2986,7 +2992,7 @@ function SettingsInner() {
   };
   const unhideSec = (id: string) => {
     patchSite({ setHidden: hiddenIds.filter(x => x !== id) });
-    if (peek === id) { setPeek(null); goGroup(groupOfSec(id).id, id); }
+    if (peek === id) { setPeek(null); setSubHidden(false); goGroup(groupOfSec(id).id, id); }
   };
 
   /* 우클릭 메뉴 — 휴대폰은 길게 누르기. 누른 뒤 손을 뗄 때 생기는 클릭은 삼킨다 */
@@ -3086,6 +3092,16 @@ function SettingsInner() {
     return () => { cancelAnimationFrame(raf); box.removeEventListener('scroll', onScroll); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cur, peek, hiddenIds.join('|')]);
+
+  // 2차 줄 — 켜진 칩이 줄 밖에 있으면 가로로 당겨 보이게 (페이지 자체는 움직이지 않게 scrollLeft만)
+  useEffect(() => {
+    const box = subRef.current;
+    const on = box?.querySelector<HTMLElement>('button.on');
+    if (!box || !on) return;
+    const l = on.offsetLeft - 12, r = on.offsetLeft + on.offsetWidth + 12;
+    if (l < box.scrollLeft) box.scrollTo({ left: l, behavior: 'smooth' });
+    else if (r > box.scrollLeft + box.clientWidth) box.scrollTo({ left: r - box.clientWidth, behavior: 'smooth' });
+  }, [activeSec, peek, group, subHidden]);
 
   /* ---------- 저장 하나 (v3.1 사용자 요청) ----------
      설정 화면이 열려 있는 동안 DRAFT_KEYS의 저장은 settingStore가 붙잡아 두고, 테마·사이트·역할 폰트는
@@ -3213,7 +3229,7 @@ function SettingsInner() {
   }
   return (
     <parts.Provider>
-    <div className={`setx${showPv ? ' with-pv' : ''}${pvSheet ? ' pv-sheet' : ''}`}>
+    <div className={`setx${showPv ? ' with-pv' : ''}${pvSheet ? ' pv-sheet' : ''}${subHidden && hiddenIds.length ? ' sub-hid' : ''}`}>
       <header className="setx-bar">
         <BackArrow fallback="/" label="설정 닫기" onGo={exit} />
         <div className="setx-title"><b>설정</b><span>/ {peek ? `숨긴 항목 · ${secLabel(peek)}` : cur.label}</span></div>
@@ -3234,7 +3250,14 @@ function SettingsInner() {
         <nav className="setx-groups" aria-label="설정 그룹">
           {GROUPS.map(g => (
             <button key={g.id} className={`setx-grp${!peek && g.id === group ? ' on' : ''}`} aria-current={!peek && g.id === group ? 'page' : undefined}
-              onClick={() => goGroup(g.id)}>
+              onClick={() => {
+                if (isPhone()) {
+                  // 휴대폰: 보고 있는 그룹을 다시 누르면 2차 줄만 접고 펼친다
+                  if (!peek && !subHidden && g.id === group) { setSubOpen(o => !o); return; }
+                  setSubHidden(false); setSubOpen(true);
+                }
+                goGroup(g.id);
+              }}>
               <i aria-hidden="true">{g.icon}</i>{g.label}
               {dirtyGroups.has(g.id) && <span className="setx-dot" aria-label="저장 안 된 변경" />}
             </button>
@@ -3243,8 +3266,17 @@ function SettingsInner() {
           {hiddenIds.length > 0 && (
             <>
               <hr className="setx-hid-line" />
-              <button className={`setx-hid-toggle${hidOpen || peek ? ' open' : ''}`} aria-expanded={hidOpen || !!peek}
-                onClick={() => setHidOpen(!(hidOpen || !!peek))}>
+              <button className={`setx-hid-toggle${hidOpen || peek ? ' open' : ''}${subHidden || peek ? ' sub-on' : ''}`}
+                aria-expanded={hidOpen || !!peek}
+                onClick={() => {
+                  if (isPhone()) {
+                    // 휴대폰: 숨긴 항목은 2차 줄에 — 이미 펼쳐져 있으면 접는다
+                    if ((subHidden || peek) && subOpen) setSubOpen(false);
+                    else { setSubHidden(true); setSubOpen(true); }
+                    return;
+                  }
+                  setHidOpen(!(hidOpen || !!peek));
+                }}>
                 숨김 <b>{hiddenIds.length}</b><span className="caret" aria-hidden="true">▸</span>
               </button>
               {(hidOpen || peek) && (
@@ -3267,6 +3299,28 @@ function SettingsInner() {
             </>
           )}
         </nav>
+        {/* 휴대폰 2차 줄 — 넓은 화면에서는 CSS로 숨기고 왼쪽 목차를 쓴다 */}
+        {(() => {
+          const hidMode = (subHidden || !!peek) && hiddenIds.length > 0;
+          return (
+            <nav ref={subRef} className={`setx-sub${subOpen ? '' : ' closed'}`} aria-hidden={!subOpen || undefined}
+              aria-label={`${hidMode ? '숨긴 항목' : cur.label} 항목`}>
+              {hidMode
+                ? GROUPS.flatMap(g => g.sections.filter(sc => hiddenSet.has(sc.id))).map(sc => (
+                  <button key={sc.id} className={peek === sc.id ? 'on' : ''} tabIndex={subOpen ? 0 : -1}
+                    aria-current={peek === sc.id ? 'true' : undefined} onClick={() => openPeek(sc.id)}
+                    {...ctxProps(() => [{ label: '메뉴로 꺼내기', fn: () => unhideSec(sc.id) }])}>{sc.label}</button>
+                ))
+                : curSecs.map(sc => (
+                  <button key={sc.id} className={activeSec === sc.id ? 'on' : ''} tabIndex={subOpen ? 0 : -1}
+                    aria-current={activeSec === sc.id ? 'true' : undefined}
+                    onClick={() => scrollToSec(sc.id)}
+                    {...ctxProps(hideItems(sc.id))}>{sc.label}</button>
+                ))}
+              {hidMode && <small>길게 누르면 메뉴로 꺼냅니다</small>}
+            </nav>
+          );
+        })()}
         <nav className="setx-toc" aria-label={`${peek ? '숨긴 항목' : cur.label} 목차`}>
           {peek ? (
             <>

@@ -2239,6 +2239,20 @@ body.no-topbar .topbar{display:none}
 /* 미리보기 iframe 안쪽 — 실제 화면과 같게 그리되, 미리보기에서 필요 없는 떠 있는 것은 숨긴다 */
 html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
 
+/* 휴대폰 2차 줄 (v3.2) — 1차 탭 아래 항목 칩. 넓은 화면은 목차가 있으니 숨긴다 */
+.setx-sub{display:none;position:relative;flex:none;gap:6px;align-items:center;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+  max-height:52px;padding:7px max(10px,env(safe-area-inset-right,0px)) 7px max(10px,env(safe-area-inset-left,0px));
+  background:var(--panel);border-bottom:1px solid var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:max-height .2s ease,padding .2s ease,opacity .2s ease}
+.setx-sub::-webkit-scrollbar{display:none}
+.setx-sub.closed{max-height:0;padding-block:0;opacity:0;border-bottom-width:0;pointer-events:none}
+.setx-sub button{flex:none;padding:5px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel-solid);
+  font-size:calc(12px*var(--fs,1));color:var(--sub);white-space:nowrap;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:color .14s,border-color .14s}
+.setx-sub button.on{color:var(--ink);border-color:var(--ink);font-weight:600}
+.setx-sub button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.setx-sub small{flex:none;font-size:calc(10px*var(--fs,1));color:var(--faint);padding-left:2px}
+@media (prefers-reduced-motion:reduce){.setx-sub{transition:none}}
+
 /* 좁은 화면 — 미리보기는 버튼으로 여는 덮개 판, 목차는 숨김 */
 @media (max-width:1100px){
   .setx-toc{display:none}
@@ -2252,6 +2266,13 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
   .setx-cols{flex-direction:column}
   .setx-groups{width:auto;flex-direction:row;flex-wrap:wrap;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);overflow:visible}
   .setx-hid-line{display:none}
+  /* 휴대폰 2단 탭 (v3.2) — 숨김은 1차 탭 하나, 숨긴 항목은 2차 줄에 (예전 펼침 목록은 쓰지 않음) */
+  .setx-hid-list{display:none !important}
+  .setx-hid-toggle{padding:8px 8px;border-radius:10px;font-size:calc(11.5px*var(--fs,1))}
+  .setx.sub-hid .setx-groups .setx-grp.on{color:var(--faint);background:none}
+  .setx-hid-toggle.sub-on{color:var(--ink);background:rgba(127,127,127,.16)}
+  .setx-groups{flex-wrap:nowrap;justify-content:stretch;gap:2px;align-items:center}
+  .setx-sub{display:flex}
   .setx-hid-toggle{flex:none}
   .setx-hid-list{flex-basis:100%;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;gap:4px 10px;padding:4px 4px 2px}
   .setx-hid-cat{flex-direction:row;width:auto;gap:4px;align-items:center;margin:0}
