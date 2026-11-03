@@ -2201,7 +2201,11 @@ body.no-topbar .topbar{display:none}
 .setx-peek-tag{font-size:calc(10.5px*var(--fs,1));font-weight:500;letter-spacing:.04em;padding:2px 9px;border-radius:999px;background:rgba(127,127,127,.22)}
 /* 글씨 위계 (v3.1 사용자 요청) — 섹션 제목 21 › 카드 안 소제목 15.5 › 항목 이름 14.5 › 설명 10.5(그대로) */
 .setx-card .set-sec h3{font-size:calc(15.5px*var(--fs,1));font-weight:600;letter-spacing:-.005em;margin-bottom:5px}
-.setx-card .set-row{padding:15px 0}
+.setx-card .set-row{padding:15px 0;flex-wrap:wrap}
+/* 설명이 길어도 오른쪽 컨트롤이 카드 밖으로 밀리지 않게 (v3.1 사용자 발견 — BGM 자동 재생) —
+   이름·설명 칸은 220px부터 늘고 줄며 개행되고, 그래도 자리가 모자라면 컨트롤이 아랫줄로 내려간다 */
+.setx-card .set-row > .l{flex:1 1 220px}
+.setx-card .set-row > :not(.l){max-width:100%}
 .setx-card .set-row .l b{font-size:calc(14.5px*var(--fs,1));font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
 .setx-card .set-row .l small{line-height:1.5}
 .setx-card .set-row .l small b{font-size:inherit;font-weight:inherit;margin:0;letter-spacing:inherit}
@@ -2264,3 +2268,10 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
   .setx-scroll{padding:0 max(12px,env(safe-area-inset-right,0px)) 120px max(12px,env(safe-area-inset-left,0px))}
   .setx-card{padding:16px 14px}
 }
+/* 접어 두는 설정 덩어리 제목 (v3.1 — 카테고리 › 다른 목록도 여러 개로) */
+.set-sec h3.set-fold-head{margin-top:22px}
+.set-fold-head button{display:inline-flex;align-items:center;gap:8px;padding:0;font:inherit;letter-spacing:inherit;color:inherit;text-align:left}
+.set-fold-head .caret{display:inline-block;font-size:11px;color:var(--faint);transition:transform .15s}
+.set-fold-head .caret.open{transform:rotate(90deg)}
+.set-fold-head button:hover .caret{color:var(--ink)}
+.set-fold-head button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
