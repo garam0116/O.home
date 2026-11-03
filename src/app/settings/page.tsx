@@ -590,6 +590,18 @@ function DetailPane() {
         </Ctl>
       </div>
 
+      {/* 드래그 효과 (v3.7 사용자 요청) — 글자를 끌어 선택했을 때의 모양. 모드를 바꿔도 유지(SHARED_KEYS) */}
+      <div className="set-row">
+        <div className="l"><b>드래그 효과</b><small>글자를 끌어서 선택했을 때의 모양 — 바탕은 그대로 두고 글자만 흐려집니다<br />안개: 글자색으로 번짐 · 삼중 잔상: 포인트 색과 푸른 회색이 엇갈림 · 아이폰은 시스템 색 고정</small></div>
+        <Ctl>
+          <div className="mini-seg">
+            <button className={(state.vars.selFx ?? 'fog') === 'fog' ? 'on' : ''} onClick={() => setVar('selFx', 'fog')}>안개</button>
+            <button className={state.vars.selFx === 'ghost' ? 'on' : ''} onClick={() => setVar('selFx', 'ghost')}>삼중 잔상</button>
+          </div>
+          <Item label="미리보기"><div className="sel-pv">끌어서 확인 — <span className="fk">이 부분이 선택된 모양</span>입니다</div></Item>
+        </Ctl>
+      </div>
+
       {/* 이미지 편집(크롭) 배경 (v1.9 사용자 요청) — 투명 PNG 위치 지정 시 보이는 판 */}
       <div className="set-row">
         <div className="l"><b>이미지 편집 배경</b><small>썸네일·헤더 위치 지정 화면의 판 — 투명 이미지에서 보임</small></div>

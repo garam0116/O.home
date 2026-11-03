@@ -199,17 +199,20 @@ export default function BoardDetailPage() {
           )}
         </div>
 
-        {/* 접기 (6.2) — 흐림 커버, 클릭 시 표시 */}
-        <div className={`veil ${!post.fold || open ? 'open' : ''}`}>
+        {/* 접기 (6.2) — 안개 (v3.7 사용자 요청): 바탕 그대로 글자만 흐림 + 작은 라벨, 본문 아무 곳이나 눌러 펼침 */}
+        <div className={`veil fog ${!post.fold || open ? 'open' : ''}`}
+          {...(post.fold && !open ? {
+            role: 'button', tabIndex: 0, 'aria-label': '접힌 글 펼치기',
+            onClick: () => setOpen(true),
+            onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(true); } },
+          } : {})}>
           {post.fold && !open && (
-            <div className="cover" onClick={() => setOpen(true)} style={{ position: 'absolute' }}>
-              <div>
-                <b>{post.fold.type === 'custom' ? (post.fold.label || '접힌 글') : FOLD_LABEL[post.fold.type]}</b>
-                <span style={{ display: 'block' }}>클릭하면 내용이 표시됩니다</span>
-              </div>
+            <div className="fog-chip">
+              <b>{post.fold.type === 'custom' ? (post.fold.label || '접힌 글') : FOLD_LABEL[post.fold.type]}</b>
+              <i>눌러서 보기</i>
             </div>
           )}
-          <div className="post-body" style={post.fold && !open ? { minHeight: 120, filter: 'blur(6px)' } : undefined}
+          <div className="post-body" aria-hidden={post.fold && !open ? true : undefined}
             dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </div>
