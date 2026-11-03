@@ -559,7 +559,7 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
 
 /* ---------- 게시판 검색 (사용자 요청) ----------
    모든 게시판의 글을 찾는 검색창 — 엔터·돋보기를 누르면 `/search?q=` 결과로 간다.
-   결과 화면은 게시판 목록(갤러리형 1)과 같은 모양이다. 제목·카드 없이 반투명 입력칸 + 돋보기 버튼만 —
+   결과 화면은 게시판 목록(갤러리형 1)과 같은 모양이다. 제목·카드 없이 각인 모양 가는 선 입력칸 + 포인트색 돋보기 버튼만 —
    안내 문구는 편집모드 우클릭 「설정」에서 */
 export function SearchWidget({ conf }: { conf: WidgetConf }) {
   const router = useRouter();
