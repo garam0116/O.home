@@ -2571,6 +2571,8 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
 .bh-dot{color:color-mix(in srgb,var(--page-title) 35%,transparent)}
 .bhs-emblem .searchbar{border-color:var(--bh-line);border-radius:999px;height:38px;min-width:38px}
 .bhs-emblem .searchbar button{border-radius:50%;width:32px;height:32px}
+/* 닫힌 검색은 폭을 높이와 같게 고정 — 버튼(32)+안쪽 여백+테두리가 높이보다 커서 가로로 찌그러지던 것 (모바일 34px에서 39×34) */
+.bhs-emblem .searchbar:not(.open){width:38px;padding:0}
 .bh-round{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--bh-line);display:grid;place-items:center;color:var(--page-title);transition:background .15s}
 .bh-round:hover{background:color-mix(in srgb,var(--page-title) 12%,transparent)}
 
@@ -2600,6 +2602,8 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
   .bhs-emblem .searchbar,.bh-round{height:34px;min-width:34px}
   .bh-round{width:34px}
   .bhs-emblem .searchbar.open input{width:90px}
+  .bhs-emblem .searchbar:not(.open){width:34px}
+  .bhs-emblem .searchbar button{width:28px;height:28px}
 }
 
 /* 환경설정 > 디자인 「페이지 헤더」 고르기 (v3.2) — 작은 모형 그림 + 이름 + 설명 */
