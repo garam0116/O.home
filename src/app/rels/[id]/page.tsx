@@ -28,6 +28,7 @@ import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { useNoKey, maxNo } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
+import { useRelFeeds, RelAnnivColumn, RelAnnivStrip, RelFeedWidget } from '@/components/rels/RelWidgets';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -266,6 +267,12 @@ export default function RelDetailPage() {
   const dday = relDday(ddayDate);
   const ddayDateLabel = relDdayDate(ddayDate);
   const freeBlocks = (isBaseAu ? rel?.freeBlocks : au?.freeBlocks) ?? rel?.freeBlocks ?? [];
+  /* 2인 자관 위젯 (v3.3 사용자 확정) — 기념일 · LOG/LOREBOOK 탭.
+     위젯이 생기면 자관명 위 LOG·LOREBOOK 버튼과 이름 아래 SINCE 한 줄은 그리지 않는다 (같은 내용이 위젯에 있다) */
+  const { feeds: [logFeed, loreFeed], sources: feedSources } = useRelFeeds([rel?.logUrl, rel?.lorebookUrl]);
+  const feedOn = logFeed.state !== 'none' || loreFeed.state !== 'none';
+  const annivOn = !!dday;
+  const firstLog = logFeed.state === 'ok' ? logFeed.first : undefined;
   // 전신이 하나도 등록되지 않았으면 전신 모드를 두지 않는다 —
   // 빈 자리에 「○○ 전신」 자리표시자를 세우는 대신 대표 일러스트만 보여 준다 (사용자 확정)
   const fullRefOf = (cid: string) =>
@@ -501,10 +508,10 @@ export default function RelDetailPage() {
           { label: 'CANCEL', kind: 'ghost', onClick: () => setDelAsk(false) },
         ]} />
 
-      <div className="rel-hero">
+      <div className={`rel-hero${isDuo ? ' wgt-on' : ''}`}>
         {quoteEl(0, 'quote l')}
         {/* LOG / LOREBOOK 바로가기 — 자관명 위 가운데 (예전 CP/NCP 뱃지 자리 · 색은 자관 수정에서) */}
-        {(logHref || lorebookHref) && (
+        {!isDuo && (logHref || lorebookHref) && (
           <div className="rel-links">
             {[['LOG', logHref], ['LOREBOOK', lorebookHref]].map(([lb, href]) => href && (
               <a key={lb} href={href} className="pill" style={auSt.cpTagBg || auSt.cpTagFg
@@ -523,14 +530,21 @@ export default function RelDetailPage() {
         <div className="catch" style={{ color: auSt.cpColor }}>
           {au?.catchphrase || rel.catchphrase}
         </div>
-        {dday && ddayDateLabel && <div className="rel-dday-detail" style={{ color: auSt.ddayColor }}>
+        {!isDuo && dday && ddayDateLabel && <div className="rel-dday-detail" style={{ color: auSt.ddayColor }}>
           {dday.startsWith('D-') ? 'UNTIL' : 'SINCE'} {ddayDateLabel} · {dday}
         </div>}
         {quoteEl(1, 'quote r')}
       </div>
 
+      {/* 모바일 — 기념일은 이름 아래 가로 띠 (PC는 왼쪽 카드 아래 세로 타임라인) */}
+      {isDuo && annivOn && (
+        <div className="rw-m rw-m-strip">
+          <RelAnnivStrip startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} />
+        </div>
+      )}
+
       {isDuo ? (
-        <div className="rel-body" style={{ fontFamily: familyOf(auBodyFont) }}>
+        <div className={`rel-body${annivOn || feedOn ? ' has-wgt' : ''}`} style={{ fontFamily: familyOf(auBodyFont) }}>
           {/* 모바일 전용 인용구 — 왼쪽 멤버는 카드 위, 오른쪽 멤버는 카드 아래 (PC는 히어로 쪽) */}
           {quoteEl(0, 'rel-mq l')}
           {quoteEl(1, 'rel-mq r')}
@@ -543,6 +557,11 @@ export default function RelDetailPage() {
                 onRemove={() => removeMember(pairSlots[0]!.charId)} />
             : sideSlotOf('l') ? <SideSlotCard slot={sideSlotOf('l')!} />
               : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
+          {annivOn && (
+            <div className="rw-slot rw-pc">
+              <RelAnnivColumn startDate={ddayDate} firstLog={firstLog} color={auSt.ddayColor} />
+            </div>
+          )}
           </div>
           <div className={`rel-center ${single ? 'one-mode' : ''}`}
             style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line-dark)' }}>
@@ -607,7 +626,18 @@ export default function RelDetailPage() {
                 onRemove={() => removeMember(pairSlots[1]!.charId)} />
             : sideSlotOf('r') ? <SideSlotCard slot={sideSlotOf('r')!} />
               : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
+          {feedOn && (
+            <div className="rw-slot rw-pc">
+              <RelFeedWidget log={logFeed} lore={loreFeed} fit />
+            </div>
+          )}
           </div>
+          {/* 모바일 — LOG/LOREBOOK은 카드 아래 전체 폭 */}
+          {feedOn && (
+            <div className="rw-m rw-m-feed">
+              <RelFeedWidget log={logFeed} lore={loreFeed} />
+            </div>
+          )}
         </div>
       ) : (
         /* 다인 자관 — 프로토타입 multi-body: 좌 멤버 리스트(430px) + 우 그룹 일러 */
@@ -662,6 +692,9 @@ export default function RelDetailPage() {
           </div>
         </div>
       )}
+
+      {/* LOG·LOREBOOK 목록을 불러오는 보이지 않는 부품 */}
+      {feedSources}
 
       {freeBlocks.map(block => (
         <section key={block.id} className="panel rel-free-block">
