@@ -30,8 +30,21 @@ export interface WidgetConf {
   // PC 절대배치 좌표 (v1.9 사용자 확정 — PC 캔버스에는 문서 흐름이 없음: 겹칠 수 있고 서로 밀지 않음.
   // 흐름 스택은 모바일 뷰 전용). 기존 흐름+오프셋 배치는 최초 1회 이 좌표로 스냅샷 마이그레이션.
   ax?: number; ay?: number;
+  /** 비율 잠금 (사용자 요청) — 켜면 어느 핸들로 끌어도 가로:세로 비율이 그대로라 사진이 잘리거나 찌그러지지 않는다.
+   *  끄면 가로·세로를 따로 바꾸고, 사진은 박스 안에 비율 그대로 맞춰 넣는다(남는 자리는 여백).
+   *  비워 두면 사진 위젯(배너·장식 이미지)은 켜짐, 나머지는 꺼짐 — ratioLocked()로 읽는다 */
+  ratioLock?: boolean;
+  /** 메뉴 카드 최소 높이(px) — 아래 변을 끌어 늘린 높이. 메뉴가 더 많으면 내용만큼 자란다 */
+  mh?: number;
   settings: Record<string, unknown>;
 }
+
+/** 비율 잠금 기본값이 켜짐인 사진 위젯 */
+export const PHOTO_TYPES: WidgetType[] = ['banner', 'deco'];
+/** 높이를 내용이 정하는 위젯 — 가로만 바꾼다 (메뉴 카드는 최소 높이를 따로 정할 수 있다) */
+export const AUTO_H_TYPES: WidgetType[] = ['dday', 'ddaycard', 'menu'];
+export const ratioLocked = (c: WidgetConf) =>
+  !AUTO_H_TYPES.includes(c.type) && (c.ratioLock ?? PHOTO_TYPES.includes(c.type));
 
 export type LayoutMode = 'fixed' | 'fluid'; // 고정 캔버스(기본) / 반응형 (v1.9)
 /** PC 레이아웃 (v2.7 사용자 요청) — top = 1단형(상단 메뉴) · side = 2단형(왼쪽/오른쪽 열 메뉴 카드).

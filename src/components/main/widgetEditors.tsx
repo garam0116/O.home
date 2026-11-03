@@ -2,7 +2,7 @@
 // 위젯 설정 공용 에디터 (5장 「위젯」 카테고리 · 메인 위젯 관리 모달 공유)
 // 같은 mainStore를 갱신하므로 메인에서 바꾸든 환경설정에서 바꾸든 즉시 서로 반영됨
 import React, { useEffect, useState } from 'react';
-import { WidgetConf, useMainStore, decoSlides, DecoSlide } from '@/lib/mainStore';
+import { WidgetConf, useMainStore, decoSlides, DecoSlide, ratioLocked } from '@/lib/mainStore';
 import { KInput, KTextarea, KCheck, KStep, KDate } from '@/components/ui/Kit';
 import { DragList } from '@/components/ui/DragList';
 import { CropEditor, CropValue, CropImg, CroppedBlobImg } from '@/components/ui/CropEditor';
@@ -476,6 +476,8 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
           <button className={fit === 'cover' ? 'on' : ''} onClick={() => set({ fit: undefined })}>꽉 채움 (잘림)</button>
           <button className={fit === 'contain' ? 'on' : ''} onClick={() => set({ fit: 'contain' })}>비율 유지 (안 잘림)</button>
         </div>
+        {/* 비율 잠금을 끈 위젯은 박스가 자유롭게 바뀌므로 늘 비율 유지로 보인다 (WidgetFrame·DecoWidget) */}
+        {!ratioLocked(conf) && <small style={{ color: 'var(--faint)', fontSize: 11 }}>비율 잠금이 꺼져 있어 지금은 비율 유지로 보입니다 — 편집모드 우클릭 「비율 잠금」</small>}
       </WRow>
       {/* 넘길 이미지가 있을 때만 간격을 묻는다 */}
       {slides.length > 1 && (
@@ -678,7 +680,12 @@ export interface LatestSet extends FreeTextColorSet {
   lblFontId?: string;   // LATEST 글자
   catFontId?: string;   // 카테고리(게시판 이름)
   dateFontId?: string;  // 날짜
+  /** 글씨 크기(%) — LATEST 글자·게시판 이름·제목·날짜를 같은 비율로 (사용자 요청). 비우면 100 */
+  fontPct?: number;
 }
+export const LATEST_FONT = { min: 70, max: 150, step: 5, def: 100 };
+export const latestFontOf = (s: LatestSet) =>
+  Math.min(LATEST_FONT.max, Math.max(LATEST_FONT.min, Math.round(s.fontPct ?? LATEST_FONT.def)));
 export const latestCountOf = (s: LatestSet) =>
   Math.min(LATEST_COUNT.max, Math.max(LATEST_COUNT.min, Math.round(s.count ?? LATEST_COUNT.def)));
 
@@ -699,6 +706,11 @@ export function LatestEditor({ conf }: { conf: WidgetConf }) {
         <KStep value={latestCountOf(s)} min={LATEST_COUNT.min} max={LATEST_COUNT.max} suffix="개"
           onChange={v => setDraft({ count: v })} />
         <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 게시판 글을 최신순으로 — 기본 {LATEST_COUNT.def}개</small>
+      </WRow>
+      <WRow label="글씨 크기">
+        <KStep value={latestFontOf(s)} min={LATEST_FONT.min} max={LATEST_FONT.max} step={LATEST_FONT.step} suffix="%"
+          onChange={v => setDraft({ fontPct: v === LATEST_FONT.def ? undefined : v })} />
+        <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 글자가 같은 비율로 — 위젯 크기를 바꿔도 글씨는 그대로</small>
       </WRow>
       <WRow label="제목 시작 위치">
         <div className="mini-seg">

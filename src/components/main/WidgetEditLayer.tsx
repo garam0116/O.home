@@ -3,7 +3,7 @@
 // 메인과 다른 페이지(좌우 위젯 레일, v2.4)가 같이 쓴다. sideOnly면 추가 위치가 왼쪽·오른쪽 열로 제한된다
 // (다른 페이지의 중앙은 본문 자리라 중앙 위젯은 메인에서만 보인다).
 import React, { useCallback, useEffect, useState } from 'react';
-import { useMainStore, WidgetConf, WidgetType, WIDGET_META, MULTI_TYPES, widgetLabel } from '@/lib/mainStore';
+import { useMainStore, WidgetConf, WidgetType, WIDGET_META, MULTI_TYPES, widgetLabel, ratioLocked, AUTO_H_TYPES } from '@/lib/mainStore';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { KRadio } from '@/components/ui/Kit';
 import { useToast } from '@/components/ui/Toast';
@@ -105,6 +105,13 @@ export function WidgetEditLayer({ ctx, setCtx, enabled, sideOnly }: {
           <button onClick={() => { updateWidget(me.id, { freeMove: !me.freeMove }); setCtx(null); }}>
             {me.freeMove ? '그리드 반영' : '그리드 무시'}
           </button>
+          {/* 비율 잠금 (사용자 요청) — 켜면 어느 핸들로 끌어도 비율 유지, 끄면 가로·세로 따로(사진은 박스 안에 맞춰 넣음).
+              높이를 내용이 정하는 위젯(디데이·메뉴 카드)은 해당 없음 */}
+          {!AUTO_H_TYPES.includes(me.type) && (
+            <button onClick={() => { updateWidget(me.id, { ratioLock: !ratioLocked(me) }); setCtx(null); }}>
+              {ratioLocked(me) ? '비율 잠금 해제' : '비율 잠금'}
+            </button>
+          )}
           {(EDITABLE.includes(me.type) || (!me.fixed && me.type !== 'menu')) && <div className="sep" />}
           {/* 내용 편집 — 편집모드에서도 우클릭으로 설정 모달을 연다 (v1.9 사용자 확정) */}
           {EDITABLE.includes(me.type) && (
