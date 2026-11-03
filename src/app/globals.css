@@ -867,30 +867,23 @@ body.edit-on .main-grid{grid-template-columns:230px 1fr 260px}
 /* NEW — 모든 게시판 최신글 (v2.6 사용자 요청, 예전 LATEST 그림 위젯 대체)
    패널 없이 배경 위에 얹는다. 글씨색은 페이지 제목색(--page-title)을 따라 배경 그림 위에서 읽힌다.
    글씨 크기는 위젯 폭과 무관 (사용자 요청 — 예전에는 폭 420px를 넘으면 글씨가 한 번에 커졌다).
-   실제 휴대폰 화면(620px 이하)에서만 사용자 모바일 캡쳐 비율로 줄이고, 어느 폭이든 한 줄 — 긴 제목만 말줄임.
+   PC도 휴대폰과 같은 촘촘 값(예전 PC 위젯 모양) — #105에서 PC가 넓은 값(줄 위아래 13px·제목 17px)을 받아
+   줄 간격이 벌어졌던 것을 되돌림 (v3.3 사용자 요청). 크게 보려면 「글씨 크기」로. 어느 폭이든 한 줄 — 긴 제목만 말줄임.
    --nw-k = 설정 「글씨 크기」(70~150%) */
 .new-wgt{container-type:inline-size;color:var(--page-title)}
 .new-row{--nw-line:color-mix(in srgb,currentColor 18%,transparent)}
-.new-lbl{font-family:var(--serif);font-size:calc(15px*var(--fs,1)*var(--nw-k,1));letter-spacing:.42em;opacity:.55;margin-bottom:4px}
-.new-row{display:flex;align-items:baseline;gap:16px;padding:13px 1px;border-bottom:1px solid var(--nw-line);cursor:pointer}
+.new-lbl{font-family:var(--serif);font-size:calc(12px*var(--fs,1)*var(--nw-k,1));letter-spacing:.45em;opacity:.55;margin-bottom:2px}
+.new-row{display:flex;align-items:baseline;gap:11px;padding:9px 0 8px;border-bottom:1px solid var(--nw-line);cursor:pointer}
 .new-row.locked{cursor:default}
-.new-cat{flex-shrink:0;font-family:var(--serif);font-size:calc(12px*var(--fs,1)*var(--nw-k,1));letter-spacing:.32em;opacity:.5;white-space:nowrap}
-.new-ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(17px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.03em}
+.new-cat{flex-shrink:0;font-family:var(--serif);font-size:calc(10px*var(--fs,1)*var(--nw-k,1));letter-spacing:.3em;opacity:.5;white-space:nowrap}
+.new-ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(14px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.04em}
 .new-row.locked .new-ttl{opacity:.55}
 .new-row:not(.locked):hover .new-ttl{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--nw-line)}
-.new-dt{flex-shrink:0;font-family:var(--serif);font-size:calc(15px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.02em;opacity:.62;white-space:nowrap}
+.new-dt{flex-shrink:0;font-family:var(--serif);font-size:calc(12.5px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.04em;opacity:.62;white-space:nowrap}
 .new-empty{font-size:calc(12px*var(--fs,1)*var(--nw-k,1));opacity:.55;padding:10px 0}
 /* 제목 세로 맞추기 (설정) — 줄마다 같은 칸(subgrid)을 써서 가장 긴 게시판 이름에 제목 시작을 맞춘다 */
-.new-wgt.align .new-list{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px}
+.new-wgt.align .new-list{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:11px}
 .new-wgt.align .new-row{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:baseline}
-@media (max-width:620px){
-  .new-lbl{font-size:calc(12px*var(--fs,1)*var(--nw-k,1));letter-spacing:.45em;margin-bottom:2px}
-  .new-row{gap:11px;padding:9px 0 8px}
-  .new-wgt.align .new-list{column-gap:11px}
-  .new-cat{font-size:calc(10px*var(--fs,1)*var(--nw-k,1));letter-spacing:.3em}
-  .new-ttl{font-size:calc(14px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.04em}
-  .new-dt{font-size:calc(12.5px*var(--fs,1)*var(--nw-k,1));letter-spacing:-.04em}
-}
 /* 편집모드 (4.0): 점선 아웃라인 + 드래그 + 우하단 리사이즈 핸들 */
 .wgt{position:relative}
 /* 위젯 간 간격은 래퍼(.wgt) 단위로 통일 — login-box처럼 .widget 마진이 없는 위젯도 갭 유지 */
@@ -1909,16 +1902,18 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   .admin-posts .ap-title{min-width:140px;font-size:calc(13px*var(--fs,1))}
   .admin-posts .ap-meta{font-size:calc(11px*var(--fs,1))}
 }
-/* 게시판 검색 위젯 (사용자 요청) — 카드·제목 없이 반투명 둥근 입력칸 + 오른쪽 어두운 돋보기 버튼만.
-   크기를 지정하면 그 높이 안에서 세로 가운데 */
+/* 게시판 검색 위젯 (사용자 요청) — 카드·제목 없이 입력칸 + 오른쪽 돋보기 버튼만.
+   v3.3 「각인」 필 (사용자 확정 — 카테고리 헤더 각인 모양에 맞춤): 배경 없이 페이지 제목색의 가는 선 · 이탤릭 세리프 문구.
+   돋보기 버튼은 포인트색 원형 그대로 (사용자 요청). 크기를 지정하면 그 높이 안에서 세로 가운데 */
 .search-wg{display:flex;align-items:center}
-.search-wg-box{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:4px 4px 4px 13px;border:1.5px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:999px;background:color-mix(in srgb,var(--wg-bg) 55%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:border-color .15s,box-shadow .15s}
-.search-wg-box:focus-within{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
-.search-wg-box input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--wg-fg);font-size:calc(12.5px*var(--fs,1));padding:6px 0}
-.search-wg-box input::placeholder{color:var(--faint)}
-.search-wg-box button{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;transition:background .15s}
+.search-wg-box{--sw-line:color-mix(in srgb,var(--page-title) 35%,transparent);flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;padding:0 4px 0 16px;border:1px solid var(--sw-line);border-radius:999px;background:none;transition:border-color .15s,background .15s}
+.search-wg-box:focus-within{border-color:color-mix(in srgb,var(--page-title) 60%,transparent);background:color-mix(in srgb,var(--page-title) 5%,transparent)}
+.search-wg-box input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--page-title);font-family:var(--font-pagetitle,var(--serif));font-style:italic;font-size:calc(15px*var(--fs,1));letter-spacing:.06em;padding:6px 0}
+.search-wg-box input::placeholder{color:color-mix(in srgb,var(--page-title) 50%,transparent)}
+.search-wg-box button{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;transition:background .15s}
 .search-wg-box button:hover{background:color-mix(in srgb,var(--accent) 82%,#000)}
-.search-wg-box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;display:block}
+.search-wg-box button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.search-wg-box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;display:block}
 
 /* 게시글 하단 다음 글 / 이전 글 / 목록가기 (사용자 요청) — 패널 밖 배경 위에 얇은 줄로.
    글씨색은 페이지 제목/설명 색(--page-title/--page-desc)을 따라 모바일 흰 바탕에서도 보인다.
