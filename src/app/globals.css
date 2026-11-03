@@ -44,6 +44,16 @@
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--sb-thumb);border-radius:9px;border:2px solid var(--sb-bd)}
+/* 드래그 효과 (v3.7 사용자 요청 — 환경설정 > 디자인 > 세부 요소) — 바탕은 그대로 두고 글자만 흐린다.
+   그림자(--sel-shadow)는 theme.ts가 고른 효과(안개·삼중 잔상)와 모드의 글자색·포인트색으로 만든다.
+   사파리는 선택 글자의 그림자를 제대로 그리지 않아 글자가 통째로 사라질 수 있어 옅은 포인트 바탕으로 대신한다.
+   아이폰·아이패드는 사이트의 선택 색을 무시하고 늘 시스템 색을 쓴다 */
+@supports not (font:-apple-system-body){
+  ::selection{background:transparent;color:transparent;text-shadow:var(--sel-shadow,0 0 4px rgba(29,32,37,.7),0 0 4px rgba(236,238,241,.55))}
+}
+@supports (font:-apple-system-body){
+  ::selection{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+}
 html,#appMain{scrollbar-color:var(--sb-thumb) transparent;scrollbar-width:thin}
 
 /* 앱 셸 (v1.8): 헤더 고정 + 스크롤은 콘텐츠 영역 안에서만 */
@@ -509,6 +519,25 @@ a{color:inherit;text-decoration:none}
 .veil .cover b{font-size:calc(12px*var(--fs,1));letter-spacing:.1em}
 .veil .cover span{font-size:calc(10px*var(--fs,1));color:#c8ccd3}
 .veil.open .cover{display:none}
+/* 게시글 접기 — 안개 (v3.7 사용자 요청): 어두운 막 없이 바탕 그대로, 글자만 흐리고 가운데 위에 작은 라벨.
+   본문 아무 곳이나 눌러도 펼쳐지고, 흐림이 서서히 걷힌다. 이미지 접기(갤러리·로드비)는 기존 .cover 그대로 */
+.veil.fog{overflow:visible}
+.veil.fog:not(.open){cursor:pointer}
+.veil.fog .post-body{transition:filter .5s ease,opacity .5s ease}
+.veil.fog:not(.open) .post-body{min-height:120px;filter:blur(5px);opacity:.75;user-select:none;pointer-events:none}
+.veil.fog:not(.open):hover .post-body{filter:blur(4px)}
+.veil.fog:focus-visible{outline:2px solid var(--focus-bd,var(--accent));outline-offset:4px}
+.fog-chip{position:absolute;left:50%;top:min(50%,90px);transform:translate(-50%,-50%);z-index:5;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;max-width:calc(100% - 16px);
+  background:var(--panel-solid,#fcfcfd);border:1px solid var(--line);border-radius:999px;padding:8px 16px;
+  box-shadow:var(--sh-dd);font-size:calc(12px*var(--fs,1));color:var(--ink);transition:transform .2s}
+.fog-chip b{font-weight:600;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis}
+.fog-chip i{font-style:normal;color:var(--faint);font-size:calc(11px*var(--fs,1));flex-shrink:0}
+.veil.fog:not(.open):hover .fog-chip{transform:translate(-50%,-50%) scale(1.03)}
+@media (prefers-reduced-motion:reduce){.veil.fog .post-body{transition:none}}
+/* 드래그 효과 미리보기 (환경설정) — 아이폰에서도 보이게 선택된 모양을 미리 칠해 둔다 */
+.sel-pv{font-size:calc(12.5px*var(--fs,1));color:var(--ink);background:var(--panel-solid,#fcfcfd);border:1px solid var(--line);border-radius:8px;padding:7px 12px;line-height:1.6}
+.sel-pv .fk{color:transparent;text-shadow:var(--sel-shadow)}
 /* 플레이스홀더 아트 (실서비스에선 업로드 이미지) */
 .ph{background:linear-gradient(135deg,#565d68 0%,#2f343c 60%,#20242a 100%);display:grid;place-items:center;color:rgba(255,255,255,.5);font-family:var(--serif);letter-spacing:.15em;position:relative;overflow:hidden}
 .ph::after{content:"";position:absolute;inset:0;background:radial-gradient(240px 240px at 70% 20%,rgba(255,255,255,.14),transparent 60%)}
@@ -1656,7 +1685,7 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
 .ce-pre>div{min-height:var(--ce-lh)}
 .ce-ta{width:100%;height:100%;resize:none;background:transparent;color:transparent;caret-color:var(--ce-caret);outline:none;overflow-x:hidden;overflow-y:auto;
   -webkit-text-fill-color:transparent}
-.ce-ta::selection{background:var(--ce-sel);-webkit-text-fill-color:transparent}
+.ce-ta::selection{background:var(--ce-sel);-webkit-text-fill-color:transparent;text-shadow:none} /* 드래그 효과(안개) 제외 */
 .ce-curline{position:absolute;left:0;right:0;height:var(--ce-lh);background:var(--ce-cur);pointer-events:none}
 .ce-ph{position:absolute;top:var(--ce-pad);left:6px;color:var(--ce-ph);pointer-events:none;line-height:var(--ce-lh)}
 /* 하단 상태 표시 — 색 띠 대신 얇고 조용하게 */

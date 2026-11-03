@@ -61,6 +61,9 @@ export interface ThemeVars {
   // 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통
   // focusColor: 테두리·링 색 / focusRing: 링 방식(은은한 글로우 · 선명한 라인 · 없음) / focusW: 링 두께 px
   focusColor?: string; focusRing?: 'glow' | 'line' | 'none'; focusW?: number;
+  // 드래그 효과 (v3.7 사용자 요청) — 글자를 끌어 선택할 때 바탕은 그대로, 글자만 흐린다.
+  // fog: 안개(글자색으로 번짐, 기본) / ghost: 삼중 잔상(포인트색·푸른 회색이 좌우로 엇갈리고 가운데 흐린 글자색)
+  selFx?: 'fog' | 'ghost';
   // 포인트 컬러
   accent: string; accentSoft: string;
   /* 가독성 보정 (v3.6) — 포인트 자동이 채운다. 있으면 카드 보조·옅은 글씨, 카드 위 포인트 글씨,
@@ -234,7 +237,7 @@ export const SHARED_KEYS = [
   'accent', 'accentSoft',
   'bgType', 'bgAngle', 'bgImageId', 'bgBlur',
   'pageHead', 'pageHeadM',
-  'focusRing', 'focusW', 'wgBorder',
+  'focusRing', 'focusW', 'wgBorder', 'selFx',
   'radius', 'radiusS',
 ] as const satisfies readonly (keyof ThemeVars)[];
 const SHARED = new Set<string>(SHARED_KEYS);
@@ -362,6 +365,12 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     // 이미지 편집(크롭) 배경 (v1.9)
     '--crop-bg': t.cropBg ?? '#2c313a',
     // 입력 포커스 (v1.9) — 테두리색 + 링(글로우: 반투명 번짐 / 라인: 선명한 테두리 / 없음)
+    // 드래그 효과 (v3.7) — globals.css의 ::selection이 이 그림자만 쓴다(글자·바탕은 투명).
+    // 번짐은 카드 글씨색 + 페이지 제목색 두 겹 — 선택 영역에선 원래 글자색을 알 수 없어서(글자가 투명),
+    // 카드 위(카드 글씨색)와 배경 위(제목색) 어느 쪽에서든 한 겹은 보이게 한다
+    '--sel-shadow': (t.selFx ?? 'fog') === 'ghost'
+      ? `-2px 0 3px ${withAlpha(t.accent, 0.85)},2px 0 3px ${withAlpha(fgDark ? '#5f7f9e' : '#86a6c4', 0.85)},0 0 2.5px ${withAlpha(cardFg, 0.6)},0 0 2.5px ${withAlpha(t.pageTitle, 0.45)}`
+      : `0 0 4px ${withAlpha(cardFg, 0.7)},0 0 4px ${withAlpha(t.pageTitle, 0.55)}`,
     '--focus-bd': focusC,
     '--focus-ring': focusRing === 'none' || focusW === 0
       ? 'none'
