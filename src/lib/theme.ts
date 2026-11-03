@@ -2,7 +2,7 @@
 // 모드 4종: 라이트 / 다크(기본) / 포인트 자동(다크·라이트 톤) / 완전 커스텀
 // 모든 색은 순수 hex로 저장(환경설정 hex 입력란과 1:1) — 반투명이 필요한 곳은
 // themeToCssVars 에서 고정 알파를 적용해 CSS 변수로 변환한다.
-import { adjust, ensureContrast, hexToHsl, onColor, oklchToHex, toOklch, withAlpha } from './color';
+import { adjust, ensureContrast, hexToHsl, hslToHex, onColor, oklchToHex, toOklch, withAlpha } from './color';
 
 export type ThemeMode = 'light' | 'dark' | 'point' | 'custom';
 export type PointTone = 'dark' | 'light';
@@ -128,51 +128,52 @@ export function softAccent(accent: string): string {
 }
 
 /**
- * 포인트 자동 모드 — 포인트 컬러 하나로 전체 팔레트 파생 (v3.6 재설계, 시안 B).
- * - 명도는 HSL이 아니라 지각 명도(OKLCH)로 역할마다 고정 — 어떤 색을 골라도 화면 밝기·대비가 같게 나온다.
- * - 채도는 예전 파생과 비슷한 은은한 정도 — 면과 글씨 모두 포인트 색조가 옅게 비친다.
- * - 마지막에 글씨마다 대비율을 검사해 단계(level) 기준에 못 미치면 명도를 밀어 준다.
+ * 포인트 자동 모드 (v1.8 확정) — 포인트 컬러 하나로 전체 팔레트 파생.
  * 톤(다크/라이트) 선택 가능, 파생값은 세부 항목 hex 란에 전부 채워짐 (v1.9).
+ * 가독성 보정 (v3.6) — 색 구성은 그대로 두고, 마지막에 글씨마다 대비율을 검사해
+ * 단계(level) 기준에 못 미치는 글씨만 명도를 밀어 준다. 이미 잘 읽히는 색은 손대지 않는다.
  */
 export function derivePointTheme(accent: string, tone: PointTone, level: ReadLevel = 'std'): ThemeVars {
   const T = READ_TARGETS[level];
-  const { H, C } = toOklch(accent);
-  const c0 = Math.min(C, 0.14);
-  // 포인트 색조를 지각 명도 L, 채도 배율 m으로
-  const n = (L: number, m: number) => oklchToHex({ L, C: c0 * m, H });
+  const { h, s } = hexToHsl(accent);
+  const c = (sat: number, lig: number) => hslToHex({ h, s: Math.min(1, s * sat), l: lig });
   const accentSoft = softAccent(accent);
 
-  const t: ThemeVars = tone === 'dark'
-    ? {
-      bgG1: n(0.29, 0.32), bgG2: n(0.17, 0.3),
+  // 라이트 톤 — 호버 글씨색은 어두운 포인트색 파생 (흰 배경 위 흰 글씨 방지, v1.9)
+  const deepAccent = adjust(accent, cc => ({ l: Math.min(cc.l, 0.38) }));
+  let t: ThemeVars;
+  if (tone === 'dark') {
+    t = {
+      bgG1: c(0.28, 0.2), bgG2: c(0.32, 0.07),
       bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-      cardBg: n(0.985, 0.04), cardFg: n(0.25, 0.25),
-      topBg: n(0.19, 0.34), topFg: n(0.8, 0.12), topHv: n(0.97, 0.06), topBrand: n(0.95, 0.08),
-      ddBg: n(0.22, 0.3), ddFg: n(0.86, 0.1), ddHv: '#ffffff',
-      pageTitle: n(0.95, 0.06), pageDesc: n(0.77, 0.12),
-      bgmBg: n(0.18, 0.32), bgmFg: n(0.95, 0.06), bgmIc: n(0.82, 0.12), bgmVol: n(0.9, 0.1),
-      sbThumb: n(0.45, 0.22), sbBd: n(0.2, 0.3),
-      searchBg: n(0.25, 0.3), searchFg: n(0.92, 0.06), searchIc: n(0.7, 0.12), searchBd: n(0.37, 0.25),
-      btnDark: n(0.31, 0.45), btnDarkFg: n(0.98, 0.04), btnDarkHv: n(0.37, 0.45),
-      cropBg: n(0.3, 0.24),
+      cardBg: c(0.12, 0.985), cardFg: c(0.4, 0.14),
+      topBg: c(0.3, 0.09), topFg: c(0.14, 0.68), topHv: c(0.2, 0.97), topBrand: c(0.12, 0.95),
+      ddBg: c(0.28, 0.11), ddFg: c(0.14, 0.78), ddHv: '#ffffff',
+      pageTitle: c(0.1, 0.93), pageDesc: c(0.12, 0.62),
+      bgmBg: c(0.3, 0.08), bgmFg: c(0.1, 0.94), bgmIc: c(0.12, 0.82), bgmVol: c(0.1, 0.9),
+      sbThumb: c(0.22, 0.38), sbBd: c(0.3, 0.1),
+      searchBg: c(0.26, 0.14), searchFg: c(0.1, 0.9), searchIc: c(0.12, 0.6), searchBd: c(0.22, 0.24),
+      btnDark: c(0.38, 0.12), btnDarkFg: c(0.08, 0.97), btnDarkHv: c(0.38, 0.19), /* 채도 살짝↑ 명도 아주 약간↓ — 컬러감 (v1.9 사용자 피드백) */
+      cropBg: c(0.24, 0.19),
       accent, accentSoft, readLevel: level,
       radius: 14, radiusS: 9, shadow: 100, ddShadow: 100,
-    }
-    : {
-      bgG1: n(0.965, 0.1), bgG2: n(0.91, 0.15),
-      bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-      cardBg: n(0.995, 0.03), cardFg: n(0.25, 0.25),
-      topBg: n(0.985, 0.06), topFg: n(0.45, 0.25), topHv: n(0.42, 1), topBrand: n(0.3, 0.35),
-      ddBg: n(0.99, 0.04), ddFg: n(0.36, 0.2), ddHv: '#000000',
-      pageTitle: n(0.28, 0.35), pageDesc: n(0.48, 0.2),
-      bgmBg: n(0.99, 0.05), bgmFg: n(0.28, 0.25), bgmIc: n(0.46, 0.2), bgmVol: n(0.36, 0.25),
-      sbThumb: n(0.76, 0.2), sbBd: n(0.9, 0.2),
-      searchBg: n(0.995, 0.03), searchFg: n(0.28, 0.2), searchIc: n(0.58, 0.12), searchBd: n(0.86, 0.15),
-      btnDark: n(0.46, 0.5), btnDarkFg: n(0.99, 0.03), btnDarkHv: n(0.52, 0.5),
-      cropBg: n(0.9, 0.15),
-      accent, accentSoft, readLevel: level,
-      radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤은 그림자 약하게 (30%)
     };
+  }
+  else t = {
+    bgG1: c(0.25, 0.95), bgG2: c(0.3, 0.86),
+    bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
+    cardBg: c(0.15, 0.99), cardFg: c(0.4, 0.14),
+    topBg: c(0.35, 0.97), topFg: c(0.3, 0.38), topHv: deepAccent, topBrand: c(0.45, 0.22),
+    ddBg: c(0.3, 0.98), ddFg: c(0.3, 0.3), ddHv: '#000000',
+    pageTitle: c(0.45, 0.22), pageDesc: c(0.2, 0.5),
+    bgmBg: c(0.3, 0.98), bgmFg: c(0.4, 0.24), bgmIc: c(0.3, 0.4), bgmVol: c(0.4, 0.3),
+    sbThumb: c(0.2, 0.72), sbBd: c(0.25, 0.88),
+    searchBg: c(0.3, 0.99), searchFg: c(0.4, 0.24), searchIc: c(0.2, 0.55), searchBd: c(0.25, 0.84),
+    btnDark: c(0.33, 0.4), btnDarkFg: c(0.1, 0.99), btnDarkHv: c(0.33, 0.46), // 라이트 톤 — 뮤트 버튼 (대비 완화 · 채도 살짝↑ 명도 약간↓, v1.9)
+    cropBg: c(0.2, 0.89),
+    accent, accentSoft, readLevel: level,
+    radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤도 그림자 약하게 (30%)
+  };
 
   // 대비 보정 — 글씨는 단계 기준(text), 아이콘·안내문은 보조 기준(hint)
   const fix = <K extends keyof ThemeVars>(k: K, bg: string | string[], target: number) => {
