@@ -429,13 +429,15 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
           : q;
       }));
       // 두 질의(공개분 · 내 글)를 합치므로 문서 id로 중복을 없앤 뒤 sort로 정렬한다
-      const seen = new Map<string, { sort: number; item: T }>();
+      const seen = new Map<string, { sort: number; at: number; item: T }>();
       snaps.forEach(s => s.docs.forEach(d => {
         if (seen.has(d.id)) return;
-        const raw = d.data() as { data?: Record<string, unknown>; sort?: number };
-        seen.set(d.id, { sort: raw.sort ?? 0, item: { ...(raw.data ?? {}), id: d.id } as T });
+        const raw = d.data() as { data?: Record<string, unknown>; sort?: number; updatedAt?: number };
+        seen.set(d.id, { sort: raw.sort ?? 0, at: raw.updatedAt ?? 0, item: { ...(raw.data ?? {}), id: d.id } as T });
       }));
-      return [...seen.values()].sort((a, b) => a.sort - b.sort).map(v => v.item);
+      // 자리가 같으면 나중에 저장한 것을 앞으로 — 회원이 맨 앞에 끼운 새 글은 남의 글 자리를 못 밀어서
+      // 그 글과 같은 자리 번호가 되는데, 이때도 새 글이 앞에 오게 (syncList 주석 참조)
+      return [...seen.values()].sort((a, b) => a.sort - b.sort || b.at - a.at).map(v => v.item);
     },
 
     async syncList<T extends ListItem>(coll: string, prev: T[], next: T[], uid: string | null) {
@@ -466,15 +468,25 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       }
       const chunk = <X,>(arr: X[], n: number) =>
         Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
-      // 자리만 바뀐 항목 — sort만 고친다 (본문까지 다시 보내지 않게, 위 diffList 주석 참조)
-      for (const part of chunk(moves, 400)) {
-        const batch = writeBatch(db);
-        part.forEach(({ id, sort }) => batch.update(doc(db, coll, id), { sort, updatedAt: Date.now() }));
-        await batch.commit();
-      }
-      for (const part of chunk(deletes, 400)) {
+      /* 남의 문서는 관리자만 고치고 지울 수 있다 (firestore.rules). 회원이 자기 글 하나를 지우거나
+         맨 앞에 새 글을 끼우면 남의 글까지 자리(sort)가 밀려 함께 고치려 드는데, 배치는 하나만 거부돼도
+         통째로 실패한다 — 그래서 **회원이 자기 글·댓글을 지워도 다시 나타났다.**
+         회원이면 자기 것(authorId가 본인)만 보내고, 남의 것은 서버가 어차피 받지 않으므로 건너뛴다.
+         (Supabase는 RLS가 남의 행을 조용히 걸러 같은 결과가 된다) */
+      const admin = await isAdminNow();
+      const mine = (it: T | undefined) => admin || (!!uid && !!it && it.authorId === uid);
+      const nextById = new Map(next.map(it => [it.id, it]));
+      const prevById = new Map(prev.map(it => [it.id, it]));
+      // 지우기를 자리 고치기보다 먼저 — 자리 고치기가 실패해도 지운 것은 지워져 있게
+      for (const part of chunk(deletes.filter(id => mine(prevById.get(id))), 400)) {
         const batch = writeBatch(db);
         part.forEach(id => batch.delete(doc(db, coll, id)));
+        await batch.commit();
+      }
+      // 자리만 바뀐 항목 — sort만 고친다 (본문까지 다시 보내지 않게, 위 diffList 주석 참조)
+      for (const part of chunk(moves.filter(m => mine(nextById.get(m.id))), 400)) {
+        const batch = writeBatch(db);
+        part.forEach(({ id, sort }) => batch.update(doc(db, coll, id), { sort, updatedAt: Date.now() }));
         await batch.commit();
       }
     },
