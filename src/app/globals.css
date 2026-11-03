@@ -2266,8 +2266,8 @@ body.no-topbar .topbar{display:none}
 .cp-item{display:inline-flex;align-items:center;gap:8px;min-width:0;max-width:100%}
 .cp-item > .cp-lb{flex:none;width:var(--cp-lw,auto);text-align:right;white-space:nowrap}
 .ctl-line > .cp-item:not(:first-child) > .cp-lb{width:auto}
-.set-ctl{display:grid;gap:10px;justify-items:start;margin-left:auto;min-width:0;max-width:100%}
-.ctl-line{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;min-width:0;max-width:100%}
+.set-ctl{display:grid;gap:10px;justify-items:end;margin-left:auto;min-width:0;max-width:100%}
+.ctl-line{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:0;max-width:100%}
 .ctl-preview{width:150px}
 .ctl-text{width:180px}
 /* 위젯 편집기 한 줄 — 라벨 칸 고정 폭 · 컨트롤은 그 오른쪽에서 시작 (v3.2) */
@@ -2285,15 +2285,19 @@ body.no-topbar .topbar{display:none}
 .mt-sub{padding-top:8px}
 /* 하위 메뉴는 이름 칸 안에서만 들여 써서 타이틀·주소·버튼 열은 상위 메뉴와 같은 선에 둔다 */
 .mt-sub .mt-row > .k-input:first-of-type{margin-left:16px;width:calc(100% - 16px)}
-.setx-card .cp-group:has(> .cp-item):not(:has(> :not(.cp-item))),.setx-card .cp-grid2{
+/* 오른쪽 끝 맞춤 (v3.4 사용자 요청 — 시안 B): 색 묶음은 한 줄로 늘어놓아 오른쪽 끝에 붙인다.
+   항목 폭이 같아서 오른쪽부터 세면 위아래 줄의 열이 맞는다. 4칸 이상은 .cp-grid2(2열 격자)로 */
+.setx-card .cp-group:has(> .cp-item):not(:has(> :not(.cp-item))){
+  display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:flex-end;align-items:center}
+.setx-card .cp-grid2{
   display:grid;grid-template-columns:repeat(2,var(--cp-col));gap:10px 18px;justify-content:end;justify-items:start;align-items:center}
-.setx-card .set-ctl > .cp-group{justify-content:start}
+.setx-card .set-ctl > .cp-group{justify-content:flex-end}
 @container (max-width:660px){
   .setx-card .set-row:has(.set-ctl,.cp-item){flex-direction:column;align-items:stretch;gap:12px}
   .setx-card .set-row:has(.set-ctl,.cp-item) > .l{flex:none}
   .setx-card .set-row > .set-ctl,.setx-card .set-row > .cp-group{margin-left:0;width:100%}
   .setx-card .set-ctl{justify-items:stretch;gap:12px}
-  .setx-card .ctl-line{gap:12px 16px}
+  .setx-card .ctl-line{gap:12px 16px;justify-content:flex-start}
   /* 라벨은 컨트롤 위 — 좁은 칸에서 라벨 폭만큼 입력칸이 줄지 않게 */
   .setx-card .cp-item{flex-direction:column;align-items:flex-start;gap:5px}
   .setx-card .cp-item > .cp-lb,.setx-card .ctl-line > .cp-item > .cp-lb{width:auto;text-align:left}
