@@ -5,7 +5,7 @@ import React, { Suspense, useEffect, useReducer, useRef, useState } from 'react'
 import { useAuth, inviteCode, setInviteCode } from '@/lib/auth';
 import { useMembers, memberNumbers, memberPath } from '@/lib/members';
 import { useTheme } from '@/lib/ThemeProvider';
-import { ThemeVars, BG_DIM } from '@/lib/theme';
+import { ThemeVars, BG_DIM, CARD_ALPHA } from '@/lib/theme';
 import { hexToHsl } from '@/lib/color';
 import { ColorField } from '@/components/ui/ColorField';
 import { KStep, KToggle, KInput, LiveInput, KTextarea, KSelect, KCheck, Pager } from '@/components/ui/Kit';
@@ -400,11 +400,18 @@ function ThemePane() {
 
       {/* 카드 색 — 패널·게시판 리스트·필터 등 공통 (v1.9) */}
       <div className="set-row">
-        <div className="l"><b>카드</b><small>패널·카테고리 목록·필터 카드의 배경과 글씨색 — 보조 글씨색은 자동 파생</small></div>
-        <div className="cp-group">
-          <CP label="배경" k="cardBg" />
-          <CP label="글씨" k="cardFg" />
-        </div>
+        <div className="l"><b>카드</b><small>패널·카테고리 목록·필터 카드의 배경과 글씨색 — 보조 글씨색은 자동 파생 · 불투명도 100%면 비침 없음, 배경 색의 투명도와 곱해지며 위젯 카드에도 적용</small></div>
+        <Ctl>
+          <div className="cp-group">
+            <CP label="배경" k="cardBg" />
+            <CP label="글씨" k="cardFg" />
+          </div>
+          {/* 카드 배경 불투명도 (v3.4 사용자 요청 — 시안 2) */}
+          <Item label="불투명도">
+            <KStep value={state.vars.cardAlpha ?? CARD_ALPHA} min={0} max={100} step={2} suffix="%"
+              onChange={v => setVar('cardAlpha', v)} />
+          </Item>
+        </Ctl>
       </div>
 
       <div className="set-row">
