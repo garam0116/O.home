@@ -3315,7 +3315,9 @@ function SettingsInner() {
       <div className="setx-cols">
         <nav className="setx-groups" aria-label="설정 그룹">
           {GROUPS.map(g => (
-            <button key={g.id} className={`setx-grp${!peek && g.id === group ? ' on' : ''}`} aria-current={!peek && g.id === group ? 'page' : undefined}
+            // PC 미리보기로 목차를 접는 동안 그룹 버튼에 마우스를 올리면 그 그룹 항목이 옆으로 펼쳐진다 (사용자 요청 — CSS가 그때만 보인다)
+            <div key={g.id} className="setx-gwrap">
+            <button className={`setx-grp${!peek && g.id === group ? ' on' : ''}`} aria-current={!peek && g.id === group ? 'page' : undefined}
               onClick={() => {
                 if (isPhone()) {
                   // 휴대폰: 보고 있는 그룹을 다시 누르면 2차 줄만 접고 펼친다
@@ -3327,6 +3329,17 @@ function SettingsInner() {
               <i aria-hidden="true">{g.icon}</i>{g.label}
               {dirtyGroups.has(g.id) && <span className="setx-dot" aria-label="저장 안 된 변경" />}
             </button>
+            <div className="setx-fly" role="menu" aria-label={`${g.label} 항목`}>
+              <small>{g.label}</small>
+              {g.sections.filter(sc => !hiddenSet.has(sc.id)).map(sc => (
+                <button key={sc.id} role="menuitem" className={!peek && g.id === group && activeSec === sc.id ? 'on' : ''}
+                  onClick={e => {
+                    (e.currentTarget as HTMLElement).blur();
+                    if (!peek && g.id === group) scrollToSec(sc.id); else goGroup(g.id, sc.id);
+                  }}>{sc.label}</button>
+              ))}
+            </div>
+            </div>
           ))}
           {/* 숨김 칸 — 관리 아래 1px 선 밑. 접혀 있다가 누르면 카테고리 순서대로 펼쳐진다 */}
           {hiddenIds.length > 0 && (

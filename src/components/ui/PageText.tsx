@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useMainStore } from '@/lib/mainStore';
 import { useMenuSettings, pageTitleFor, menuLabelOf } from '@/lib/menuStore';
 import { canonPath, isExtraHref } from '@/lib/urlCanon';
 import { refreshPage } from '@/lib/pageRefresh';
@@ -75,6 +76,10 @@ export function setPageText(k: string, v: string) {
 /** always — 헤더 표시 옵션(제목만/안 띄움)에도 숨지 않는 상태·안내 문구용 (예: 로그인 필요 안내, v1.9) */
 export function EditableDesc({ k, def, always }: { k: string; def: string; always?: boolean }) {
   const { isAdmin } = useAuth();
+  /* 관리자라도 편집모드를 켰을 때만 고친다 (사용자 요청 — 평소에 설명을 눌러 실수로 입력창이 열리지 않게).
+     편집모드를 켤 수 없는 페이지(글쓰기·수정 화면 등)는 예전처럼 관리자가 바로 고칠 수 있다 — 고칠 길이 없어지지 않게 */
+  const { editOn, editAvailable } = useMainStore();
+  const canEdit = isAdmin && (editOn || !editAvailable);
   const [text, setText] = useState(def);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -92,6 +97,9 @@ export function EditableDesc({ k, def, always }: { k: string; def: string; alway
     setText(v || def);
     setEditing(false);
   };
+
+  // 편집 중에 편집모드를 끄면 입력창도 닫는다(입력한 내용은 저장하지 않음)
+  useEffect(() => { if (!canEdit) setEditing(false); }, [canEdit]);
 
   if (editing) {
     // 보기(p)와 동일한 크기·여백의 심리스 인풋 — 전환 시 레이아웃이 덜컹거리지 않음
@@ -113,7 +121,7 @@ export function EditableDesc({ k, def, always }: { k: string; def: string; alway
 
   return (
     // .editable — 관리자 연필 표시는 이 클래스에만 (동적 메타 문구에는 연필 없음)
-    <p className={`editable${always ? ' gate' : ''}`} onClick={() => { if (isAdmin) { setDraft(text); setEditing(true); } }}>
+    <p className={`editable${always ? ' gate' : ''}${canEdit ? ' can-edit' : ''}`} onClick={() => { if (canEdit) { setDraft(text); setEditing(true); } }}>
       {text}
     </p>
   );
