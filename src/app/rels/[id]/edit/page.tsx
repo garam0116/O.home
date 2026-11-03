@@ -11,6 +11,7 @@ import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 import { useNoKey } from '@/lib/itemNo';
+import { RelFormBack } from '@/components/rels/RelFormBack';
 
 function RelEditInner() {
   const { id: rawKey, au: auParam } = useParams<{ id: string; au?: string }>();
@@ -43,7 +44,9 @@ function RelEditInner() {
   }
 
   return (
-    <section className="page">
+    <section className="page page-rel-edit">
+      {/* PC 2단형이면 상단바 대신 화살표 — 이 자관 상세로 (CANCEL과 같은 곳) */}
+      <RelFormBack to={relPath(rel)} label="자관 상세로" />
       <div className="page-head">
         <PageTitle>EDIT — {rel.name}{auObj ? ` · ${auObj.label}` : ''}</PageTitle>
         <EditableDesc k="rels-edit-desc" def="자관 정보 수정 — 멤버·AU는 상세 페이지에서 관리합니다" />

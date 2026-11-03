@@ -10,6 +10,7 @@ import { RelForm } from '@/components/rels/RelForm';
 import { useToast } from '@/components/ui/Toast';
 import { PageTitle, EditableDesc } from '@/components/ui/PageText';
 import { allocNo } from '@/lib/itemNo';
+import { RelFormBack } from '@/components/rels/RelFormBack';
 
 function RelNewInner() {
   const router = useRouter();
@@ -29,7 +30,9 @@ function RelNewInner() {
   }
 
   return (
-    <section className="page">
+    <section className="page page-rel-edit">
+      {/* PC 2단형이면 상단바 대신 화살표 — 눌러 온 자관 목록으로 (CANCEL과 같은 곳) */}
+      <RelFormBack to={sectionHref('rels', sec.id)} label="자관 목록으로" />
       <div className="page-head">
         <PageTitle href={tt.href}>{tt.title}</PageTitle>
         <EditableDesc k="rels-new-desc" def="자관 등록 — 멤버(인물 이름·사진)는 페이지를 만든 뒤 상세에서 추가할 수 있습니다" />

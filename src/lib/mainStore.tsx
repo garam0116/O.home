@@ -164,6 +164,9 @@ interface MainCtx {
   setPcLayout: (m: PcLayout, estH: number) => void;
   /** 지금 페이지가 2단형으로 그려지는지 (PC 기준 — 모바일은 CSS가 1단형으로 되돌림) */
   sideNav: boolean;
+  /** PC를 2단형으로 설정했는지 (페이지와 무관 · 메뉴 카드가 있을 때만) — 자관 수정처럼 레일은 없지만
+   *  2단형이면 상단바 대신 뒤로가기 화살표를 쓰는 페이지가 본다 */
+  pcSide: boolean;
   /** 가운데 정렬 (편집모드 버튼) — 켜면 가운데 열 위젯을 캔버스 한가운데로 옮기고 본문도 화면 가운데에 둔다.
    *  편집 중 변경이라 저장은 편집 종료 시 「저장 후 종료」로 확정된다 */
   setCenterAlign: (on: boolean) => void;
@@ -348,8 +351,9 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   // 2단형 적용 페이지 (v2.7 사용자 확정) — 메인 + 좌우 위젯 레일 페이지(자관 목록·다이어리·로드비 포함, v2.8).
   // 환경설정·글쓰기는 2단형으로 설정해도 1단형 그대로, 자관 상세는 상단바 없이 전체 화면.
   // 메뉴 카드가 없으면(예전 저장분) 상단바를 유지한다
-  const sideNav = state.pcLayout === 'side' && (pathname === '/' || isRailPage(pathname))
+  const pcSide = state.pcLayout === 'side'
     && state.widgets.some(w => w.type === 'menu' && w.enabled && w.ax != null && w.ay != null);
+  const sideNav = pcSide && (pathname === '/' || isRailPage(pathname));
   useEffect(() => {
     document.body.classList.toggle('side-nav', sideNav);
   }, [sideNav]);
@@ -390,7 +394,7 @@ export function MainStoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, editOn, editAvailable: canEditAt(pathname), gridOn, setGridOn, toggleEdit, requestExit, guardNav,
-      updateWidget, addWidget, removeWidget, setLayoutMode, setPcLayout, sideNav, setCenterAlign, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
+      updateWidget, addWidget, removeWidget, setLayoutMode, setPcLayout, sideNav, pcSide, setCenterAlign, setMobileOff, setMobileOrder, setSettingsOrder, saveNow, resetMain,
     }}>
       {children}
 

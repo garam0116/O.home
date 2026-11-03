@@ -1,6 +1,7 @@
 'use client';
 // 뒤로가기 화살표 (v2.8 사용자 요청 — 자관 상세 왼쪽 위). 모양·애니메이션은 globals.css `.back-arrow`.
-// 누르면 브라우저 뒤로가기와 같다. 주소로 바로 들어와(새 탭 등) 이전 기록이 없으면 fallback으로 간다.
+// 기본은 브라우저 뒤로가기 — 주소로 바로 들어와(새 탭 등) 이전 기록이 없으면 fallback으로 간다.
+// to를 주면 기록과 상관없이 늘 그곳으로 간다 (사용자 요청 — 자관 상세는 목록으로, 자관 수정은 상세로).
 // 마우스는 올릴 때 이미 화살표로 바뀌어 있으니 바로 이동하고, 터치는 누르는 순간 화살표로 바뀐 걸 보여 준 뒤 이동한다.
 import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,8 +9,10 @@ import { useRouter } from 'next/navigation';
 /** 터치에서 화살표가 다 그려지는 걸 보여 주고 이동하기까지 (CSS 전환 .42s + 지연 .08s 중 대부분) */
 const TOUCH_DELAY = 380;
 
-export function BackArrow({ fallback, label = '뒤로가기', onGo }: {
-  fallback: string; label?: string;
+export function BackArrow({ fallback = '/', to, label = '뒤로가기', onGo }: {
+  fallback?: string; label?: string;
+  /** 늘 이 주소로 이동 (뒤로가기 대신) */
+  to?: string;
   /** 이동 전에 끼어들기 (v3.1 — 환경설정: 저장 안 한 변경이 있으면 먼저 묻는다). 받은 go를 부르면 이동 */
   onGo?: (go: () => void) => void;
 }) {
@@ -18,7 +21,8 @@ export function BackArrow({ fallback, label = '뒤로가기', onGo }: {
   const pointer = useRef<string>('mouse');
 
   const nav = () => {
-    if (window.history.length > 1) router.back();
+    if (to) router.push(to);
+    else if (window.history.length > 1) router.back();
     else router.push(fallback);
   };
   const go = () => (onGo ? onGo(nav) : nav());

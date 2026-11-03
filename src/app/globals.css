@@ -1962,6 +1962,16 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   body.side-nav .topbar > :is(.brand,.gnb,.user-wrap,.login-link){display:none}
   body.side-nav .topbar > :is(.btn,.k-toggle.grid-chip.show,.edit-flag.show){background:var(--top-bg);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 }
+/* 자관 등록·수정 — PC 2단형이면 상단바 없이 자관 상세와 같은 자리에 뒤로가기 (사용자 요청 · RelFormBack이 body.rel-edit-bare).
+   틀은 상세와 같은 1280px · 화살표도 상세 .rel-tl과 같은 좌표(top 20 · left 28). 제목·설명·폼은 화살표 오른쪽 한 줄에
+   맞춘다 — 상세에서 화살표 옆 EDIT 버튼이 시작하는 자리(28 + 화살표 32 + 간격 10)와 같다.
+   위쪽 19px은 제목 한가운데를 화살표 한가운데(위에서 36px)에 맞춘 값 */
+.rel-edit-back{display:none}
+@media (min-width:621px){
+  body.rel-edit-bare .topbar{display:none}
+  body.rel-edit-bare .page-rel-edit{position:relative;max-width:1280px;padding-top:19px;padding-left:70px}
+  body.rel-edit-bare .page-rel-edit > .rel-edit-back{display:block;position:absolute;top:20px;left:28px;z-index:6}
+}
 /* 좌우 위젯 사이 본문이 좁을 때(700px 미만, SideRails가 body.rail-narrow) 페이지별 보정 (v2.8 사용자 확정) —
    레이아웃은 그대로 두고 폭만 맞춘다. 960px 이하는 원래대로(로드비 세로 쌓기 등) */
 @media (min-width:961px){
