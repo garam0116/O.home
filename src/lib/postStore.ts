@@ -308,7 +308,7 @@ export function postBodyText(body: string): string {
     .replace(/\s+/g, ' ');
 }
 
-/** 게시글 검색 — 제목·작성자·태그·본문. `k`는 소문자로 바꾼 검색어.
+/** 포스팅 검색 — 제목·작성자·태그·본문. `k`는 소문자로 바꾼 검색어.
  *  비밀글 본문은 `secretBody`가 참일 때(=읽을 수 있는 사람)만 찾는다 — 본문으로 걸리면 내용을 짐작할 수 있다 */
 export function postMatches(p: Post, k: string, secretBody = false): boolean {
   if (!k) return true;

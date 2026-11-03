@@ -169,20 +169,23 @@ function Item({ label, children }: { label: React.ReactNode; children: React.Rea
 function WidgetStyleRow() {
   const { state, setVar } = useTheme();
   const v = state.vars;
-  // 위젯 탭 맨 위로 이동 (v2.6 사용자 요청) — 설명은 이름 아래 한 줄, 색 3개·테두리 토글은 오른쪽 한 줄
+  /* 위젯 탭 맨 위 (v2.6) — 2열 격자: 배경·타이틀 / 본문·(빈칸) / 테두리 토글·테두리 색.
+     토글도 「라벨 + 컨트롤」 한 쌍으로 넣어 배경·본문과 같은 라벨 열·입력 열에 선다 (v3.3 사용자 요청 — 시안 B).
+     켜면 같은 줄 오른쪽 칸에 테두리 색이 붙는다 */
   return (
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>위젯 카드 색</b>
         <small>메인·사이드에 얹히는 카드 — 비워 두면 카드 색을 그대로 따라갑니다</small></div>
-      <Ctl>
-        <div className="cp-group">
-          <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
-          <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
-          <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
-          {v.wgBorder && <CP label="테두리" k="wgBd" def="#e6e8ec" />}
-        </div>
-        <KToggle label="테두리 그리기" checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
-      </Ctl>
+      <div className="cp-group">
+        <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
+        <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
+        <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
+        <span className="cp-item" aria-hidden="true" />
+        <Item label="테두리">
+          <KToggle checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
+        </Item>
+        {v.wgBorder && <CP label="색" k="wgBd" def="#e6e8ec" />}
+      </div>
     </div>
   );
 }
@@ -878,7 +881,7 @@ function BoardPane() {
 
   return (
     <div className="set-sec">
-      {/* 전체 게시글 관리 버튼은 제목·설명과 같은 줄 오른쪽 (v2.6 사용자 요청) */}
+      {/* 전체 포스팅 관리 버튼은 제목·설명과 같은 줄 오른쪽 (v2.6 사용자 요청) */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
           <div className="d" style={{ marginBottom: 0 }}>카테고리 생성·삭제와 카테고리별 스킨·댓글 사용 — 저장하면 메뉴·목록·포스팅 쓰기에 반영</div>
@@ -1994,8 +1997,6 @@ function MenuPane() {
   // 글에도 적용 (v2.0 사용자 요청) — 아래 applyVis 참조
   const { user } = useAuth();
   const [visBusy, setVisBusy] = useState(false);
-  // 「주소로는 열람 허용」을 켤 때 띄우는 확인 (v2.0 사용자 요청)
-  const [openAsk, setOpenAsk] = useState<(() => void) | null>(null);
   const [visAsk, setVisAsk] = useState(false);
   // 멤버 선택 모달 (v2.0 사용자 요청) — 「비로그인 숨김」·갤러리 글쓰기를 특정 회원으로 좁힌다
   const [memAsk, setMemAsk] = useState<{ ids: string[]; apply: (ids: string[]) => void; desc?: string } | null>(null);
@@ -2010,6 +2011,9 @@ function MenuPane() {
   // 예전에는 ADD가 빈 행을 즉시 등록해, 주소를 치는 순간 미배치에 미완성 링크가 나타났다
   const [nlName, setNlName] = useState('');
   const [nlHref, setNlHref] = useState('');
+  /* 미배치 기능·커스텀 링크는 평소 접어 둔다 (v3.3 사용자 요청) — 제목·설명만 보이고 목록·폼은 펼칠 때 */
+  const [unOpen, setUnOpen] = useState(false);
+  const [lnOpen, setLnOpen] = useState(false);
   const extraAll = [...boardEntries(boards), ...sectionMenuEntries(secMap), ...linkEntries(links)];
   const defLabel = (href: string) => menuLabelFor(href, extraAll) ?? href;
 
@@ -2236,16 +2240,6 @@ function MenuPane() {
     return null;
   };
 
-  /* 「주소로는 열람 허용」 (v2.0 사용자 요청) — 메뉴·위젯에서는 감추되 들어오는 것만 열어 준다.
-     링크로만 돌릴 게시판을 만들려는 용도라, 켤 때 **주소를 아는 사람은 누구나 본다**는 점을
-     모달로 분명히 알린다(사용자 요청). 「전부 보임」에서는 이미 열려 있으므로 뜻이 없어 감춘다 */
-  const openChk = (v: MenuVis | undefined, open: boolean | undefined, onChange: (nv: boolean) => void) => (
-    (v ?? 'all') === 'all' ? null : (
-      <KCheck label={<span style={{ fontSize: 11 }}>주소로는 열람 허용</span>} checked={!!open}
-        onChange={nv => { if (nv) setOpenAsk(() => () => onChange(true)); else onChange(false); }} />
-    )
-  );
-
   // 공개범위 셀렉트 (v1.9) — 메뉴 자체 노출: 전부 / 비로그인 숨김 / 관리자만 (드래프트 — SAVE로 적용)
   const visSel = (v: MenuVis | undefined, onChange: (nv: MenuVis) => void) => (
     <KSelect minWidth={128} value={v ?? 'all'} onChange={nv => onChange(nv as MenuVis)}
@@ -2289,8 +2283,6 @@ function MenuPane() {
             공개범위는 메뉴 노출을 정합니다(전부 보임 / 비로그인 숨김 / 관리자만) — 맨 위 [저장]을 눌러야 반영 · 글쓰기·댓글 권한도 함께 저장
             <br />
             「비로그인 숨김」 옆 <b>멤버 선택</b>으로 특정 회원에게만 보이게 좁힐 수 있습니다 — 비우면 로그인한 모든 회원
-            <br />
-            <b>주소로는 열람 허용</b>을 켜면 메뉴에서는 계속 감춰 두고 <b>주소를 아는 사람만 들어올 수 있는</b> 메뉴가 됩니다 — 링크로 돌릴 게시판에 씁니다
           </div>
           {tree.map(g => (
             <div key={g.id} style={{ borderBottom: '1px dashed var(--line)', padding: '9px 0' }}>
@@ -2299,11 +2291,10 @@ function MenuPane() {
                 {g.href && <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{g.href}</small>}
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   {g.href && extraPerm(g.href)}
-                  {openChk(g.vis, g.open, nv => patchGroup(g.id, { open: nv || undefined }))}
                   {memberBtn(g.vis, g.visMembers, ids => patchGroup(g.id, { visMembers: ids }))}
                   {visSel(g.vis, nv => patchGroup(g.id, {
                     vis: nv === 'all' ? undefined : nv,
-                    ...(nv === 'all' ? { open: undefined } : {}),
+                    open: undefined,   // 옛 「주소로는 열람 허용」 값 정리 (v3.3 — 기능 삭제)
                     ...(nv !== 'member' ? { visMembers: undefined } : {}),
                   }))}
                 </div>
@@ -2314,9 +2305,6 @@ function MenuPane() {
                   <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{it.href}</small>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     {extraPerm(it.href)}
-                    {openChk(it.vis, it.open, nv => patchGroup(g.id, {
-                      items: g.items.map(x => (x.href === it.href ? { ...x, open: nv || undefined } : x)),
-                    }))}
                     {memberBtn(it.vis, it.visMembers, ids => patchGroup(g.id, {
                       items: g.items.map(x => (x.href === it.href ? { ...x, visMembers: ids } : x)),
                     }))}
@@ -2324,7 +2312,7 @@ function MenuPane() {
                       items: g.items.map(x => (x.href === it.href
                         ? {
                           ...x, vis: nv === 'all' ? undefined : nv,
-                          ...(nv === 'all' ? { open: undefined } : {}),
+                          open: undefined,   // 옛 「주소로는 열람 허용」 값 정리 (v3.3 — 기능 삭제)
                           ...(nv !== 'member' ? { visMembers: undefined } : {}),
                         } : x)),
                     }))}
@@ -2357,15 +2345,6 @@ function MenuPane() {
             <MemberPickModal initial={memAsk.ids} onApply={memAsk.apply} desc={memAsk.desc}
               onClose={() => setMemAsk(null)} />
           )}
-
-          {/* 「주소로는 열람 허용」 확인 (v2.0 사용자 요청) — 켜는 순간 무엇이 열리는지 분명히 */}
-          <ConfirmModal open={!!openAsk} title="주소가 있는 모두에게 공개됩니다"
-            body={'메뉴에서는 계속 감춰지지만, 이 주소를 아는 사람은 로그인하지 않아도 들어와 볼 수 있습니다. 링크를 받은 사람이 다른 곳에 옮겨 적으면 그 사람들도 볼 수 있습니다. 정말 알려지면 안 되는 내용에는 쓰지 마세요.'}
-            onClose={() => setOpenAsk(null)}
-            buttons={[
-              { label: 'CANCEL', kind: 'ghost', onClick: () => setOpenAsk(null) },
-              { label: '알겠습니다', kind: 'dark', onClick: () => { openAsk?.(); setOpenAsk(null); } },
-            ]} />
 
           <ConfirmModal open={visAsk} title="글 공개범위를 서버에 적용할까요?"
             body={'비공개로 둔 메뉴의 글이 서버에서도 가려집니다. 각 글의 공개범위가 바뀌므로, 되돌리려면 글마다 직접 고쳐야 합니다.'}
@@ -2457,9 +2436,14 @@ function MenuPane() {
           onClick={() => setTree([...tree, { id: newGroupId(), label: '새 메뉴', items: [] }])}>＋ ADD MENU</button>
       </div>
 
-      <h3 style={{ marginTop: 26 }}>미배치 기능</h3>
+      <h3 className="set-fold-head" style={{ marginTop: 26 }}>
+        <button type="button" aria-expanded={unOpen} onClick={() => setUnOpen(!unOpen)}>
+          <span className={`caret${unOpen ? ' open' : ''}`} aria-hidden="true">▸</span>
+          미배치 기능
+        </button>
+      </h3>
       <div className="d">트리에 넣지 않은 기능 — 메뉴에 노출되지 않지만 데이터는 보존됩니다. 넣을 위치를 고르면 바로 배치</div>
-      {unplaced.map(f => {
+      {unOpen && unplaced.map(f => {
         // 커스텀 링크는 미배치에서도 지울 수 있다 (v2.0 사용자 요청 — 「목록 자체에서 지우고 싶다」).
         // 다른 기능(게시판·섹션 등)은 데이터가 있어 여기서 못 지운다 — 각자의 관리 화면에서
         const link = links.find(l => l.href === f.href);
@@ -2482,15 +2466,18 @@ function MenuPane() {
           </div>
         );
       })}
-      {unplaced.length === 0 && (
+      {unOpen && unplaced.length === 0 && (
         <div style={{ padding: '10px 0', fontSize: 12, color: 'var(--faint)' }}>모든 기능이 메뉴에 배치되어 있습니다</div>
       )}
 
       {/* 커스텀 링크 (v2.0 사용자 요청) — 사이트 안의 아무 페이지나 메뉴로.
           만들면 위 미배치 목록에 나타나고, 거기서 원하는 상위 메뉴에 넣는다 */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 22 }}>
-        <h3 style={{ margin: 0 }}>커스텀 링크</h3>
-      </div>
+      <h3 className="set-fold-head">
+        <button type="button" aria-expanded={lnOpen} onClick={() => setLnOpen(!lnOpen)}>
+          <span className={`caret${lnOpen ? ' open' : ''}`} aria-hidden="true">▸</span>
+          커스텀 링크
+        </button>
+      </h3>
       <div className="d">
         자관처럼 목록에서 골라야 갈 수 있던 페이지를 메뉴에서 바로 — 주소를 적어 두면 됩니다.
         <br />
@@ -2498,6 +2485,7 @@ function MenuPane() {
         <b>다른 사이트 주소</b>는 그대로 남아 새 창으로 열립니다.
         만든 링크는 위 <b>미배치</b>에 나타나며, 거기서 원하는 상위 메뉴에 넣어 주세요.
       </div>
+      {lnOpen && (<>
       {links.map(l => (
         <div key={l.id} className="set-row">
           <div className="l" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2536,9 +2524,11 @@ function MenuPane() {
             if (!href || href === '/') { toast('이동할 주소를 입력해 주세요'); return; }
             setLinks([...links, { id: newId(), name: nlName.trim(), href }]);
             setNlName(''); setNlHref('');
+            setUnOpen(true);   // 접혀 있으면 펼쳐 둔다 — 방금 만든 링크가 바로 보이게
             toast('링크가 만들어졌습니다 — 위 미배치에서 메뉴에 넣어 주세요');
           }}>＋ ADD</button>
       </div>
+      </>)}
       </>
       )}
 

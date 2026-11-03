@@ -133,7 +133,7 @@ export default function UiKitPage() {
           <h3>리스트 행 호버 · 페이지네이션</h3>
           <div className="d">행 호버는 배경+글씨색 변경, 라운드 밖으로 삐져나오지 않음</div>
           <div className="hover-list" style={{ border: '1px solid var(--line)' }}>
-            {['첫 번째 게시글 제목', '두 번째 게시글 제목', '세 번째 게시글 제목'].map(t => (
+            {['첫 번째 포스팅 제목', '두 번째 포스팅 제목', '세 번째 포스팅 제목'].map(t => (
               <div className="row" key={t}><span className="pill">잡담</span>{t}</div>
             ))}
           </div>

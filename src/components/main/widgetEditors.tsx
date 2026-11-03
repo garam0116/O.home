@@ -30,7 +30,7 @@ function WidgetImageSource({ children, onSelect, onFiles }: {
 
 /* ---------- 자유 텍스트 글씨색 (v2.1 사용자 요청) ----------
    기본은 테마를 따라간다 — 다크/라이트(포인트 톤·커스텀 포함)를 바꾸면 글씨색도 같이 바뀐다.
-   게시글 하단 다음 글/이전 글과 같은 색을 쓴다: 「제목색」 = 환경설정 > 페이지 타이틀(--page-title),
+   포스팅 하단 다음 글/이전 글과 같은 색을 쓴다: 「제목색」 = 환경설정 > 페이지 타이틀(--page-title),
    「설명색」 = 페이지 설명(--page-desc). 「직접 지정」만 모드와 상관없이 고정된다.
    colorMode가 없던 예전 위젯 — 색을 골라 둔 적이 있으면 직접 지정으로, 없으면 테마 제목색으로 본다 */
 export type FreeTextColorMode = 'title' | 'desc' | 'custom';

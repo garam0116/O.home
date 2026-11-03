@@ -22,7 +22,7 @@ export default function BackupEditPage() {
   if (!p || !(isAdmin || (!!p.authorId && p.authorId === user?.id))) {
     return (
       <section className="page">
-        <div className="page-head"><PageTitle>EDIT</PageTitle><p>게시물을 찾을 수 없거나 수정 권한이 없습니다</p></div>
+        <div className="page-head"><PageTitle>EDIT</PageTitle><p>포스팅을 찾을 수 없거나 수정 권한이 없습니다</p></div>
       </section>
     );
   }

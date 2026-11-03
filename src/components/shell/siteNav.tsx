@@ -106,7 +106,7 @@ export function UserArea({ nav, onOpen, className }: {
               </button>
             )}
             <button onClick={() => { setOpen(false); nav('/settings'); }}>환경설정</button>
-            <button onClick={() => { setOpen(false); nav('/admin/posts'); }}>전체 게시글 관리</button>
+            <button onClick={() => { setOpen(false); nav('/admin/posts'); }}>전체 포스팅 관리</button>
           </>
         )}
         <button onClick={() => { setOpen(false); logout(); }}>로그아웃</button>

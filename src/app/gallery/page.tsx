@@ -63,7 +63,7 @@ function BackupPageInner() {
   // 편집모드 카드 드래그 정렬 (v1.9 — 갤러리 보기)
   const sort = useCardSort(visible, next => setPosts(mergeOrder(posts, next)), editOn && isAdmin);
 
-  /* 게시물이 쌓이면 페이지로 (v2.0 사용자 요청) — 보기에 따라 한 장 분량이 다르다.
+  /* 포스팅이 쌓이면 페이지로 (v2.0 사용자 요청) — 보기에 따라 한 장 분량이 다르다.
      갤러리 보기는 한 줄에 3개라 12개(4줄), 리스트 보기는 글 목록과 같은 20개. */
   const PER = view === 'gal' ? 12 : 20;
   const [page, setPage] = useState(1);
@@ -133,7 +133,7 @@ function BackupPageInner() {
             );
           })}
         </div>
-      {/* 게시물이 없으면 컨테이너 자체를 숨김 — 빈 패널이 안내문 위에 카드처럼 남던 버그 (v1.9 사용자 발견) */}
+      {/* 포스팅이 없으면 컨테이너 자체를 숨김 — 빈 패널이 안내문 위에 카드처럼 남던 버그 (v1.9 사용자 발견) */}
       <div className="panel flush" style={{ display: view === 'list' && visible.length > 0 ? undefined : 'none' }}>
           {paged.map(p => (
             <div key={p.id} className="list-item" onClick={() => router.push(itemPath('/gallery', p))}
@@ -157,7 +157,7 @@ function BackupPageInner() {
         </div>
       {visible.length === 0 && (
         <div className="panel" style={{ textAlign: 'center', padding: 44, fontSize: 13, color: 'var(--faint)' }}>
-          게시물이 없습니다
+          포스팅이 없습니다
         </div>
       )}
       {visible.length > PER && <Pager page={cur} total={pages} onChange={setPage} />}

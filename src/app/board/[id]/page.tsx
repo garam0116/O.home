@@ -1,5 +1,5 @@
 'use client';
-// 게시글 상세 (4.2) — 본문 렌더(격리 새니타이즈) · 접기 · 댓글+대댓글
+// 포스팅 상세 (4.2) — 본문 렌더(격리 새니타이즈) · 접기 · 댓글+대댓글
 // 주소는 글 번호 /board/{번호} (v2.4) — 예전 id 주소(/board/mvwvev4lnr1m)로 들어오면 번호 주소로 바꿔 준다
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
