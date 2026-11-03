@@ -75,10 +75,10 @@ const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[]
   ] },
   { id: 'design', label: '디자인', icon: '◈', sections: [
     { id: 'theme', label: '테마·색' }, { id: 'layout', label: '레이아웃' },
-    { id: 'detail', label: '세부 요소' }, { id: 'fonts', label: '폰트' },
+    { id: 'detail', label: '세부 요소' }, { id: 'fonts', label: '폰트 설정' }, { id: 'fontlib', label: '폰트 라이브러리' },
   ] },
   { id: 'content', label: '콘텐츠', icon: '▤', sections: [
-    { id: 'menu', label: '메뉴' }, { id: 'board', label: '게시판' }, { id: 'trpg', label: 'TRPG' },
+    { id: 'menu', label: '메뉴' }, { id: 'board', label: '카테고리' }, { id: 'trpg', label: 'TRPG' },
     { id: 'threads', label: '감상타래' }, { id: 'bgm', label: 'BGM' },
   ] },
   { id: 'manage', label: '관리', icon: '⚙', sections: [
@@ -248,7 +248,7 @@ function ThemePane() {
 
       <div className="set-row">
         <div className="l"><b>모드</b><small>포인트 컬러·배경 이미지·모서리 등은 전환해도 유지</small></div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <div className="seg in-panel seg-1line">
             {modeBtn('light', '라이트')}
             {modeBtn('dark', '다크')}
@@ -372,7 +372,7 @@ function ThemePane() {
 
       {/* 카드 색 — 패널·게시판 리스트·필터 등 공통 (v1.9) */}
       <div className="set-row">
-        <div className="l"><b>카드</b><small>패널·게시판 리스트·필터 카드의 배경과 글씨색 — 보조 글씨색은 자동 파생</small></div>
+        <div className="l"><b>카드</b><small>패널·카테고리 목록·필터 카드의 배경과 글씨색 — 보조 글씨색은 자동 파생</small></div>
         <div className="cp-group">
           <CP label="배경" k="cardBg" />
           <CP label="글씨" k="cardFg" />
@@ -469,11 +469,11 @@ function LayoutPane() {
   return (
     <div className="set-sec">
       <PcLayoutRow />
-      {/* 모바일 메뉴 모양 (v2.9 사용자 요청) — Cover를 고르면 상위 메뉴별 커버 이미지 칸이 이어서 나온다 */}
-      <MobileNavRow />
-
       {/* PC 2단형 메뉴 카드 모양 (v3.0 사용자 요청) */}
       <MenuCardRow />
+
+      {/* 모바일 메뉴 모양 (v2.9 사용자 요청) — Cover를 고르면 상위 메뉴별 커버 이미지 칸이 이어서 나온다 */}
+      <MobileNavRow />
 
       <BoardWidthRow />
     </div>
@@ -528,7 +528,7 @@ function DetailPane() {
       </div>
 
       <div className="set-row">
-        <div className="l"><b>검색창</b><small>게시판·리스트 공통 검색 인풋 — 라이트/다크 전환 시 자동 연동</small></div>
+        <div className="l"><b>검색창</b><small>카테고리·리스트 공통 검색 인풋 — 라이트/다크 전환 시 자동 연동</small></div>
         {/* 4항목은 한 줄에 안 들어가 밀림 — 2×2 그리드 정렬 (열 맞춤) */}
         <div className="cp-grid2">
           <CP label="배경" k="searchBg" />
@@ -539,7 +539,7 @@ function DetailPane() {
       </div>
 
       <div className="set-row">
-        <div className="l"><b>스위치 탭</b><small>게시판 공지·갤러리 보기 전환 등 — 고른 쪽은 아래 진한 버튼색을 그대로 따라갑니다</small></div>
+        <div className="l"><b>스위치 탭</b><small>카테고리 공지·갤러리 보기 전환 등 — 고른 쪽은 아래 진한 버튼색을 그대로 따라갑니다</small></div>
         <div className="cp-group">
           <CP label="배경" k="segBg" />
           <CP label="글씨" k="segFg" />
@@ -588,13 +588,12 @@ function DetailPane() {
   );
 }
 
-/** 폰트 — 사이트 역할 폰트 + 폰트 라이브러리 (v3.1 — 예전 디자인 탭·폰트 탭을 한곳에) */
+/** 폰트 설정 — 사이트 역할 폰트 (v3.1). 폰트 라이브러리는 바로 아래 별도 칸(fontlib)에서 관리 */
 function FontsPane() {
   return (
     <>
       <div className="set-sec">
-        <h3>역할별 폰트</h3>
-        <div className="d">사이트 곳곳의 글씨 — 아래 라이브러리에서 고르고 굵기·크기를 보정합니다</div>
+        <div className="d">사이트 곳곳의 글씨 — 아래 「폰트 라이브러리」에 등록한 폰트 중에서 고르고 굵기·크기를 보정합니다</div>
         {/* 사이트 역할 폰트 (5.1) — 폰트 라이브러리(내장+직접 등록)에서 선택 + 굵기·크기 보정 */}
       <FontRoleRow role="title" />
       <FontRoleRow role="pagetitle" />
@@ -606,7 +605,6 @@ function FontsPane() {
       <FontRoleRow role="body" />
 
       </div>
-      <FontPane />
     </>
   );
 }
@@ -616,7 +614,7 @@ function BoardWidthRow() {
   const { site, set } = useSiteDraft();
   return (
     <div className="set-row">
-      <div className="l"><b>게시판 본문 폭</b><small>게시판 목록과 글 상세에 같은 폭으로 적용 — 기본 {BOARD_W.def}px · 모바일은 화면 폭 그대로</small></div>
+      <div className="l"><b>카테고리 본문 폭</b><small>카테고리 목록과 포스팅 상세에 같은 폭으로 적용 — 기본 {BOARD_W.def}px · 모바일은 화면 폭 그대로</small></div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         {site.boardW != null && site.boardW !== BOARD_W.def && (
           <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
@@ -826,16 +824,16 @@ function BoardPane() {
       {/* 전체 게시글 관리 버튼은 제목·설명과 같은 줄 오른쪽 (v2.6 사용자 요청) */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
-          <div className="d" style={{ marginBottom: 0 }}>게시판 생성·삭제와 게시판별 스킨·댓글 사용 — 저장하면 메뉴·목록·글쓰기에 반영</div>
+          <div className="d" style={{ marginBottom: 0 }}>카테고리 생성·삭제와 카테고리별 스킨·댓글 사용 — 저장하면 메뉴·목록·포스팅 쓰기에 반영</div>
         </div>
-        <a className="btn btn-ghost" href="/admin/posts">전체 게시글 관리</a>
+        <a className="btn btn-ghost" href="/admin/posts">전체 포스팅 관리</a>
       </div>
 
-      <h3 style={{ marginTop: 16 }}>게시판 목록</h3>
-      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 게시판마다 지정 · <b>글씨</b>는 목록의 글 제목·날짜 색(갤러리형 1은 그림 위 흰 글씨라 지정하지 않음) ·
+      <h3 style={{ marginTop: 16 }}>카테고리 목록</h3>
+      <div className="d">⠿ 드래그로 메뉴 순서 · 이름은 상단 메뉴와 페이지 타이틀에 그대로 표시 · 리스트 스킨(기본형/갤러리형 1·2) 카테고리마다 지정 · <b>글씨</b>는 목록의 글 제목·날짜 색(갤러리형 1은 그림 위 흰 글씨라 지정하지 않음) ·
         <b>댓글</b>을 끄면 글 아래 댓글창과 목록의 댓글 수가 숨겨지고, 이미 달린 댓글은 지워지지 않습니다 — 글쓰기·댓글 권한은 메뉴 관리에서
         <br />
-        <b>주소</b>는 <code>/board/b/주소</code> — 영소문자·숫자·하이픈만 쓸 수 있고, 비우면 게시판 이름을 영소문자로 바꿔 씁니다
+        <b>주소</b>는 <code>/board/b/주소</code> — 영소문자·숫자·하이픈만 쓸 수 있고, 비우면 카테고리 이름을 영소문자로 바꿔 씁니다
         (이름에 영문·숫자가 없으면 내부 id). 이름이나 주소를 바꾸면 메뉴의 주소도 함께 바뀌고, 글은 그대로 있습니다
       </div>
       <DragList items={boards} keyOf={b => b.id} onReorder={setBoards}
@@ -888,9 +886,9 @@ function BoardPane() {
               </span>
               {b.id !== MAIN_BOARD_ID && (
                 <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                  onClick={() => del.ask(`게시판 「${b.name}」를 삭제하시겠습니까?`, () => {
+                  onClick={() => del.ask(`카테고리 「${b.name}」를 삭제하시겠습니까?`, () => {
                     setBoards(boards.filter(x => x.id !== b.id));
-                  }, '메뉴에서 사라지지만 이 게시판에 쓴 글 데이터는 보존됩니다 (3장 원칙).')}>DELETE</button>
+                  }, '메뉴에서 사라지지만 이 카테고리에 쓴 포스팅은 보존됩니다 (3장 원칙).')}>DELETE</button>
               )}
             </div>
           </div>
@@ -898,20 +896,20 @@ function BoardPane() {
       <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
         <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }}
           onClick={() => setBoards([...boards, {
-            id: newId(), name: '새 게시판', desc: '게시판 설명을 입력하세요',
+            id: newId(), name: '새 카테고리', desc: '카테고리 설명을 입력하세요',
             skin: 'list', permWrite: 'member', permComment: 'member',
-          }])}>＋ ADD BOARD</button>
+          }])}>＋ ADD CATEGORY</button>
       </div>
 
       {/* 페이지당 글 수 (v2.3 사용자 요청) — 게시판마다가 아니라 모든 게시판 공통 */}
       <div className="set-row" style={{ marginTop: 14 }}>
-        <div className="l"><b>페이지당 글 수</b><small>모든 게시판 목록에 공통 적용 — 갤러리형은 한 줄에 3개라 3의 배수가 깔끔합니다</small></div>
+        <div className="l"><b>페이지당 포스팅 수</b><small>모든 카테고리 목록에 공통 적용 — 갤러리형은 한 줄에 3개라 3의 배수가 깔끔합니다</small></div>
         <KStep value={perPageOf(st)} min={BOARD_PER_PAGE.min} max={BOARD_PER_PAGE.max} suffix="개" onChange={setPerPage} />
       </div>
 
       {/* 본문 박스 (v2.6 사용자 요청) — 목록·글 화면의 흰 박스 불투명도와 그 안의 글씨색. 모든 게시판 공통 */}
       <div className="set-row">
-        <div className="l"><b>본문 박스 불투명도</b><small>게시판 목록·글 화면의 흰 박스 — 100% 완전한 흰 박스 · {BOARD_BOX_DEF}% 기본 · 0% 박스 없이 배경 위에 바로 글씨 (모바일 글 화면의 흰 바탕도 함께)</small></div>
+        <div className="l"><b>본문 박스 불투명도</b><small>카테고리 목록·포스팅 화면의 흰 박스 — 100% 완전한 흰 박스 · {BOARD_BOX_DEF}% 기본 · 0% 박스 없이 배경 위에 바로 글씨 (모바일 글 화면의 흰 바탕도 함께)</small></div>
         <KStep value={boxAlphaOf(st)} min={0} max={100} step={5} suffix="%" onChange={v => setBox({ boxAlpha: v })} />
       </div>
       <div className="set-row">
@@ -2111,7 +2109,7 @@ function MenuPane() {
             ]} />
           {/* 댓글을 끈 게시판은 권한을 고를 일이 없다 (v2.5) — 켜는 곳은 게시판 관리 */}
           {bd.noComment
-            ? <span className="pill" data-tip="게시판 관리에서 댓글을 켜면 권한을 고를 수 있습니다">댓글 꺼짐</span>
+            ? <span className="pill" data-tip="콘텐츠 › 카테고리에서 댓글을 켜면 권한을 고를 수 있습니다">댓글 꺼짐</span>
             : (
               <KSelect minWidth={110} value={bd.permComment}
                 onChange={v => patchBoard(bd.id, { permComment: v as BoardPerm })}
@@ -2886,7 +2884,6 @@ function FontPane() {
 
   return (
     <div className="set-sec">
-      <h3>폰트 라이브러리</h3>
       <div className="d">자관 이름·시나리오 타이틀 등에서 이 목록 중 선택해 사용 — 원하는 폰트만 남기고 삭제 가능 · ↑↓로 목록 순서 변경</div>
 
       {fonts.map((f, i) => <FontRow key={f.id} f={f} first={i === 0} last={i === fonts.length - 1} />)}
@@ -2958,8 +2955,8 @@ function SettingsInner() {
      주소로 페이지를 옮기면 설정 화면이 새로 그려져, 화면 안에 들고 있던 편집본(메뉴 등)이 사라진다.
      뒤로가기 기록도 쌓지 않는다 — 뒤로가기·✕는 설정 화면을 나가는 것 */
   const [first] = useState(() => routeOf(route.tab ? decodeURIComponent(route.tab) : params.get('tab')));
-  const [group, setGroup] = useState<GroupId>(first?.group ?? 'design');
-  const [visited, setVisited] = useState<GroupId[]>(() => [first?.group ?? 'design']);
+  const [group, setGroup] = useState<GroupId>(first?.group ?? 'site');   // 처음 열면 사이트 그룹 (v3.1 사용자 요청)
+  const [visited, setVisited] = useState<GroupId[]>(() => [first?.group ?? 'site']);
   const cur = GROUPS.find(g => g.id === group)!;
 
   /* 숨김 칸 (v3.1 사용자 요청 — 예전 설정 메뉴 보관함을 되살림).
@@ -3191,6 +3188,7 @@ function SettingsInner() {
       case 'layout': return <LayoutPane />;
       case 'detail': return <DetailPane />;
       case 'fonts': return <FontsPane />;
+      case 'fontlib': return <FontPane />;
       case 'menu': return <MenuPane />;
       case 'board': return <BoardPane />;
       case 'trpg': return <TrpgPane />;
