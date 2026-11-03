@@ -235,6 +235,11 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
     return (e as { message?: string })?.message ?? '알 수 없는 오류입니다.';
   };
 
+  /* 서버에 저장돼 있는 공개범위 (컬렉션/id → visibility) — 목록을 읽거나 쓸 때 기억해 둔다.
+     refreshVis가 바뀌지 않은 문서까지 다시 쓰지 않게 (쓰기 횟수도 요금이다) */
+  const storedVis = new Map<string, string>();
+  const visKey = (coll: string, id: string) => `${coll}/${id}`;
+
   return {
     kind: 'firebase',
 
@@ -432,7 +437,8 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       const seen = new Map<string, { sort: number; at: number; item: T }>();
       snaps.forEach(s => s.docs.forEach(d => {
         if (seen.has(d.id)) return;
-        const raw = d.data() as { data?: Record<string, unknown>; sort?: number; updatedAt?: number };
+        const raw = d.data() as { data?: Record<string, unknown>; sort?: number; updatedAt?: number; visibility?: string };
+        if (typeof raw.visibility === 'string') storedVis.set(visKey(coll, d.id), raw.visibility);
         seen.set(d.id, { sort: raw.sort ?? 0, at: raw.updatedAt ?? 0, item: { ...(raw.data ?? {}), id: d.id } as T });
       }));
       // 자리가 같으면 나중에 저장한 것을 앞으로 — 회원이 맨 앞에 끼운 새 글은 남의 글 자리를 못 밀어서
@@ -465,6 +471,7 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
           });
         });
         await batch.commit();
+        part.forEach(({ item }) => storedVis.set(visKey(coll, item.id), metaOf(item, uid, visFloorOf(coll, item)).visibility));
       }
       const chunk = <X,>(arr: X[], n: number) =>
         Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
@@ -491,17 +498,21 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
       }
     },
 
-    /* 공개범위만 다시 계산해 덮어쓰기 (v2.0) — data·sort는 손대지 않는다. */
+    /* 공개범위만 다시 계산해 덮어쓰기 (v2.0) — data·sort는 손대지 않는다.
+       좁히는 쪽만이 아니라 **넓히는 쪽도** 맞춘다 — 메뉴를 비공개로 했다가 다시 공개로 돌리면
+       그동안 좁혀 저장된 글을 원래 공개범위로 되돌려야 방문자에게 다시 보인다.
+       서버 값과 이미 같은 문서는 건너뛴다 (읽은 적이 없는 문서는 안전하게 쓴다) */
     async refreshVis<T extends ListItem>(coll: string, items: T[], uid: string | null): Promise<number> {
+      const todo = items
+        .map(it => ({ id: it.id, visibility: metaOf(it, uid, visFloorOf(coll, it)).visibility }))
+        .filter(x => storedVis.get(visKey(coll, x.id)) !== x.visibility);
       let n = 0;
-      for (let i = 0; i < items.length; i += 400) {
-        const part = items.slice(i, i + 400);
+      for (let i = 0; i < todo.length; i += 400) {
+        const part = todo.slice(i, i + 400);
         const batch = writeBatch(db);
-        part.forEach(it => {
-          const { visibility } = metaOf(it, uid, visFloorOf(coll, it));
-          batch.update(doc(db, coll, it.id), { visibility, updatedAt: Date.now() });
-        });
+        part.forEach(({ id, visibility }) => batch.update(doc(db, coll, id), { visibility, updatedAt: Date.now() }));
         await batch.commit();
+        part.forEach(({ id, visibility }) => storedVis.set(visKey(coll, id), visibility));
         n += part.length;
       }
       return n;
