@@ -56,13 +56,49 @@ export function railBounds(side: WidgetConf[], centered = false): { left: number
   return { left, right: Math.max(left, right) };
 }
 
+/** 「가운데 정렬」 좌우 열 폭 맞춤 (v3.2 사용자 확정 — 시안 C 「평균으로 맞춤」).
+ *  화면 한가운데 + 안쪽 간격 같음 + **바깥 여백 같음**을 함께 만족하려면 좌우 열의 폭이 같아야 한다
+ *  (안쪽 끝 대칭 L+R = W, 바깥 끝 대칭 Lo+Ro = W → 두 열 폭이 같음). 그래서 mirrorSides가 옮기기 전에 폭부터 맞춘다.
+ *  열 폭 = 그 열 위젯들을 감싸는 상자의 폭. 기준 폭은 anchor(편집 중인 쪽)가 있으면 그쪽 폭, 없으면 두 폭의 평균.
+ *  열 안 위젯은 바깥 끝을 고정하고 같은 비율로 늘이거나 줄여 열 안의 상대 배치를 유지한다 */
+export function matchSideWidths(widgets: WidgetConf[], withMenu = false, anchor?: 1 | 3): WidgetConf[] {
+  const side = railWidgets(widgets, withMenu);
+  const ls = side.filter(w => sideOf(w) === 1);
+  const rs = side.filter(w => sideOf(w) === 3);
+  if (!ls.length || !rs.length) return widgets;
+  const lo = Math.min(...ls.map(w => w.ax!)), li = Math.max(...ls.map(w => w.ax! + widthOf(w)));
+  const ri = Math.min(...rs.map(w => w.ax!)), ro = Math.max(...rs.map(w => w.ax! + widthOf(w)));
+  const wl = li - lo, wr = ro - ri;
+  const target = Math.max(SIDE_MIN_W, Math.round(anchor === 1 ? wl : anchor === 3 ? wr : (wl + wr) / 2));
+  const scaled = new Map<string, WidgetConf>();
+  // 왼쪽 열 — 바깥(왼쪽) 끝 lo 고정. 양 끝을 따로 반올림해 가장 안쪽 위젯의 끝이 정확히 lo + target에 오게 한다
+  if (wl !== target && wl > 0) {
+    const k = target / wl;
+    for (const w of ls) {
+      const a = lo + Math.round((w.ax! - lo) * k), b = lo + Math.round((w.ax! + widthOf(w) - lo) * k);
+      scaled.set(w.id, { ...w, ax: a, w: Math.max(SIDE_MIN_W, b - a) });
+    }
+  }
+  // 오른쪽 열 — 바깥(오른쪽) 끝 ro 고정
+  if (wr !== target && wr > 0) {
+    const k = target / wr;
+    for (const w of rs) {
+      const b = ro - Math.round((ro - w.ax! - widthOf(w)) * k), a = ro - Math.round((ro - w.ax!) * k);
+      scaled.set(w.id, { ...w, ax: a, w: Math.max(SIDE_MIN_W, b - a) });
+    }
+  }
+  return scaled.size ? widgets.map(w => scaled.get(w.id) ?? w) : widgets;
+}
+
 /** 「가운데 정렬」 좌우 대칭 (v2.8 사용자 확정 — 본문이 **화면 한가운데**에 오면서 **좌우 위젯과의 간격도 같게**).
  *  두 조건을 함께 만족하려면 왼쪽 위젯들의 안쪽 끝과 오른쪽 위젯들의 안쪽 끝이 캔버스 가운데선에서 같은 거리여야 한다.
  *  그래서 한쪽 열 위젯들을 덩어리째(서로의 배치는 그대로) 가로로 옮겨 거울처럼 맞춘다.
  *  anchor: 기준으로 둘 쪽 — 편집모드에서 그쪽 위젯을 옮기거나 크기를 바꾸는 중이면 반대쪽이 따라온다.
  *  없으면 가운데선에서 더 먼 쪽(본문이 넓은 쪽)에 맞추되, 캔버스 밖으로 밀려나면 들어올 수 있는 만큼만.
- *  한쪽 열이 비어 있으면 옮기지 않는다(본문은 railBounds가 위젯 쪽에서 간격만큼 띄우고 반대쪽도 같게 둔다). */
+ *  한쪽 열이 비어 있으면 옮기지 않는다(본문은 railBounds가 위젯 쪽에서 간격만큼 띄우고 반대쪽도 같게 둔다).
+ *  v3.2: 옮기기 전에 matchSideWidths로 좌우 열 폭을 같게 맞추므로 바깥 여백(화면 끝 ↔ 위젯)도 함께 같아진다 */
 export function mirrorSides(widgets: WidgetConf[], withMenu = false, anchor?: 1 | 3): WidgetConf[] {
+  widgets = matchSideWidths(widgets, withMenu, anchor);
   const side = railWidgets(widgets, withMenu);
   const ls = side.filter(w => sideOf(w) === 1);
   const rs = side.filter(w => sideOf(w) === 3);
