@@ -14,6 +14,7 @@ import { useSections } from '@/lib/sectionStore';
 import { useMenuSettings, canAccessHref } from '@/lib/menuStore';
 import { postHref, postNumbers } from '@/lib/boardStore';
 import { postBodyText, type Post } from '@/lib/postStore';
+import { visibleText } from './widgetExcerpt';
 import { itemPath } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
@@ -47,7 +48,8 @@ type FeedRow = Row & {
 const excerptOf = (kind: SrcKind, r: FeedRow): string | undefined => {
   const raw = kind === 'gallery' ? r.desc : (kind === 'board' || kind === 'diary' || kind === 'trpg') ? r.body : undefined;
   if (typeof raw !== 'string') return undefined;
-  const txt = postBodyText(raw).trim();
+  // 숨긴 글자는 뺀다 — 이 위젯 전용 (검색은 postBodyText로 모든 글자를 찾는다)
+  const txt = (visibleText(raw) ?? postBodyText(raw)).trim();
   return txt ? txt.slice(0, 160) : undefined;
 };
 
