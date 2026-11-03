@@ -22,7 +22,7 @@ import { findByNo, type NoRow } from './itemNo';
 import { lastDate, type ThreadWork } from './threadStore';
 
 /** 날짜를 읽을 수 있는 목록 종류 — 주소 첫 칸 → 저장 키 · 섹션 종류 */
-const SOURCES = {
+export const SOURCES = {
   board:   { key: 'ohome.board.v1',    sec: null },
   gallery: { key: 'ohome.backup.v1',   sec: 'gallery' },
   trpg:    { key: 'ohome.trpg.v1',     sec: 'trpg' },
@@ -31,13 +31,13 @@ const SOURCES = {
   loadb:   { key: 'ohome.road.v1',     sec: 'roadview' },
 } as const satisfies Record<string, { key: string; sec: SectionKind | null }>;
 
-type SrcKind = keyof typeof SOURCES;
-type Row = {
+export type SrcKind = keyof typeof SOURCES;
+export type Row = {
   id?: string; date?: string; secId?: string; boardId?: string; visibility?: string;
   posts?: unknown[]; created?: string;
 };
 
-interface Target { kind: SrcKind; itemId?: string; board?: string; sec?: string }
+export interface Target { kind: SrcKind; itemId?: string; board?: string; sec?: string }
 
 /** 링크 → 이 홈 안의 어느 목록(또는 글)인지. 바깥 주소·모르는 주소면 null */
 export function parseTarget(url?: string): Target | null {
@@ -82,7 +82,7 @@ function idTime(id?: string): number | undefined {
   return t > 1577836800000 && t < 4102444800000 ? t : undefined;
 }
 
-function rowTime(kind: SrcKind, r: Row): number | undefined {
+export function rowTime(kind: SrcKind, r: Row): number | undefined {
   if (kind === 'threads') return toTime(lastDate(r as unknown as ThreadWork));
   return toTime(r.date) ?? idTime(r.id);
 }
@@ -91,8 +91,33 @@ function rowTime(kind: SrcKind, r: Row): number | undefined {
 export const fmtUpdate = (t: number) =>
   new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+/** 링크가 가리키는 글만 골라낸다 — 글 하나의 주소면 그 글, 목록 주소면 그 목록(게시판·섹션)의 글 전체.
+ *  자관 목록의 LATEST UPDATE와 자관 상세의 LOG·LOREBOOK 위젯(v3.3)이 같이 쓴다 */
+export function pickRows(t: Target, rows: Row[], list: ReturnType<typeof useSections>['list']): Row[] {
+  if (t.itemId && t.kind === 'board') {
+    // 게시판 글 주소는 번호(`/board/12`) 또는 예전 id (v2.4)
+    const p = findPostByKey(rows as unknown as Post[], t.itemId);
+    return p ? [p as unknown as Row] : [];
+  }
+  if (t.itemId) {
+    // 글 주소는 번호(`/gallery/3`) 또는 예전 id (v2.4)
+    const one = findByNo(rows as unknown as (NoRow & { id: string })[], t.itemId);
+    return one ? [one as unknown as Row] : [];
+  }
+  if (t.kind === 'board') {
+    // 주소 값은 별명·이름에서 만든 값·id 어느 것이든 (v2.4)
+    const b = t.board ? (findBoardByKey(t.board)?.id ?? t.board) : MAIN_BOARD_ID;
+    return rows.filter(r => (r.boardId ?? MAIN_BOARD_ID) === b);
+  }
+  // ?s= 는 섹션 id 또는 별명 — 못 찾으면 목록 페이지처럼 기본 섹션으로 본다
+  const secKind = SOURCES[t.kind].sec as SectionKind;
+  const items = list(secKind);
+  const secId = (t.sec && items.find(s => s.id === t.sec || (s.slug ?? '') === t.sec)?.id) || MAIN_SEC;
+  return rows.filter(r => inSection(r.secId, secId));
+}
+
 /** 목록 하나를 불러와 위로 넘겨 주는 보이지 않는 부품 — 필요한 종류만 그린다 */
-function Source({ kind, onRows }: { kind: SrcKind; onRows: (kind: SrcKind, rows: Row[]) => void }) {
+export function Source({ kind, onRows }: { kind: SrcKind; onRows: (kind: SrcKind, rows: Row[]) => void }) {
   const [rows] = useLocalList<Row>(SOURCES[kind].key, []);
   useEffect(() => { onRows(kind, rows); }, [kind, rows, onRows]);
   return null;
@@ -118,26 +143,7 @@ export function useLatestUpdates(linkSets: (string | undefined)[][], isAdmin: bo
   const latestOf = (t: Target): number | undefined => {
     const rows = rowsBy[t.kind];
     if (!rows) return undefined;
-    let hit: Row[];
-    if (t.itemId && t.kind === 'board') {
-      // 게시판 글 주소는 번호(`/board/12`) 또는 예전 id (v2.4)
-      const p = findPostByKey(rows as unknown as Post[], t.itemId);
-      hit = p ? [p as unknown as Row] : [];
-    } else if (t.itemId) {
-      // 글 주소는 번호(`/gallery/3`) 또는 예전 id (v2.4)
-      const one = findByNo(rows as unknown as (NoRow & { id: string })[], t.itemId);
-      hit = one ? [one as unknown as Row] : [];
-    } else if (t.kind === 'board') {
-      // 주소 값은 별명·이름에서 만든 값·id 어느 것이든 (v2.4)
-      const b = t.board ? (findBoardByKey(t.board)?.id ?? t.board) : MAIN_BOARD_ID;
-      hit = rows.filter(r => (r.boardId ?? MAIN_BOARD_ID) === b);
-    } else {
-      // ?s= 는 섹션 id 또는 별명 — 못 찾으면 목록 페이지처럼 기본 섹션으로 본다
-      const secKind = SOURCES[t.kind].sec as SectionKind;
-      const items = list(secKind);
-      const secId = (t.sec && items.find(s => s.id === t.sec || (s.slug ?? '') === t.sec)?.id) || MAIN_SEC;
-      hit = rows.filter(r => inSection(r.secId, secId));
-    }
+    let hit = pickRows(t, rows, list);
     // 나만보기 글의 날짜는 관리자에게만 반영한다
     if (!isAdmin) hit = hit.filter(r => r.visibility !== 'private');
     let best: number | undefined;
