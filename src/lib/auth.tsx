@@ -1,7 +1,7 @@
 'use client';
 // 인증 컨텍스트 (v2.0) — 백엔드 어댑터(Supabase / Firebase)에 위임한다.
 // 백엔드 설정이 없으면(개발·오프라인) 브라우저 안의 로컬 계정으로 동작한다.
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { backend, isServerMode } from './backend';
 import { setCurrentUserId } from './currentUser';
 import { getSetting, setSetting } from './settingStore';
@@ -104,9 +104,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);   // 확인이 끝났는지 (v2.0)
 
+  // 목록 캐시가 기준으로 삼은 사용자 (undefined = 아직 첫 확인 전)
+  const listOwner = useRef<string | undefined>(undefined);
   useEffect(() => {
     // 로그인·로그아웃·관리자 승격 시 이전 권한의 목록과 실시간 질의를 재사용하지 않는다.
-    if (server && ready) invalidateListCache();
+    // 첫 확인(ready가 처음 true가 되는 순간)에는 비우지 않는다 — 목록 조회는 이미 로그인 복원을
+    // 기다린 뒤 그 사용자 권한으로 나갔기 때문이다(Firebase: readSets의 authReady · Supabase: SDK가 세션 복원 대기).
+    // 여기서 비우면 접속할 때마다 목록이 보였다 사라졌다 다시 뜨고(깜빡임), 받던 조회를 버려 로딩이 두 배가 됐다.
+    if (!server || !ready) return;
+    const key = user ? `${user.id}:${user.role}` : '';
+    if (listOwner.current === undefined) { listOwner.current = key; return; }
+    if (listOwner.current === key) return;
+    listOwner.current = key;
+    invalidateListCache();
   }, [server, ready, user?.id, user?.role]);
 
   useEffect(() => {
