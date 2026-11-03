@@ -2161,14 +2161,32 @@ body.no-topbar .topbar{display:none}
 .setx-cols{position:relative;flex:1;min-height:0;display:flex}
 /* 그룹 4개 — 세로 아이콘 줄 */
 .setx-groups{flex:none;width:76px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;
-  background:var(--panel);border-right:1px solid var(--line)}
-.setx-groups button{position:relative;width:62px;padding:9px 0 8px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
+/* 숨김 칸 — 관리 아래 1px 선 밑, 접혀 있다가 누르면 펼쳐진다 */
+.setx-hid-line{width:52px;border:0;border-top:1px solid var(--line);margin:10px 0 4px;flex:none}
+.setx-hid-toggle{display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:7px;font-size:calc(10.5px*var(--fs,1));color:var(--faint);letter-spacing:.04em}
+.setx-hid-toggle b{font-weight:600}
+.setx-hid-toggle .caret{display:inline-block;font-size:9px;transition:transform .15s}
+.setx-hid-toggle.open .caret{transform:rotate(90deg)}
+.setx-hid-toggle:hover{color:var(--ink)}
+.setx-hid-list{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%}
+.setx-hid-cat{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;margin-top:4px}
+.setx-hid-cat small{font-size:calc(9px*var(--fs,1));letter-spacing:.06em;color:var(--faint);opacity:.75}
+.setx-hid-cat button{width:66px;padding:4px 2px;border-radius:6px;font-size:calc(11px*var(--fs,1));line-height:1.3;color:var(--faint);text-align:center;word-break:keep-all}
+.setx-hid-cat button:hover{color:var(--ink);background:rgba(127,127,127,.1)}
+.setx-hid-cat button.on{color:var(--ink);background:rgba(127,127,127,.16)}
+.setx-hid-toggle:focus-visible,.setx-hid-cat button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 길게 눌러 숨기기·꺼내기 — 휴대폰 글자 선택·미리보기 말풍선이 끼어들지 않게 */
+.setx-toc button,.setx-hid-cat button,.setx-sec-h{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.setx-toc-note{margin:8px 0 0 10px;font-size:calc(10.5px*var(--fs,1));line-height:1.5;color:var(--faint)}
+.setx-ctx{min-width:140px}
+.setx-groups .setx-grp{position:relative;width:62px;padding:9px 0 8px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:4px;
   font-size:calc(11px*var(--fs,1));color:var(--faint);transition:background .14s,color .14s}
-.setx-groups button i{font-style:normal;font-size:16px;line-height:1}
-.setx-groups button:hover{color:var(--ink);background:rgba(127,127,127,.1)}
-.setx-groups button.on{color:var(--btn-dark-fg,#fff);background:var(--btn-dark,var(--ink))}
-.setx-groups button .setx-dot{position:absolute;top:7px;right:9px;box-shadow:0 0 0 2px var(--panel-solid)}
-.setx-groups button:focus-visible,.setx-toc button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.setx-groups .setx-grp i{font-style:normal;font-size:16px;line-height:1}
+.setx-groups .setx-grp:hover{color:var(--ink);background:rgba(127,127,127,.1)}
+.setx-groups .setx-grp.on{color:var(--btn-dark-fg,#fff);background:var(--btn-dark,var(--ink))}
+.setx-groups .setx-grp .setx-dot{position:absolute;top:7px;right:9px;box-shadow:0 0 0 2px var(--panel-solid)}
+.setx-groups .setx-grp:focus-visible,.setx-toc button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* 목차 — 지금 보이는 항목을 따라간다 */
 .setx-toc{flex:none;width:170px;padding:22px 12px 22px 18px;display:flex;flex-direction:column;gap:2px;
   background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
@@ -2179,7 +2197,14 @@ body.no-topbar .topbar{display:none}
 /* 본문 — 그룹의 항목이 한 장으로 이어진다 */
 .setx-scroll{position:relative;flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:6px max(28px,env(safe-area-inset-right,0px)) 120px 28px;scroll-behavior:auto}
 .setx-sec{max-width:980px;margin:0 auto;padding-top:22px}
-.setx-sec-h{margin:0 0 10px 4px;font-size:calc(14px*var(--fs,1));font-weight:600;letter-spacing:.06em;color:var(--page-title)}
+.setx-sec-h{display:flex;align-items:center;gap:10px;margin:0 0 12px 2px;font-size:calc(21px*var(--fs,1));font-weight:600;letter-spacing:-.01em;line-height:1.3;color:var(--page-title)}
+.setx-peek-tag{font-size:calc(10.5px*var(--fs,1));font-weight:500;letter-spacing:.04em;padding:2px 9px;border-radius:999px;background:rgba(127,127,127,.22)}
+/* 글씨 위계 (v3.1 사용자 요청) — 섹션 제목 21 › 카드 안 소제목 15.5 › 항목 이름 14.5 › 설명 10.5(그대로) */
+.setx-card .set-sec h3{font-size:calc(15.5px*var(--fs,1));font-weight:600;letter-spacing:-.005em;margin-bottom:5px}
+.setx-card .set-row{padding:15px 0}
+.setx-card .set-row .l b{font-size:calc(14.5px*var(--fs,1));font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
+.setx-card .set-row .l small{line-height:1.5}
+.setx-card .set-row .l small b{font-size:inherit;font-weight:inherit;margin:0;letter-spacing:inherit}
 .setx-card{padding:22px 26px;overflow:visible;container-type:inline-size}
 /* 카드가 좁아지면(미리보기를 켰을 때·휴대폰) 한 줄 설정이 넘치지 않게 컨트롤을 아래 줄로 내린다 */
 @container (max-width:660px){
@@ -2221,10 +2246,16 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
 /* 휴대폰 — 그룹은 툴바 아래 가로 탭, 툴바 글자는 줄인다 */
 @media (max-width:700px){
   .setx-cols{flex-direction:column}
-  .setx-groups{width:auto;flex-direction:row;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line)}
-  .setx-groups button{width:auto;flex:1;flex-direction:row;justify-content:center;gap:5px;padding:8px 0}
-  .setx-groups button i{font-size:13px}
-  .setx-groups button .setx-dot{top:5px;right:6px}
+  .setx-groups{width:auto;flex-direction:row;flex-wrap:wrap;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  .setx-hid-line{display:none}
+  .setx-hid-toggle{flex:none}
+  .setx-hid-list{flex-basis:100%;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;gap:4px 10px;padding:4px 4px 2px}
+  .setx-hid-cat{flex-direction:row;width:auto;gap:4px;align-items:center;margin:0}
+  .setx-hid-cat button{width:auto;padding:4px 8px}
+  .setx-sec-h{font-size:calc(18px*var(--fs,1))}
+  .setx-groups .setx-grp{width:auto;flex:1;flex-direction:row;justify-content:center;gap:5px;padding:8px 0}
+  .setx-groups .setx-grp i{font-size:13px}
+  .setx-groups .setx-grp .setx-dot{top:5px;right:6px}
   .setx-bar{gap:6px;flex-wrap:wrap}
   .setx-title span,.setx-state:not(.on){display:none}
   .setx-state.on{font-size:0;gap:0}

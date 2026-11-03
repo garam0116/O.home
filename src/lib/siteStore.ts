@@ -25,6 +25,9 @@ export interface SiteSettings {
   // 환경설정 왼쪽 메뉴에서 「보관」한 탭 이름 (v2.3 사용자 요청) — 메뉴 맨 아래 보관함에 접어 둔다.
   // 숨기기만 하고 그 탭의 설정값은 그대로 둔다. 디자인 탭 SAVE와 무관하게 누르는 즉시 저장
   setArchived?: string[];
+  // 환경설정에서 숨긴 항목 id (v3.1 사용자 요청 — 우클릭으로 숨기고 왼쪽 「숨김」 칸에 모은다).
+  // 비어 있으면(예전 저장본) 위 setArchived의 탭 이름을 항목 id로 바꿔 이어받는다. 누르는 즉시 저장
+  setHidden?: string[];
   // 모바일 메뉴 모양 (v2.9 사용자 요청) — 휴대폰에서 ≡를 눌렀을 때 열리는 패널. 비우면 accordion
   mNav?: MobileNavStyle;
   // Cover 모양에서 쓰는 상위 메뉴별 커버 이미지 — 메뉴 트리 그룹 id → 파일 주소.

@@ -34,7 +34,7 @@ import { BackArrow } from '@/components/ui/BackArrow';
 import { isPreviewFrame } from '@/lib/previewFrame';
 import { useSections, sectionsOf, sectionMenuEntries, MAIN_SEC, inSection, cleanSlug } from '@/lib/sectionStore';
 import { useCustomLinks, linkEntries, toInternalPath } from '@/lib/linkStore';
-import { useSiteDraft, BOARD_W, boardWOf, MOBILE_NAV_STYLES, MENU_CARD_STYLES } from '@/lib/siteStore';
+import { useSiteDraft, useSiteSettings, BOARD_W, boardWOf, MOBILE_NAV_STYLES, MENU_CARD_STYLES } from '@/lib/siteStore';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { allBlobs, putBlobAs, useBlobUrl } from '@/lib/blobStore';
 import { fileDrop } from '@/lib/dnd';
@@ -116,6 +116,12 @@ const KEY_GROUP: Record<string, GroupId> = {
 };
 /** 사이트 드래프트 칸 중 레이아웃(디자인 그룹)에 있는 것 — 나머지(탭 제목·로고 등)는 사이트 그룹 */
 const SITE_LAYOUT_FIELDS = ['boardW', 'mNav', 'mNavCovers', 'mCard'];
+
+/** 숨길 수 없는 항목 — 설정 첫 화면이라 늘 메뉴에 있어야 한다 (예전 「디자인」 탭과 같은 규칙) */
+const LOCKED_SEC = 'theme';
+const groupOfSec = (id: string) => GROUPS.find(g => g.sections.some(s => s.id === id))!;
+const secLabel = (id: string) => groupOfSec(id)?.sections.find(s => s.id === id)?.label ?? id;
+interface CtxItem { label: string; fn: () => void }
 
 /** 설정 화면이 사라질 때 드래프트를 버리는 예약 — 곧바로 다시 그려지는 설정 화면이 있으면 취소한다 */
 let draftEndTimer: ReturnType<typeof setTimeout> | null = null;
@@ -2955,6 +2961,77 @@ function SettingsInner() {
   const [group, setGroup] = useState<GroupId>(first?.group ?? 'design');
   const [visited, setVisited] = useState<GroupId[]>(() => [first?.group ?? 'design']);
   const cur = GROUPS.find(g => g.id === group)!;
+
+  /* 숨김 칸 (v3.1 사용자 요청 — 예전 설정 메뉴 보관함을 되살림).
+     목차·섹션 제목을 우클릭(휴대폰은 길게 누르기)해 숨기면 왼쪽 그룹 줄 「관리」 아래 선 밑으로 모인다.
+     접혀 있다가 누르면 펼쳐지고, 카테고리 순서 그대로 보인다. 숨겨도 설정값은 그대로 적용되고,
+     숨긴 항목을 누르면 그 항목만 열어 볼 수 있다. 메뉴 정리라서 [저장]과 상관없이 바로 저장한다 */
+  const [site, patchSite] = useSiteSettings();
+  const hiddenIds = (site.setHidden
+    ?? (site.setArchived ?? []).map(n => routeOf(n)?.section).filter((x): x is string => !!x))
+    .filter(id => id !== LOCKED_SEC && !!groupOfSec(id));
+  const hiddenSet = new Set(hiddenIds);
+  const [peek, setPeek] = useState<string | null>(null);
+  const [hidOpen, setHidOpen] = useState(false);
+  const curSecs = cur.sections.filter(s => !hiddenSet.has(s.id));
+  const viewGroup: GroupId = peek ? groupOfSec(peek).id : group;
+  const openPeek = (id: string) => {
+    const g = groupOfSec(id).id;
+    setVisited(v => (v.includes(g) ? v : [...v, g]));
+    setPeek(id);
+    setActiveSec(id);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  };
+  const hideSec = (id: string) => {
+    if (id === LOCKED_SEC) return;
+    patchSite({ setHidden: [...hiddenIds.filter(x => x !== id), id] });
+    toast(`「${secLabel(id)}」을(를) 숨김 칸으로 옮겼습니다`);
+  };
+  const unhideSec = (id: string) => {
+    patchSite({ setHidden: hiddenIds.filter(x => x !== id) });
+    if (peek === id) { setPeek(null); goGroup(groupOfSec(id).id, id); }
+  };
+
+  /* 우클릭 메뉴 — 휴대폰은 길게 누르기. 누른 뒤 손을 뗄 때 생기는 클릭은 삼킨다 */
+  const [ctx, setCtx] = useState<{ x: number; y: number; items: CtxItem[] } | null>(null);
+  const ctxRef = useRef<HTMLDivElement>(null);
+  const press = useRef<{ t: number | null; fired: boolean }>({ t: null, fired: false });
+  useEffect(() => {
+    if (!ctx) return;
+    const off = (e: Event) => { if (!ctxRef.current?.contains(e.target as Node)) setCtx(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setCtx(null); };
+    window.addEventListener('pointerdown', off, true);
+    window.addEventListener('scroll', off, true);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('pointerdown', off, true);
+      window.removeEventListener('scroll', off, true);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [ctx]);
+  const ctxProps = (items: () => CtxItem[]) => {
+    const clear = () => { if (press.current.t) { clearTimeout(press.current.t); press.current.t = null; } };
+    return {
+      onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); clear(); setCtx({ x: e.clientX, y: e.clientY, items: items() }); },
+      onTouchStart: (e: React.TouchEvent) => {
+        const t = e.touches[0];
+        press.current.fired = false;
+        clear();
+        press.current.t = window.setTimeout(() => {
+          press.current.t = null; press.current.fired = true;
+          setCtx({ x: t.clientX, y: t.clientY, items: items() });
+        }, 550);
+      },
+      onTouchMove: clear, onTouchCancel: clear,
+      onTouchEnd: clear,
+      onClickCapture: (e: React.MouseEvent) => {
+        if (press.current.fired) { press.current.fired = false; e.preventDefault(); e.stopPropagation(); }
+      },
+    };
+  };
+  const hideItems = (id: string) => (): CtxItem[] =>
+    id === LOCKED_SEC ? [] : [{ label: '숨기기', fn: () => hideSec(id) }];
+
   const [activeSec, setActiveSec] = useState<string>(first?.section ?? cur.sections[0].id);
   const pendingSec = useRef<string | null>(first?.section ?? null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -2964,12 +3041,13 @@ function SettingsInner() {
   }, [group]);
 
   const goGroup = (g: GroupId, sec?: string) => {
+    setPeek(null);
     if (g !== group) {
       setGroup(g);
       setVisited(v => (v.includes(g) ? v : [...v, g]));
     }
     pendingSec.current = sec ?? null;
-    setActiveSec(sec ?? GROUPS.find(x => x.id === g)!.sections[0].id);
+    setActiveSec(sec ?? GROUPS.find(x => x.id === g)!.sections.find(x => !hiddenSet.has(x.id))?.id ?? '');
     if (!sec && scrollRef.current) scrollRef.current.scrollTop = 0;
   };
   const scrollToSec = (id: string, smooth = true) => {
@@ -2984,7 +3062,9 @@ function SettingsInner() {
     const id = pendingSec.current;
     if (!id) return;
     pendingSec.current = null;
+    if (hiddenSet.has(id)) { openPeek(id); return; }   // 숨긴 항목 주소로 들어오면 그 항목만 연다
     requestAnimationFrame(() => scrollToSec(id, false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group]);
   // 목차가 스크롤을 따라간다 — 화면 위쪽을 지난 마지막 항목
   useEffect(() => {
@@ -2994,19 +3074,21 @@ function SettingsInner() {
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        let on = cur.sections[0].id;
-        for (const sc of cur.sections) {
+        if (peek || !curSecs.length) return;
+        let on = curSecs[0].id;
+        for (const sc of curSecs) {
           const el = document.getElementById(`set-${sc.id}`);
           if (el && el.offsetTop - box.scrollTop <= 80) on = sc.id;
         }
         // 맨 아래까지 내리면 마지막 항목 (짧은 마지막 항목이 위쪽에 닿지 못하는 경우)
-        if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) on = cur.sections[cur.sections.length - 1].id;
+        if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) on = curSecs[curSecs.length - 1].id;
         setActiveSec(on);
       });
     };
     box.addEventListener('scroll', onScroll, { passive: true });
     return () => { cancelAnimationFrame(raf); box.removeEventListener('scroll', onScroll); };
-  }, [cur]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cur, peek, hiddenIds.join('|')]);
 
   /* ---------- 저장 하나 (v3.1 사용자 요청) ----------
      설정 화면이 열려 있는 동안 DRAFT_KEYS의 저장은 settingStore가 붙잡아 두고, 테마·사이트·역할 폰트는
@@ -3098,7 +3180,7 @@ function SettingsInner() {
     if (narrow()) setPvSheet(v => !v);
     else { setPvOn(!pvOn); keepPv(!pvOn, device); }
   };
-  const showPv = group === 'design' && (pvOn || pvSheet);
+  const showPv = viewGroup === 'design' && (pvOn || pvSheet);
 
   const renderSec = (id: string) => {
     switch (id) {
@@ -3136,12 +3218,12 @@ function SettingsInner() {
     <div className={`setx${showPv ? ' with-pv' : ''}${pvSheet ? ' pv-sheet' : ''}`}>
       <header className="setx-bar">
         <BackArrow fallback="/" label="설정 닫기" onGo={exit} />
-        <div className="setx-title"><b>설정</b><span>/ {cur.label}</span></div>
+        <div className="setx-title"><b>설정</b><span>/ {peek ? `숨긴 항목 · ${secLabel(peek)}` : cur.label}</span></div>
         <span className="setx-gap" />
         <span className={`setx-state${dirty ? ' on' : ''}`} role="status">
           {dirty ? <><i className="setx-dot" />저장 안 된 변경</> : '모두 저장됨'}
         </span>
-        {group === 'design' && (
+        {viewGroup === 'design' && (
           <button className={`btn btn-ghost setx-pv-btn${showPv ? ' on' : ''}`} aria-pressed={showPv} onClick={togglePv}>미리보기</button>
         )}
         <button className="btn btn-ghost" disabled={!dirty}
@@ -3153,32 +3235,76 @@ function SettingsInner() {
       <div className="setx-cols">
         <nav className="setx-groups" aria-label="설정 그룹">
           {GROUPS.map(g => (
-            <button key={g.id} className={g.id === group ? 'on' : ''} aria-current={g.id === group ? 'page' : undefined}
+            <button key={g.id} className={`setx-grp${!peek && g.id === group ? ' on' : ''}`} aria-current={!peek && g.id === group ? 'page' : undefined}
               onClick={() => goGroup(g.id)}>
               <i aria-hidden="true">{g.icon}</i>{g.label}
               {dirtyGroups.has(g.id) && <span className="setx-dot" aria-label="저장 안 된 변경" />}
             </button>
           ))}
+          {/* 숨김 칸 — 관리 아래 1px 선 밑. 접혀 있다가 누르면 카테고리 순서대로 펼쳐진다 */}
+          {hiddenIds.length > 0 && (
+            <>
+              <hr className="setx-hid-line" />
+              <button className={`setx-hid-toggle${hidOpen || peek ? ' open' : ''}`} aria-expanded={hidOpen || !!peek}
+                onClick={() => setHidOpen(!(hidOpen || !!peek))}>
+                숨김 <b>{hiddenIds.length}</b><span className="caret" aria-hidden="true">▸</span>
+              </button>
+              {(hidOpen || peek) && (
+                <div className="setx-hid-list">
+                  {GROUPS.map(g => {
+                    const hs = g.sections.filter(sc => hiddenSet.has(sc.id));
+                    if (!hs.length) return null;
+                    return (
+                      <div key={g.id} className="setx-hid-cat">
+                        <small>{g.label}</small>
+                        {hs.map(sc => (
+                          <button key={sc.id} className={peek === sc.id ? 'on' : ''} onClick={() => openPeek(sc.id)}
+                            {...ctxProps(() => [{ label: '메뉴로 꺼내기', fn: () => unhideSec(sc.id) }])}>{sc.label}</button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
         </nav>
-        <nav className="setx-toc" aria-label={`${cur.label} 목차`}>
-          <h2>{cur.label}</h2>
-          {cur.sections.map(sc => (
-            <button key={sc.id} className={activeSec === sc.id ? 'on' : ''} onClick={() => scrollToSec(sc.id)}>{sc.label}</button>
-          ))}
+        <nav className="setx-toc" aria-label={`${peek ? '숨긴 항목' : cur.label} 목차`}>
+          {peek ? (
+            <>
+              <h2>숨긴 항목</h2>
+              <button className="on" {...ctxProps(() => [{ label: '메뉴로 꺼내기', fn: () => unhideSec(peek) }])}>{secLabel(peek)}</button>
+              <p className="setx-toc-note">설정값은 그대로 적용됩니다 · 우클릭하면 메뉴로 꺼낼 수 있습니다</p>
+            </>
+          ) : (
+            <>
+              <h2>{cur.label}</h2>
+              {curSecs.map(sc => (
+                <button key={sc.id} className={activeSec === sc.id ? 'on' : ''} onClick={() => scrollToSec(sc.id)}
+                  {...ctxProps(hideItems(sc.id))}>{sc.label}</button>
+              ))}
+            </>
+          )}
         </nav>
         <div className="setx-scroll" ref={scrollRef}>
           <div key={paneGen}>
             {GROUPS.filter(g => visited.includes(g.id)).map(g => (
-              // 한 번 연 그룹은 숨겨 두기만 한다 — 그룹을 오가도 편집 중인 값이 남게
-              <div key={g.id} hidden={g.id !== group}>
+              // 한 번 연 그룹·숨긴 항목도 감춰 두기만 한다 — 오가도 편집 중인 값이 남게
+              <div key={g.id} hidden={peek ? g.id !== viewGroup : g.id !== group}>
                 {g.sections.map(sc => (
-                  <section key={sc.id} id={`set-${sc.id}`} className="setx-sec">
-                    <h2 className="setx-sec-h">{sc.label}</h2>
+                  <section key={sc.id} id={`set-${sc.id}`} className="setx-sec"
+                    hidden={peek ? sc.id !== peek : hiddenSet.has(sc.id)}>
+                    <h2 className="setx-sec-h" {...(peek ? {} : ctxProps(hideItems(sc.id)))}>
+                      {sc.label}{peek === sc.id && <span className="setx-peek-tag">숨긴 항목</span>}
+                    </h2>
                     <div className="panel setx-card">{renderSec(sc.id)}</div>
                   </section>
                 ))}
               </div>
             ))}
+            {!peek && !curSecs.length && (
+              <div className="setx-empty">이 그룹의 항목을 모두 숨겼습니다 — 왼쪽 「숨김」에서 우클릭해 꺼낼 수 있습니다</div>
+            )}
           </div>
         </div>
         {showPv && (
@@ -3191,6 +3317,14 @@ function SettingsInner() {
         )}
       </div>
 
+      {ctx && ctx.items.length > 0 && (
+        <div ref={ctxRef} className="ctx-menu on setx-ctx" role="menu"
+          style={{ left: Math.min(ctx.x, window.innerWidth - 160), top: Math.min(ctx.y, window.innerHeight - 60) }}>
+          {ctx.items.map(it => (
+            <button key={it.label} role="menuitem" onClick={() => { setCtx(null); it.fn(); }}>{it.label}</button>
+          ))}
+        </div>
+      )}
       <ConfirmModal open={!!leaveGo} title="저장하지 않은 변경이 있습니다"
         body="저장하지 않고 나가면 바꾼 내용이 사라지고 저장된 상태로 돌아갑니다."
         onClose={() => setLeaveGo(null)}
