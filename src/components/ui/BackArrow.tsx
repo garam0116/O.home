@@ -8,15 +8,20 @@ import { useRouter } from 'next/navigation';
 /** 터치에서 화살표가 다 그려지는 걸 보여 주고 이동하기까지 (CSS 전환 .42s + 지연 .08s 중 대부분) */
 const TOUCH_DELAY = 380;
 
-export function BackArrow({ fallback, label = '뒤로가기' }: { fallback: string; label?: string }) {
+export function BackArrow({ fallback, label = '뒤로가기', onGo }: {
+  fallback: string; label?: string;
+  /** 이동 전에 끼어들기 (v3.1 — 환경설정: 저장 안 한 변경이 있으면 먼저 묻는다). 받은 go를 부르면 이동 */
+  onGo?: (go: () => void) => void;
+}) {
   const router = useRouter();
   const [play, setPlay] = useState(false);
   const pointer = useRef<string>('mouse');
 
-  const go = () => {
+  const nav = () => {
     if (window.history.length > 1) router.back();
     else router.push(fallback);
   };
+  const go = () => (onGo ? onGo(nav) : nav());
 
   return (
     <button type="button" className={`back-arrow ${play ? 'play' : ''}`} aria-label={label} title={label}

@@ -24,6 +24,7 @@ import { MenuGuard } from '@/components/shell/MenuGuard';
 import { RailHost } from '@/components/main/SideRails';
 import { ServerBoot } from '@/components/shell/ServerBoot';
 import { siteMeta } from '@/lib/siteMeta';
+import { PreviewBridge, NotInPreview } from '@/components/shell/PreviewBridge';
 
 /**
  * 링크를 미리 읽어 가는 쪽(카톡·디스코드·검색)은 서버가 돌려준 HTML만 본다.
@@ -93,7 +94,7 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   {/* RailHost: 메인의 좌우 열 위젯을 다른 페이지에도 같은 자리에 고정 (v2.4) — 페이지 바깥이라 이동해도 유지 */}
                   <main id="appMain"><RailHost><PageFrame><MenuGuard>{children}</MenuGuard></PageFrame></RailHost></main>
                   {/* BGM 미니 플레이어 — 전역 상주, 페이지 이동에도 유지 (4.1) */}
-                  <BgmPlayer />
+                  <NotInPreview><BgmPlayer /></NotInPreview>
                   {/* 전역 커스텀 툴팁 — data-tip 요소 공통 (7장) */}
                   <TipLayer />
                   {/* 이미지 저장 방지 — 메뉴 관리 > 권한에서 영역별 지정 (v1.9) */}
@@ -104,14 +105,16 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   {/* 설정이 서버에 저장되지 않았을 때 알림 (v2.0) — 조용히 실패하면 원인을 알 수 없다 */}
                   <SettingSync />
                   {/* 관리자 로그인 때 예전에 공개로 저장된 비밀 데이터를 옮긴다 (보안 검토) */}
-                  <SecurityMigrate />
+                  <NotInPreview><SecurityMigrate /></NotInPreview>
                   {/* 글·댓글 저장이 거부됐을 때 이유를 알림 (v2.0) — 조용히 되돌리면 스스로 사라진 것처럼 보인다 */}
                   <ListSync />
-                  <NumberSync />
+                  <NotInPreview><NumberSync /></NotInPreview>
                   {/* 이미지 올리는 중 표시 (v2.0) — 느린 업로드를 다시 누르지 않게 */}
                   <UploadBusy />
                   {/* 게시판 본문 폭 — 목록·상세 공통 (v2.3) */}
                   <BoardWidth />
+                  {/* 환경설정 미리보기 iframe 안쪽 — 부모가 보낸 저장 전 값을 받아 그린다 (v3.1) */}
+                  <PreviewBridge />
                   </SetupGate>
                 </BgmStoreProvider>
               </MainStoreProvider>

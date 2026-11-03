@@ -9,6 +9,7 @@
 // primeSettings()로 캐시를 채운다. 이후 읽기는 전부 동기(캐시)라 기존 코드 모양이 유지된다.
 // 쓰기는 캐시 → localStorage(첫 페인트용 사본) → DB 순으로 나간다.
 import { backend, isServerMode } from './backend';
+import { isPreviewFrame } from './previewFrame';
 
 const cache = new Map<string, unknown>();
 const revisions = new Map<string, number>();
@@ -151,7 +152,8 @@ function savedRaw(key: string): string | null {
 /** 저장 — 캐시·로컬 사본·DB 순. DB 저장 실패는 조용히 무시(로컬은 남는다) */
 export function setSetting(key: string, value: unknown): void {
   // 설정 탭 SAVE 드래프트 (v2.5) — 지금 열린 탭이 맡은 키는 SAVE 전까지 저장하지 않고 붙잡아 둔다
-  if (draftScope?.has(key)) {
+  // 설정 화면 미리보기 iframe (v3.1) — 그 안에서는 어떤 설정도 저장하지 않는다. 화면에만 반영
+  if (draftScope?.has(key) || isPreviewFrame()) {
     draftVals.set(key, value);
     try { window.dispatchEvent(new CustomEvent(EVT, { detail: key })); } catch { /* 무시 */ }
     try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
@@ -235,6 +237,13 @@ export function settingDraftDirty(): boolean {
   return false;
 }
 
+/** 저장본과 다른 드래프트 키 목록 (v3.1 — 환경설정 메뉴의 「저장 안 된 변경」 점) */
+export function settingDraftDirtyKeys(): string[] {
+  const out: string[] = [];
+  for (const [k, v] of draftVals) if (JSON.stringify(v) !== (savedRaw(k) ?? 'null')) out.push(k);
+  return out;
+}
+
 /** SAVE — 드래프트 값을 실제로 저장 */
 export function commitSettingDraft(): void {
   const entries = [...draftVals];
@@ -254,6 +263,48 @@ export function discardSettingDraft(): void {
     try { window.dispatchEvent(new CustomEvent(RELOAD_EVT, { detail: k })); } catch { /* 무시 */ }
   });
   try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
+}
+
+/** 지금 붙잡아 둔 값 전체 — 설정 화면이 미리보기 iframe에 넘겨 준다 (v3.1) */
+export function settingDraftValues(): Record<string, unknown> {
+  return Object.fromEntries(draftVals);
+}
+
+/**
+ * 드래프트를 잠시 걷어 내고 실행 (v3.1) — 설정 화면은 이제 전체가 하나의 드래프트라,
+ * 백업 복원·서버 이전·설정 올리기처럼 **바로 실제 값을 다뤄야 하는 작업**이 드래프트에 붙잡히거나
+ * 저장 전 값을 읽지 않게 한다. 끝나면 붙잡던 값과 범위를 그대로 돌려놓는다.
+ */
+export async function withSettingDraftPaused<T>(fn: () => Promise<T> | T): Promise<T> {
+  const scope = draftScope;
+  const held = new Map(draftVals);
+  draftScope = null;
+  draftVals.clear();
+  try {
+    return await fn();
+  } finally {
+    draftScope = scope;
+    held.forEach((v, k) => draftVals.set(k, v));
+    try { window.dispatchEvent(new Event(DRAFT_EVT)); } catch { /* 무시 */ }
+  }
+}
+
+/**
+ * 미리보기 iframe 쪽 (v3.1) — 부모가 보낸 저장 전 값을 드래프트 자리에 얹는다.
+ * 빠진 키는 저장본으로 돌아가고, 바뀐 키는 스토어들이 다시 읽게 RELOAD_EVT를 보낸다.
+ */
+export function applyPreviewSettings(vals: Record<string, unknown>): void {
+  const changed = new Set<string>();
+  for (const k of [...draftVals.keys()]) {
+    if (!(k in vals)) { draftVals.delete(k); changed.add(k); }
+  }
+  for (const [k, v] of Object.entries(vals)) {
+    if (JSON.stringify(draftVals.get(k)) !== JSON.stringify(v)) { draftVals.set(k, v); changed.add(k); }
+  }
+  changed.forEach(k => {
+    try { window.dispatchEvent(new CustomEvent(EVT, { detail: k })); } catch { /* 무시 */ }
+    try { window.dispatchEvent(new CustomEvent(RELOAD_EVT, { detail: k })); } catch { /* 무시 */ }
+  });
 }
 
 /** 드래프트를 버렸을 때 이 키를 다시 읽게 하는 구독 */
