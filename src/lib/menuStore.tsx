@@ -296,12 +296,13 @@ export function canViewHref(
   return allows(e.vis, viewer, e.members);
 }
 
-/** 이 방문자가 **들어갈 수 있는가** (v2.0) — 페이지 차단·서버 저장값이 쓴다 */
+/** 이 방문자가 **들어갈 수 있는가** (v2.0) — 페이지 차단·서버 저장값이 쓴다.
+ *  메뉴에 보이는가(canViewHref)와 **반드시 같은 답**이어야 한다 — 한쪽만 고치면 「메뉴엔 없는데 주소로는 열림」이
+ *  생긴다. 그래서 판정은 canViewHref 한 곳에만 두고 여기서는 그대로 부른다 */
 export function canAccessHref(
   s: MenuSettings, path: string, viewer: MenuViewer,
 ): boolean {
-  const e = hrefEntry(s, path);
-  return allows(e.vis, viewer, e.members);
+  return canViewHref(s, path, viewer);
 }
 
 /** 메뉴 트리에 적힌 이 주소의 이름 (v2.0) — 이름을 따로 준 적이 없으면 null */

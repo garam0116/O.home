@@ -127,10 +127,9 @@ export function useSections(): {
   useEffect(() => {
     const h = () => force();
     window.addEventListener(EVT, h);
-    window.addEventListener('ohome-setting', h);
     // 환경설정에서 SAVE 없이 변경을 취소하면 모듈 캐시를 저장본으로 다시 채운다 (v2.5)
     const offReload = onSettingReload(KEY, () => { cache = {}; loaded = false; load(); force(); });
-    return () => { window.removeEventListener(EVT, h); window.removeEventListener('ohome-setting', h); offReload(); };
+    return () => { window.removeEventListener(EVT, h); offReload(); };
   }, []);
   load();
 
