@@ -175,7 +175,7 @@ export function CropEditor({ open, src, aspect, aspectLabel, initial, onClose, o
           style={{ flex: 1, maxWidth: 220, height: 4, borderRadius: 4, background: '#d7dae0', position: 'relative', cursor: 'pointer' }}>
           <i style={{
             position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 4,
-            width: `${((crop.scale - 1) / 2) * 100}%`, background: 'var(--accent)',
+            width: `${((crop.scale - 1) / 2) * 100}%`, background: 'var(--accent-fill, var(--accent))',
           }} />
           <i style={{
             position: 'absolute', top: '50%', left: `${((crop.scale - 1) / 2) * 100}%`,

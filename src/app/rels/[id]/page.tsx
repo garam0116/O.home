@@ -625,6 +625,8 @@ export default function RelDetailPage() {
               <div className="illu-toggle seg" style={{
                 ['--illu-bg' as string]: auSt.illuBg,
                 ['--illu-on' as string]: auSt.illuOn,
+                // 자관별 스위치 색을 정했으면 글씨는 지금까지처럼 흰색 (v3.6 — 미지정이면 테마의 버튼 글씨색)
+                ...(auSt.illuOn ? { ['--illu-on-fg' as string]: '#fff' } : {}),
               } as React.CSSProperties}>
                 <button className={!single ? 'on' : ''} onClick={() => setOneMode(false)}>전신</button>
                 <button className={single ? 'on' : ''} onClick={() => setOneMode(true)}>일러스트</button>

@@ -276,7 +276,7 @@ function WriteInner() {
                     {thumbSrc === src && (
                       <span style={{
                         position: 'absolute', right: 4, top: 4, fontSize: 9, fontWeight: 700, letterSpacing: '.08em',
-                        background: 'var(--accent)', color: '#fff', padding: '2px 6px', borderRadius: 999,
+                        background: 'var(--accent-fill, var(--accent))', color: 'var(--on-accent, #fff)', padding: '2px 6px', borderRadius: 999,
                       }}>대표</span>
                     )}
                   </div>

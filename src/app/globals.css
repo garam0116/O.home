@@ -32,7 +32,7 @@
   --bgm-bg:rgba(22,24,29,.9); --bgm-fg:#eef0f3; --bgm-ic:#cfd3da; --bgm-vol:#e8eaee;
   --sb-thumb:#565d68; --sb-bd:#1a1d22;
   --search-bg:#232830; --search-fg:#e8eaee; --search-ic:#8b919b; --search-bd:#3a404a;
-  --accent:#a63a45; --accent-soft:#c96a73;
+  --accent:#a63a45; --accent-soft:#c96a73; --accent-fill:#a63a45; --on-accent:#ffffff;
   --radius:14px; --radius-s:9px;
   /* 블록 그림자 (환경설정 > 디자인에서 세기 조절) · --sh-dd = 드롭다운 별도 세기 */
   --sh-sm:0 8px 26px rgba(0,0,0,.22); --sh-md:0 10px 40px rgba(0,0,0,.25); --sh-lg:0 24px 70px rgba(0,0,0,.5);
@@ -142,7 +142,7 @@ a{color:inherit;text-decoration:none}
 .grid-chip .tr{background:#565d68}
 /* 켜짐 상태가 어두운 헤더에 묻히지 않게 — 포인트색 트랙 + 밝은 라벨 + 칩 배경 (기존 on색 --ink는 다크 헤더와 동화됨)
    .k-toggle까지 붙여 뒤에 오는 기본 on 규칙(--ink)보다 우선 */
-.k-toggle.grid-chip input:checked + .tr{background:var(--accent)}
+.k-toggle.grid-chip input:checked + .tr{background:var(--accent-fill,var(--accent))}
 .grid-chip:has(input:checked){color:var(--top-hv);background:rgba(127,127,127,.14)} /* 라이트 헤더에서도 보이게 — 테마 글씨색 */
 .grid-chip:has(input:checked) .tr{box-shadow:0 0 8px color-mix(in srgb,var(--accent) 60%,transparent)}
 .edit-flag{display:none;font-size:calc(10px*var(--fs,1));color:var(--accent-soft);letter-spacing:.1em;border:1px solid rgba(201,106,115,.4);padding:3px 9px;border-radius:9px;white-space:nowrap;cursor:pointer}
@@ -482,8 +482,8 @@ a{color:inherit;text-decoration:none}
 .btn.post-meta-btn{height:20px;padding:0 8px;font-size:inherit;border-radius:6px;vertical-align:middle;margin:-2px 0 0 6px}
 .btn-ghost{border:1.5px solid var(--line);color:var(--sub);background:#fff}
 .btn-ghost:hover{border-color:var(--steel-3);color:var(--ink)}
-.btn-accent{background:var(--accent);color:#fff}
-.btn-accent:hover{background:var(--accent-soft)}
+.btn-accent{background:var(--accent-fill,var(--accent));color:var(--on-accent,#fff)}
+.btn-accent:hover{background:color-mix(in srgb,var(--accent-fill,var(--accent)) 86%,var(--on-accent,#fff))} /* 호버 = 면 색에 글씨색을 살짝 섞음 — 글씨 대비 유지 (v3.6) */
 /* 어두운 페이지 배경 위의 저강조 버튼 (CANCEL 등 — 주버튼보다 약하게) */
 /* 배경 위 보조 버튼 — 중립 회색 베이스 + 테마 글씨색이라 라이트/다크 모두 보임 */
 .btn-onbk{background:rgba(127,127,127,.13);border:1px solid rgba(127,127,127,.28);color:var(--page-desc)}
@@ -903,7 +903,7 @@ body.edit-on .page-main-wrap, body.edit-on .page-main-wrap *:not(.rs):not(.rr),b
 body.edit-on .page-main-wrap .wgt:active,
 body.edit-on .page-main-wrap *:not(.rs):not(.rr):active{cursor:grabbing}
 /* 핸들 커서 — 전체 grab 규칙(!important)에 덮이지 않게 여기서도 !important */
-.wgt .rs{display:none;position:absolute;right:5px;bottom:5px;width:15px;height:15px;border-radius:4px;background:var(--accent);cursor:nwse-resize !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.wgt .rs{display:none;position:absolute;right:5px;bottom:5px;width:15px;height:15px;border-radius:4px;background:var(--accent-fill,var(--accent));cursor:nwse-resize !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .wgt .rs::after{content:"";position:absolute;right:3px;bottom:3px;width:6px;height:6px;border-right:2px solid #fff;border-bottom:2px solid #fff}
 body.edit-on .page-main-wrap .wgt .rs,body.edit-on .rail-canvas .wgt .rs{display:block}
 /* 드래그 중 전역 커서 고정 (v1.9 사용자 피드백) — 빠른 드래그로 커서가 다른 요소·페이지 밖을 지나도
@@ -919,7 +919,7 @@ body.drag-rs-y, body.drag-rs-y *{cursor:ns-resize !important}
 /* 비율 잠금 위젯은 변 핸들을 동그랗게 — 끌면 다른 쪽도 같이 바뀐다는 표시 */
 .wgt.ratio-lock .rs.rs-r,.wgt.ratio-lock .rs.rs-b{border-radius:99px;box-shadow:0 0 0 2px rgba(255,255,255,.85),0 2px 6px rgba(0,0,0,.35)}
 /* 기울기 핸들 (v1.9 — 이미지·자유 텍스트): 왼쪽 위, 드래그로 회전 · 더블클릭 초기화 */
-.wgt .rr{display:none;position:absolute;left:5px;top:5px;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:grab !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.wgt .rr{display:none;position:absolute;left:5px;top:5px;width:15px;height:15px;border-radius:50%;background:var(--accent-fill,var(--accent));cursor:grab !important;z-index:6;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .wgt .rr::after{content:"";position:absolute;inset:3.5px;border:2px solid #fff;border-radius:50%;border-left-color:transparent}
 body.edit-on .page-main-wrap .wgt .rr,body.edit-on .rail-canvas .wgt .rr{display:block}
 /* (v1.9) 위젯 삭제는 편집모드 우클릭 메뉴로 이동 — 상시 ✕ 버튼 제거 */
@@ -1166,7 +1166,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
    자관별 색은 EDIT의 「전신/일러 스위치 색」 — --illu-bg/--illu-on 인라인 주입 */
 .illu-toggle.seg{background:var(--illu-bg,color-mix(in srgb,var(--btn-dark,#1d2025) 82%,transparent));border-color:color-mix(in srgb,var(--accent-soft,#c96a73) 45%,transparent);backdrop-filter:blur(6px)}
 .illu-toggle.seg button{padding:5px 11px;font-size:calc(10px*var(--fs,1));color:var(--btn-dark-fg,#dfe2e7);opacity:.75}
-.illu-toggle.seg button.on{background:var(--illu-on,var(--accent));color:#fff;opacity:1}
+.illu-toggle.seg button.on{background:var(--illu-on,var(--accent-fill,var(--accent)));color:var(--illu-on-fg,var(--on-accent,#fff));opacity:1}
 /* AU 리스트 (우상단, v1.8) — 자식 일괄 relative 규칙보다 뒤에서 absolute로 재고정 */
 .au-list{display:flex;gap:8px;align-items:flex-start}
 .page-rel-detail > .au-list{position:absolute;top:20px;right:28px;left:auto;z-index:6}
@@ -1353,7 +1353,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .ticket .stub{padding:24px 22px 16px 30px;display:flex;flex-direction:column;gap:6px;min-width:0;overflow:hidden}
 .ticket .stub .sc-title{font-family:'Noto Serif KR',serif;font-size:calc(26px*var(--fs,1));font-weight:700;letter-spacing:.04em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ticket .stub .sc-catch{font-size:calc(11px*var(--fs,1));color:var(--faint);letter-spacing:.14em;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ticket .stub .sc-catch::after{content:"";display:block;width:34px;height:2px;background:var(--accent);margin-top:12px}
+.ticket .stub .sc-catch::after{content:"";display:block;width:34px;height:2px;background:var(--accent-fill,var(--accent));margin-top:12px}
 .ticket .stub .row{font-size:calc(12px*var(--fs,1));color:var(--sub);display:block;padding:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ticket .stub .row b{color:var(--faint);font-weight:600;display:inline-block;min-width:48px;letter-spacing:.05em}
 /* 하단 문구 = 홈페이지 서브타이틀 연동 (v1.9), 한 줄 말줄임 */
@@ -1731,22 +1731,22 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
 .mnav-th-accordion i:nth-child(5){left:14%;top:69%;width:38%}
 /* stage: 가운데 줄 · 위아래 포인트 별 */
 .mnav-th-stage i{left:30%;width:40%}
-.mnav-th-stage i:nth-child(1){left:46%;width:8%;top:20%;background:var(--accent)}
+.mnav-th-stage i:nth-child(1){left:46%;width:8%;top:20%;background:var(--accent-fill,var(--accent))}
 .mnav-th-stage i:nth-child(2){top:33%}
 .mnav-th-stage i:nth-child(3){top:47%;background:rgba(255,255,255,.85)}
 .mnav-th-stage i:nth-child(4){top:61%}
-.mnav-th-stage i:nth-child(5){left:46%;width:8%;top:74%;background:var(--accent)}
+.mnav-th-stage i:nth-child(5){left:46%;width:8%;top:74%;background:var(--accent-fill,var(--accent))}
 /* cover: 왼쪽 열 · 오른쪽 위 이미지 */
 .mnav-th-cover::before{content:"";position:absolute;left:40%;right:6%;top:12%;height:20%;border-radius:3px;background:linear-gradient(135deg,#d9d2c6,#6c7a63)}
 .mnav-th-cover::after{content:"";position:absolute;left:36%;top:8%;bottom:8%;width:1px;background:rgba(255,255,255,.2)}
 .mnav-th-cover i:nth-child(1){left:8%;top:18%;width:22%;height:2px}
-.mnav-th-cover i:nth-child(2){left:8%;top:28%;width:22%;height:2px;background:var(--accent)}
+.mnav-th-cover i:nth-child(2){left:8%;top:28%;width:22%;height:2px;background:var(--accent-fill,var(--accent))}
 .mnav-th-cover i:nth-child(3){left:8%;top:38%;width:22%;height:2px}
 .mnav-th-cover i:nth-child(4){left:42%;top:42%;width:46%}
 .mnav-th-cover i:nth-child(5){left:42%;top:53%;width:46%}
 /* ledger: 위쪽 반투명 판 · 라벨(포인트) + 줄 */
 .mnav-th-ledger::before{content:"";position:absolute;left:0;right:0;top:8%;height:46%;border-radius:0 0 7px 7px;background:rgba(255,255,255,.12)}
-.mnav-th-ledger i:nth-child(odd){left:8%;width:18%;height:2px;background:var(--accent)}
+.mnav-th-ledger i:nth-child(odd){left:8%;width:18%;height:2px;background:var(--accent-fill,var(--accent))}
 .mnav-th-ledger i:nth-child(even){left:34%;width:54%}
 .mnav-th-ledger i:nth-child(1),.mnav-th-ledger i:nth-child(2){top:17%}
 .mnav-th-ledger i:nth-child(3),.mnav-th-ledger i:nth-child(4){top:29%}
@@ -1804,7 +1804,7 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
 .mcard-th-ink i:nth-child(3){box-shadow:0 3px 0 -1px var(--accent)}
 .mcard-th-halo::before{border-radius:7px;background:radial-gradient(60% 40% at 30% 52%,color-mix(in srgb,var(--accent) 45%,transparent),transparent 70%),rgba(255,255,255,.06);
   border:1px solid color-mix(in srgb,var(--accent) 70%,rgba(255,255,255,.2))}
-.mcard-th-halo i:nth-child(3)::before{content:"";position:absolute;left:-5px;top:-1px;width:3px;height:3px;border-radius:50%;background:var(--accent)}
+.mcard-th-halo i:nth-child(3)::before{content:"";position:absolute;left:-5px;top:-1px;width:3px;height:3px;border-radius:50%;background:var(--accent-fill,var(--accent))}
 .mcard-th-prism::before{border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.7)}
 .mcard-th-prism i:nth-child(3){box-shadow:-6px 0 0 -0px var(--accent),-6px 0 6px var(--accent)}
 .mcard-th-thread::before{left:16%;right:auto;width:0;border-left:1px dashed rgba(255,255,255,.4)}
@@ -2032,7 +2032,7 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
 .search-wg-box:focus-within{border-color:color-mix(in srgb,var(--page-title) 60%,transparent);background:color-mix(in srgb,var(--page-title) 5%,transparent)}
 .search-wg-box input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--page-title);font-size:calc(12.5px*var(--fs,1));padding:6px 0}
 .search-wg-box input::placeholder{color:color-mix(in srgb,var(--page-title) 50%,transparent)}
-.search-wg-box button{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;transition:background .15s}
+.search-wg-box button{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--accent-fill,var(--accent));color:var(--on-accent,#fff);transition:background .15s}
 .search-wg-box button:hover{background:color-mix(in srgb,var(--accent) 82%,#000)}
 .search-wg-box button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .search-wg-box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;display:block}
@@ -2176,7 +2176,7 @@ body.no-topbar .topbar{display:none}
   background:radial-gradient(130px 100px at var(--mx) var(--my),color-mix(in srgb,var(--accent-soft) 20%,transparent),transparent 70%) padding-box,
     linear-gradient(var(--dd-bg),var(--dd-bg)) padding-box,
     radial-gradient(130px 130px at var(--mx) var(--my),var(--accent-soft),var(--line-dark) 70%) border-box}
-.mc-s-halo .mc-sub button.on .mc-cnt{background:var(--accent);color:#fff;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
+.mc-s-halo .mc-sub button.on .mc-cnt{background:var(--accent-fill,var(--accent));color:var(--on-accent,#fff);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
 
 /* Prism — 위쪽 가장자리에 빛이 맺히는 유리 · 왼쪽 빛줄기(.mc-beam)가 마우스를 따라감 · 하위 메뉴는 차례로 떠오름 */
 .mc-s-prism{--mc-gap:16px;border:1px solid transparent;border-radius:18px;
@@ -2291,7 +2291,7 @@ body.no-topbar .topbar{display:none}
 .setx-gap{flex:1}
 .setx-state{display:inline-flex;align-items:center;gap:6px;font-size:calc(11.5px*var(--fs,1));color:var(--faint);white-space:nowrap}
 .setx-state.on{color:var(--accent);font-weight:600}
-.setx-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.setx-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent-fill,var(--accent));flex:none}
 .setx-bar .btn{height:34px;padding:0 15px;font-size:calc(11.5px*var(--fs,1));white-space:nowrap}
 .setx-bar .btn:disabled{opacity:.42;cursor:default}
 .setx-bar .setx-save{padding:0 22px}

@@ -2,10 +2,16 @@
 // 모드 4종: 라이트 / 다크(기본) / 포인트 자동(다크·라이트 톤) / 완전 커스텀
 // 모든 색은 순수 hex로 저장(환경설정 hex 입력란과 1:1) — 반투명이 필요한 곳은
 // themeToCssVars 에서 고정 알파를 적용해 CSS 변수로 변환한다.
-import { adjust, hexToHsl, hslToHex, withAlpha } from './color';
+import { adjust, ensureContrast, hexToHsl, onColor, oklchToHex, toOklch, withAlpha } from './color';
 
 export type ThemeMode = 'light' | 'dark' | 'point' | 'custom';
 export type PointTone = 'dark' | 'light';
+/** 포인트 자동 가독성 단계 (v3.6) — 표준 = WCAG AA(글씨 4.5:1 · 보조 3:1), 높음 = AAA(7:1 · 4.5:1) */
+export type ReadLevel = 'std' | 'high';
+export const READ_TARGETS: Record<ReadLevel, { text: number; hint: number }> = {
+  std: { text: 4.5, hint: 3 },
+  high: { text: 7, hint: 4.5 },
+};
 
 /** 환경설정에서 항목별로 제어되는 테마 변수 (5.1 상세 설정 항목) */
 export interface ThemeVars {
@@ -57,6 +63,10 @@ export interface ThemeVars {
   focusColor?: string; focusRing?: 'glow' | 'line' | 'none'; focusW?: number;
   // 포인트 컬러
   accent: string; accentSoft: string;
+  /* 가독성 보정 (v3.6) — 포인트 자동이 채운다. 있으면 카드 보조·옅은 글씨, 카드 위 포인트 글씨,
+     포인트 버튼 글씨를 이 단계의 대비 기준에 맞춰 themeToCssVars에서 자동 보정한다.
+     커스텀으로 넘어가도 따라가서, 글씨색을 손봐도 보정이 계속 걸린다. 없으면 지금까지처럼 그대로 */
+  readLevel?: ReadLevel;
   // 모서리 둥글기(px)
   radius: number; radiusS: number;
   // 블록(패널·카드) 그림자 세기 % — 0 = 없음, 100 = 기본, 200 = 최대
@@ -118,55 +128,87 @@ export function softAccent(accent: string): string {
 }
 
 /**
- * 포인트 자동 모드 (v1.8 확정) — 포인트 컬러 하나로 전체 팔레트 파생.
+ * 포인트 자동 모드 — 포인트 컬러 하나로 전체 팔레트 파생 (v3.6 재설계, 시안 C).
+ * - 명도는 HSL이 아니라 지각 명도(OKLCH)로 고정 — 어떤 색을 골라도 화면 밝기·대비가 같게 나온다.
+ * - 포인트 색은 배경·상단바·버튼 같은 **면**에 쓰고, 글씨는 거의 무채색으로 둔다.
+ * - 마지막에 글씨마다 대비율을 검사해 단계(level) 기준에 못 미치면 명도를 밀어 준다.
  * 톤(다크/라이트) 선택 가능, 파생값은 세부 항목 hex 란에 전부 채워짐 (v1.9).
  */
-export function derivePointTheme(accent: string, tone: PointTone): ThemeVars {
-  const { h, s } = hexToHsl(accent);
-  const c = (sat: number, lig: number) => hslToHex({ h, s: Math.min(1, s * sat), l: lig });
+export function derivePointTheme(accent: string, tone: PointTone, level: ReadLevel = 'std'): ThemeVars {
+  const T = READ_TARGETS[level];
+  const { H, C } = toOklch(accent);
+  const c0 = Math.min(C, 0.15);
+  // 면: 포인트 색조를 지각 명도 L, 채도 배율 m으로
+  const n = (L: number, m: number) => oklchToHex({ L, C: c0 * m, H });
+  // 글씨: 색조만 살짝 비친 무채색
+  const ink = (L: number) => oklchToHex({ L, C: Math.min(0.01, c0 * 0.07), H });
   const accentSoft = softAccent(accent);
 
-  if (tone === 'dark') {
-    return {
-      bgG1: c(0.28, 0.2), bgG2: c(0.32, 0.07),
+  const t: ThemeVars = tone === 'dark'
+    ? {
+      bgG1: n(0.3, 0.6), bgG2: n(0.17, 0.5),
       bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-      cardBg: c(0.12, 0.985), cardFg: c(0.4, 0.14),
-      topBg: c(0.3, 0.09), topFg: c(0.14, 0.68), topHv: c(0.2, 0.97), topBrand: c(0.12, 0.95),
-      ddBg: c(0.28, 0.11), ddFg: c(0.14, 0.78), ddHv: '#ffffff',
-      pageTitle: c(0.1, 0.93), pageDesc: c(0.12, 0.62),
-      bgmBg: c(0.3, 0.08), bgmFg: c(0.1, 0.94), bgmIc: c(0.12, 0.82), bgmVol: c(0.1, 0.9),
-      sbThumb: c(0.22, 0.38), sbBd: c(0.3, 0.1),
-      searchBg: c(0.26, 0.14), searchFg: c(0.1, 0.9), searchIc: c(0.12, 0.6), searchBd: c(0.22, 0.24),
-      btnDark: c(0.38, 0.12), btnDarkFg: c(0.08, 0.97), btnDarkHv: c(0.38, 0.19), /* 채도 살짝↑ 명도 아주 약간↓ — 컬러감 (v1.9 사용자 피드백) */
-      cropBg: c(0.24, 0.19),
-      accent, accentSoft,
+      cardBg: n(0.985, 0.05), cardFg: ink(0.22),
+      topBg: n(0.2, 0.62), topFg: ink(0.82), topHv: ink(0.98), topBrand: ink(0.96),
+      ddBg: n(0.23, 0.5), ddFg: ink(0.88), ddHv: '#ffffff',
+      pageTitle: ink(0.96), pageDesc: ink(0.8),
+      bgmBg: n(0.19, 0.55), bgmFg: ink(0.96), bgmIc: ink(0.84), bgmVol: ink(0.9),
+      sbThumb: n(0.45, 0.35), sbBd: n(0.2, 0.5),
+      searchBg: n(0.26, 0.45), searchFg: ink(0.93), searchIc: ink(0.72), searchBd: n(0.38, 0.45),
+      btnDark: n(0.34, 0.8), btnDarkFg: ink(0.99), btnDarkHv: n(0.4, 0.8),
+      cropBg: n(0.3, 0.4),
+      accent, accentSoft, readLevel: level,
       radius: 14, radiusS: 9, shadow: 100, ddShadow: 100,
+    }
+    : {
+      bgG1: n(0.955, 0.22), bgG2: n(0.89, 0.32),
+      bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
+      cardBg: n(0.995, 0.04), cardFg: ink(0.22),
+      topBg: n(0.975, 0.14), topFg: ink(0.42), topHv: ink(0.22), topBrand: ink(0.26),
+      ddBg: n(0.985, 0.08), ddFg: ink(0.33), ddHv: '#000000',
+      pageTitle: ink(0.24), pageDesc: ink(0.45),
+      bgmBg: n(0.985, 0.1), bgmFg: ink(0.26), bgmIc: ink(0.44), bgmVol: ink(0.32),
+      sbThumb: n(0.75, 0.25), sbBd: n(0.9, 0.25),
+      searchBg: n(0.99, 0.05), searchFg: ink(0.26), searchIc: ink(0.56), searchBd: n(0.85, 0.3),
+      btnDark: n(0.46, 0.75), btnDarkFg: ink(0.99), btnDarkHv: n(0.53, 0.75),
+      cropBg: n(0.9, 0.2),
+      accent, accentSoft, readLevel: level,
+      radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤은 그림자 약하게 (30%)
     };
-  }
-  // 라이트 톤 — 호버 글씨색은 어두운 포인트색 파생 (흰 배경 위 흰 글씨 방지, v1.9)
-  const deepAccent = adjust(accent, cc => ({ l: Math.min(cc.l, 0.38) }));
-  return {
-    bgG1: c(0.25, 0.95), bgG2: c(0.3, 0.86),
-    bgType: 'gradient', bgAngle: 180, bgBlur: 0, bgDim: BG_DIM,
-    cardBg: c(0.15, 0.99), cardFg: c(0.4, 0.14),
-    topBg: c(0.35, 0.97), topFg: c(0.3, 0.38), topHv: deepAccent, topBrand: c(0.45, 0.22),
-    ddBg: c(0.3, 0.98), ddFg: c(0.3, 0.3), ddHv: '#000000',
-    pageTitle: c(0.45, 0.22), pageDesc: c(0.2, 0.5),
-    bgmBg: c(0.3, 0.98), bgmFg: c(0.4, 0.24), bgmIc: c(0.3, 0.4), bgmVol: c(0.4, 0.3),
-    sbThumb: c(0.2, 0.72), sbBd: c(0.25, 0.88),
-    searchBg: c(0.3, 0.99), searchFg: c(0.4, 0.24), searchIc: c(0.2, 0.55), searchBd: c(0.25, 0.84),
-    btnDark: c(0.33, 0.4), btnDarkFg: c(0.1, 0.99), btnDarkHv: c(0.33, 0.46), // 라이트 톤 — 뮤트 버튼 (대비 완화 · 채도 살짝↑ 명도 약간↓, v1.9)
-    cropBg: c(0.2, 0.89),
-    accent, accentSoft,
-    radius: 14, radiusS: 9, shadow: 30, ddShadow: 30, // 라이트 톤도 그림자 약하게 (30%)
+
+  // 대비 보정 — 글씨는 단계 기준(text), 아이콘·안내문은 보조 기준(hint)
+  const fix = <K extends keyof ThemeVars>(k: K, bg: string | string[], target: number) => {
+    (t as unknown as Record<string, string>)[k] = ensureContrast(t[k] as string, bg, target);
   };
+  const page = [t.bgG1, t.bgG2];
+  fix('topBrand', t.topBg, T.text); fix('topFg', t.topBg, T.text); fix('topHv', t.topBg, T.text);
+  fix('ddFg', t.ddBg, T.text);
+  fix('pageTitle', page, T.text); fix('pageDesc', page, T.text);
+  fix('searchFg', t.searchBg!, T.text); fix('searchIc', t.searchBg!, T.hint);
+  fix('cardFg', t.cardBg!, Math.max(7, T.text));
+  fix('btnDarkFg', [t.btnDark!, t.btnDarkHv!], T.text);
+  // 글씨를 끝까지 밀어도 모자라면(높음 단계) 버튼 면 쪽을 글씨에서 멀어지게 조정
+  fix('btnDark', t.btnDarkFg!, T.text); fix('btnDarkHv', t.btnDarkFg!, T.text);
+  fix('bgmFg', t.bgmBg, T.text); fix('bgmIc', t.bgmBg, T.hint);
+  return t;
 }
 
-export function themeForMode(mode: ThemeMode, accent: string, tone: PointTone, custom: ThemeVars): ThemeVars {
+/** 포인트 색의 가독성 보정값 (v3.6) — 카드 위 글씨용 색 · 버튼 면 색 · 버튼 글씨 */
+export function readableAccent(accent: string, cardBg: string, level: ReadLevel) {
+  const T = READ_TARGETS[level];
+  const o = toOklch(accent);
+  const ink = ensureContrast(oklchToHex({ ...o, L: Math.min(o.L, 0.5) }), cardBg, T.text);
+  const on = onColor(accent);
+  // 흰/먹 글씨로도 4.5가 안 나오는 색이면 버튼 면만 살짝 밝게(어둡게) 조정
+  const fill = ensureContrast(accent, on, 4.5);
+  return { ink, fill, on };
+}
+
+export function themeForMode(mode: ThemeMode, accent: string, tone: PointTone, custom: ThemeVars, level: ReadLevel = 'std'): ThemeVars {
   switch (mode) {
     case 'light': return LIGHT_THEME;
     case 'dark': return DARK_THEME;
-    case 'point': return derivePointTheme(accent, tone);
+    case 'point': return derivePointTheme(accent, tone, level);
     case 'custom': return custom;
   }
 }
@@ -176,6 +218,7 @@ export interface ThemeStore {
   mode: ThemeMode;
   pointTone: PointTone;
   pointAccent: string;                     // 포인트 자동 기준색 (변경 시에만 재파생)
+  pointLevel?: ReadLevel;                  // 포인트 자동 가독성 단계 (v3.6, 없으면 표준)
   perMode: Record<ThemeMode, ThemeVars>;   // 각 모드의 현재 값 (화면에 보이는 값)
   /* 사용자가 직접 지정한 항목 (v2.0 사용자 요청 — 「포인트 자동 톤·모드를 바꿀 때 지정한
      포인트 컬러·배경 이미지가 다 초기화된다」). 모드·톤을 바꾸면 새 모드의 초기값 위에
@@ -206,13 +249,13 @@ export function sharedEdits(e: Partial<ThemeVars>): Partial<ThemeVars> {
 
 /** 모드·톤을 바꿀 때 새 모드의 값 = 그 모드의 초기값(커스텀은 보관된 커스텀 값) + 이어지는 항목 */
 export function composeVars(mode: ThemeMode, accent: string, tone: PointTone,
-  edits: Partial<ThemeVars>, custom: ThemeVars): ThemeVars {
+  edits: Partial<ThemeVars>, custom: ThemeVars, level: ReadLevel = 'std'): ThemeVars {
   const shared = sharedEdits(edits);
   if (mode === 'point') {
     // 포인트색은 파생의 기준 — accent는 pointAccent와 항상 같게 맞춰 둔다
     const { accent: _a, accentSoft: _s, ...rest } = shared;
     void _a; void _s;
-    return { ...derivePointTheme(accent, tone), ...rest };
+    return { ...derivePointTheme(accent, tone, level), ...rest };
   }
   const base = mode === 'custom' ? custom : defaultVarsFor(mode, accent, tone);
   const out: ThemeVars = { ...base, ...shared };
@@ -226,17 +269,17 @@ export function composeVars(mode: ThemeMode, accent: string, tone: PointTone,
 }
 
 /** 모드별 초기값 (선택 리셋용) */
-export function defaultVarsFor(mode: ThemeMode, accent: string, tone: PointTone): ThemeVars {
+export function defaultVarsFor(mode: ThemeMode, accent: string, tone: PointTone, level: ReadLevel = 'std'): ThemeVars {
   switch (mode) {
     case 'light': return LIGHT_THEME;
     case 'dark': return DARK_THEME;
-    case 'point': return derivePointTheme(accent, tone);
+    case 'point': return derivePointTheme(accent, tone, level);
     case 'custom': return DARK_THEME; // 커스텀 초기 상태 = 기본(다크)
   }
 }
 
 export const DEFAULT_THEME_STORE: ThemeStore = {
-  mode: 'dark', pointTone: 'dark', pointAccent: '#a63a45',
+  mode: 'dark', pointTone: 'dark', pointAccent: '#a63a45', pointLevel: 'std',
   perMode: {
     light: LIGHT_THEME,
     dark: DARK_THEME,
@@ -263,8 +306,18 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
   // 카드 글씨 — 보조(sub)·옅은(faint) 색은 지정한 글씨색의 명도에서 자동 파생 (v1.9)
   const cardFg = t.cardFg ?? '#1d2025';
   const fgDark = hexToHsl(cardFg).l < 0.5;
-  const cardSub = adjust(cardFg, cc => ({ l: fgDark ? Math.min(0.85, cc.l + 0.25) : Math.max(0.15, cc.l - 0.22) }));
-  const cardFaint = adjust(cardFg, cc => ({ l: fgDark ? Math.min(0.92, cc.l + 0.45) : Math.max(0.3, cc.l - 0.38), s: cc.s * 0.6 }));
+  let cardSub = adjust(cardFg, cc => ({ l: fgDark ? Math.min(0.85, cc.l + 0.25) : Math.max(0.15, cc.l - 0.22) }));
+  let cardFaint = adjust(cardFg, cc => ({ l: fgDark ? Math.min(0.92, cc.l + 0.45) : Math.max(0.3, cc.l - 0.38), s: cc.s * 0.6 }));
+  // 가독성 보정 (v3.6) — 포인트 자동(과 그걸 이어받은 커스텀)에서만. 다른 모드는 지정한 색 그대로
+  const lv = t.readLevel;
+  const cardBgSolid = t.cardBg ?? '#fbfbfc';
+  let accentInk = t.accent, accentFill = t.accent, onAccent = '#ffffff';
+  if (lv) {
+    const T = READ_TARGETS[lv];
+    cardSub = ensureContrast(cardSub, cardBgSolid, T.text);
+    cardFaint = ensureContrast(cardFaint, cardBgSolid, T.hint);
+    ({ ink: accentInk, fill: accentFill, on: onAccent } = readableAccent(t.accent, cardBgSolid, lv));
+  }
   // 입력 포커스 (v1.9) — 미지정이면 포인트색 기반 글로우 3px
   const focusC = t.focusColor ?? t.accent;
   const focusRing = t.focusRing ?? 'glow';
@@ -300,7 +353,9 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     '--sb-thumb': t.sbThumb, '--sb-bd': t.sbBd,
     '--search-bg': t.searchBg ?? '#232830', '--search-fg': t.searchFg ?? '#e8eaee',
     '--search-ic': t.searchIc ?? '#8b919b', '--search-bd': t.searchBd ?? '#3a404a',
-    '--accent': t.accent, '--accent-soft': t.accentSoft,
+    // --accent = 글씨로 쓰는 포인트색 / --accent-fill = 면(버튼·토글)으로 쓰는 포인트색 / --on-accent = 그 위 글씨 (v3.6)
+    '--accent': accentInk, '--accent-soft': t.accentSoft,
+    '--accent-fill': accentFill, '--on-accent': onAccent,
     // 진한 버튼 3색 — 호버 미지정 시 배경에서 살짝 밝게 자동 파생
     '--btn-dark': t.btnDark ?? '#1d2025',
     '--btn-dark-fg': t.btnDarkFg ?? '#ffffff',

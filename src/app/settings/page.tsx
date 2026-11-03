@@ -244,7 +244,7 @@ function FontRoleRow({ role }: { role: FontRole }) {
 /** 테마·색 — 모드·테마 보관함·포인트·배경·카드·상단메뉴·드롭다운·페이지 타이틀 */
 function ThemePane() {
   const {
-    state, setMode, setPointAccent, setPointTone, setVar,
+    state, setMode, setPointAccent, setPointTone, pointLevel, setPointLevel, setVar,
     resetMode, presets, savePreset, applyPreset, removePreset,
   } = useTheme();
   const backgroundSource = useImageSource(url => {
@@ -326,6 +326,14 @@ function ThemePane() {
         <div className="mini-seg">
           <button className={state.pointTone === 'dark' ? 'on' : ''} onClick={() => setPointTone('dark')}>다크 느낌</button>
           <button className={state.pointTone === 'light' ? 'on' : ''} onClick={() => setPointTone('light')}>라이트 느낌</button>
+        </div>
+      </div>
+
+      <div className="set-row">
+        <div className="l"><b>포인트 자동 가독성</b><small>글씨와 배경의 대비 기준 — 표준은 글씨 4.5:1 · 보조 3:1, 높음은 7:1 · 4.5:1 (기준에 못 미치는 글씨만 자동 보정)</small></div>
+        <div className="mini-seg">
+          <button className={pointLevel === 'std' ? 'on' : ''} onClick={() => setPointLevel('std')}>표준</button>
+          <button className={pointLevel === 'high' ? 'on' : ''} onClick={() => setPointLevel('high')}>높음</button>
         </div>
       </div>
 
