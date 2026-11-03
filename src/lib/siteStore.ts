@@ -117,6 +117,8 @@ export function useSiteDraft() {
   }, []);
   return {
     site: draft ?? savedCache,
+    /** 저장본 (v3.1 — 환경설정이 어느 칸이 바뀌었는지 보고 그룹에 「저장 안 된 변경」 점을 찍는다) */
+    saved: savedCache,
     dirty: draft !== null && JSON.stringify(draft) !== JSON.stringify(savedCache),
     set: (p: Partial<SiteSettings>) => { draft = { ...(draft ?? savedCache), ...p }; notify(); },
     save: () => {

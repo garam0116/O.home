@@ -7,7 +7,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { newId } from './postStore';
 import { putBlob, getBlob } from './blobStore';
-import { getRawSetting, setSetting } from './settingStore';
+import { getRawSetting, setSetting, onSettingReload } from './settingStore';
 
 export interface FontDef {
   id: string;
@@ -188,16 +188,21 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   const roles = draftRoles ?? st.roles;
 
   useEffect(() => {
-    try {
-      const raw = getRawSetting(STORAGE_KEY);
-      if (raw) {
-        const p = JSON.parse(raw) as Partial<FontState>;
-        setSt({ ...EMPTY, ...p, roles: normRoles(p.roles as Record<string, unknown> | undefined) });
-        return;
-      }
-      const legacy = getRawSetting(LEGACY_KEY);
-      if (legacy) setSt({ ...EMPTY, custom: JSON.parse(legacy) });
-    } catch { /* 무시 */ }
+    const load = () => {
+      try {
+        const raw = getRawSetting(STORAGE_KEY);
+        if (raw) {
+          const p = JSON.parse(raw) as Partial<FontState>;
+          setSt({ ...EMPTY, ...p, roles: normRoles(p.roles as Record<string, unknown> | undefined) });
+          return;
+        }
+        const legacy = getRawSetting(LEGACY_KEY);
+        if (legacy) setSt({ ...EMPTY, custom: JSON.parse(legacy) });
+      } catch { /* 무시 */ }
+    };
+    load();
+    // 환경설정 [되돌리기]로 저장 전 값을 버렸을 때·미리보기에 새 값이 왔을 때 다시 읽는다 (v3.1)
+    return onSettingReload(STORAGE_KEY, load);
   }, []);
 
   // 수정값 반영된 내장 + 커스텀 (전체 풀 — familyOf 용)
@@ -402,12 +407,17 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
       return { ...base, [role]: { ...base[role], ...patch } };
     }), [st.roles]);
   const rolesDirty = draftRoles !== null && JSON.stringify(draftRoles) !== JSON.stringify(st.roles);
+  /* 바로 저장한다 (v3.1) — 예전처럼 setState 갱신 함수 안에서 저장하면 실제 저장이 다음 렌더로 밀려,
+     환경설정이 같은 클릭에서 이어 부르는 드래프트 확정(commitSettingDraft)보다 늦게 들어간다 */
   const saveRoles = useCallback(() => {
-    setDraftRoles(d => {
-      if (d) apply(s => ({ ...s, roles: d }));
-      return null;
-    });
-  }, []);
+    if (draftRoles) {
+      const next = { ...st, roles: draftRoles };
+      setSt(next);
+      persist(next);
+    }
+    setDraftRoles(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRoles, st]);
   const discardRoles = useCallback(() => setDraftRoles(null), []);
 
   // 페어(pairId) 반영 스택 — 영문 폰트를 골라도 한글은 페어 폰트로 렌더 (v1.9)

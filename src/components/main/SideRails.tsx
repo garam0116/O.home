@@ -52,7 +52,8 @@ export function RailHost({ children }: { children: React.ReactNode }) {
     return () => document.body.classList.remove('rail-narrow');
   }, [narrow]);
   // 자관 상세는 상단바 없이 전체 화면 (v2.8 · 모바일 포함) — 돌아갈 길은 페이지 왼쪽 위 뒤로가기
-  const bare = isBareRelPage(pathname);
+  // 환경설정도 상단바 없이 전체 화면 (v3.1 사용자 요청) — 왼쪽 위 뒤로가기·오른쪽 위 닫기로 나간다
+  const bare = isBareRelPage(pathname) || pathname === '/settings' || pathname.startsWith('/settings/');
   useEffect(() => {
     document.body.classList.toggle('no-topbar', bare);
     return () => document.body.classList.remove('no-topbar');

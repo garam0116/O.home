@@ -2135,3 +2135,101 @@ body.no-topbar .topbar{display:none}
 .back-arrow:is(:hover,:focus-visible,.play) .shaft{stroke-dashoffset:0;transition-delay:.08s}
 @media (hover:none){.back-arrow:hover:not(.play) :is(.l1,.l2,.r1,.r2,.shaft){transform:none;opacity:1;transition-delay:0s}.back-arrow:hover:not(.play) .shaft{stroke-dashoffset:14}}
 @media (prefers-reduced-motion:reduce){.back-arrow svg *{transition-duration:.01s!important;transition-delay:0s!important}}
+
+/* ---------- 환경설정 전체 화면 (v3.1 사용자 요청 — B안: 상단 툴바 하나 + 그룹별 한 장 스크롤 + 디자인 미리보기) ----------
+   상단바 없이 화면 전체를 쓴다(SideRails가 body.no-topbar). 바탕은 사이트 배경 그대로 비치게 두어
+   테마를 바꾸면 설정 화면도 함께 바뀐다. 저장 버튼은 맨 위 툴바 하나뿐 */
+.setx{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;color:var(--ink);font-family:var(--sans)}
+.setx-bar{flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:58px;padding:8px max(18px,env(safe-area-inset-right,0px)) 8px max(18px,env(safe-area-inset-left,0px));
+  padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--panel);border-bottom:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);position:relative;z-index:3}
+.setx-bar .back-arrow{color:var(--ink);filter:none;--s:28px}
+.setx-title{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.setx-title b{font-size:calc(15px*var(--fs,1));font-weight:600;letter-spacing:.02em}
+.setx-title span{font-size:calc(12.5px*var(--fs,1));color:var(--faint)}
+.setx-gap{flex:1}
+.setx-state{display:inline-flex;align-items:center;gap:6px;font-size:calc(11.5px*var(--fs,1));color:var(--faint);white-space:nowrap}
+.setx-state.on{color:var(--accent);font-weight:600}
+.setx-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.setx-bar .btn{height:34px;padding:0 15px;font-size:calc(11.5px*var(--fs,1));white-space:nowrap}
+.setx-bar .btn:disabled{opacity:.42;cursor:default}
+.setx-bar .setx-save{padding:0 22px}
+.setx-pv-btn.on{border-color:var(--ink)}
+.setx-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--sub);font-size:15px;line-height:1;flex:none}
+.setx-icon:hover{background:rgba(127,127,127,.14);color:var(--ink)}
+.setx-icon:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.setx-cols{position:relative;flex:1;min-height:0;display:flex}
+/* 그룹 4개 — 세로 아이콘 줄 */
+.setx-groups{flex:none;width:76px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;
+  background:var(--panel);border-right:1px solid var(--line)}
+.setx-groups button{position:relative;width:62px;padding:9px 0 8px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  font-size:calc(11px*var(--fs,1));color:var(--faint);transition:background .14s,color .14s}
+.setx-groups button i{font-style:normal;font-size:16px;line-height:1}
+.setx-groups button:hover{color:var(--ink);background:rgba(127,127,127,.1)}
+.setx-groups button.on{color:var(--btn-dark-fg,#fff);background:var(--btn-dark,var(--ink))}
+.setx-groups button .setx-dot{position:absolute;top:7px;right:9px;box-shadow:0 0 0 2px var(--panel-solid)}
+.setx-groups button:focus-visible,.setx-toc button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 목차 — 지금 보이는 항목을 따라간다 */
+.setx-toc{flex:none;width:170px;padding:22px 12px 22px 18px;display:flex;flex-direction:column;gap:2px;
+  background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
+.setx-toc h2{margin:0 0 10px 10px;font-size:calc(16px*var(--fs,1));font-weight:600;color:var(--ink)}
+.setx-toc button{text-align:left;padding:6px 10px;border-left:2px solid var(--line);font-size:calc(12.5px*var(--fs,1));color:var(--sub);transition:color .14s,border-color .14s}
+.setx-toc button:hover{color:var(--ink)}
+.setx-toc button.on{color:var(--ink);font-weight:600;border-left-color:var(--accent)}
+/* 본문 — 그룹의 항목이 한 장으로 이어진다 */
+.setx-scroll{position:relative;flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:6px max(28px,env(safe-area-inset-right,0px)) 120px 28px;scroll-behavior:auto}
+.setx-sec{max-width:980px;margin:0 auto;padding-top:22px}
+.setx-sec-h{margin:0 0 10px 4px;font-size:calc(14px*var(--fs,1));font-weight:600;letter-spacing:.06em;color:var(--page-title)}
+.setx-card{padding:22px 26px;overflow:visible;container-type:inline-size}
+/* 카드가 좁아지면(미리보기를 켰을 때·휴대폰) 한 줄 설정이 넘치지 않게 컨트롤을 아래 줄로 내린다 */
+@container (max-width:660px){
+  .setx-card .set-row{flex-wrap:wrap;gap:10px}
+  .setx-card .set-row .l{flex-shrink:1;min-width:0}
+  .setx-card .set-row > :not(.l){max-width:100%}
+  .setx-card .cp-group,.setx-card .cp-grid2{justify-content:flex-start}
+}
+.setx-card > .set-sec:last-child{margin-bottom:0}
+.setx-empty{display:grid;place-items:center;flex:1;padding:60px 20px;font-size:13px;color:var(--page-desc,var(--faint))}
+/* 미리보기 — 디자인 그룹에서만 (PC/모바일) */
+.setx-pv-wrap{flex:none;width:clamp(340px,32vw,520px);transition:width .2s;position:relative;display:flex;border-left:1px solid var(--line);background:var(--panel)}
+.setx-pv-wrap.pc{width:clamp(420px,40vw,760px)}
+/* PC 미리보기를 넓게 쓰는 동안은 목차를 접어 본문 폭을 지킨다 */
+.setx.with-pv:has(.setx-pv-wrap.pc) .setx-toc{display:none}
+.setx-pv{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;padding:14px 14px 12px}
+.setx-pv-head{display:flex;align-items:center;gap:10px}
+.setx-pv-head .mini-seg{margin-left:auto}
+.setx-pv-head .setx-icon{width:28px;height:28px;font-size:14px}
+.setx-eyebrow{font-size:calc(10.5px*var(--fs,1));letter-spacing:.16em;color:var(--faint)}
+.setx-pv-box{flex:1;min-height:0;display:grid;place-items:center;border-radius:12px;background:rgba(127,127,127,.08);overflow:hidden}
+.setx-pv-dev{position:relative;overflow:hidden;background:var(--bg-g2);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.setx-pv-dev.m{border-radius:26px;outline:6px solid var(--steel-1,#1a1d22)}
+.setx-pv-dev.pc{border-radius:8px;outline:4px solid var(--steel-1,#1a1d22)}
+.setx-pv-dev iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:transparent}
+.setx-pv-note{margin:0;text-align:center;font-size:calc(10.5px*var(--fs,1));color:var(--faint)}
+.setx-pv-close{position:absolute;top:10px;right:10px;z-index:2;display:none}
+/* 미리보기 iframe 안쪽 — 실제 화면과 같게 그리되, 미리보기에서 필요 없는 떠 있는 것은 숨긴다 */
+html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
+
+/* 좁은 화면 — 미리보기는 버튼으로 여는 덮개 판, 목차는 숨김 */
+@media (max-width:1100px){
+  .setx-toc{display:none}
+  .setx:not(.pv-sheet) .setx-pv-wrap{display:none}
+  .setx.pv-sheet .setx-pv-wrap{position:absolute;inset:0;z-index:5;width:auto;border:0;background:var(--panel-solid)}
+  .setx.pv-sheet .setx-pv-close{display:grid}
+  .setx.pv-sheet .setx-pv-head{padding-right:40px}
+}
+/* 휴대폰 — 그룹은 툴바 아래 가로 탭, 툴바 글자는 줄인다 */
+@media (max-width:700px){
+  .setx-cols{flex-direction:column}
+  .setx-groups{width:auto;flex-direction:row;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line)}
+  .setx-groups button{width:auto;flex:1;flex-direction:row;justify-content:center;gap:5px;padding:8px 0}
+  .setx-groups button i{font-size:13px}
+  .setx-groups button .setx-dot{top:5px;right:6px}
+  .setx-bar{gap:6px;flex-wrap:wrap}
+  .setx-title span,.setx-state:not(.on){display:none}
+  .setx-state.on{font-size:0;gap:0}
+  .setx-bar .btn{padding:0 11px}
+  .setx-bar .setx-save{padding:0 16px}
+  .setx-scroll{padding:0 max(12px,env(safe-area-inset-right,0px)) 120px max(12px,env(safe-area-inset-left,0px))}
+  .setx-card{padding:16px 14px}
+}
