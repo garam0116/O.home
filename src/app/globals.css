@@ -1055,11 +1055,13 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-m{display:none}
 /* 줄을 다 빼도 들어가지 않으면(좁은 창) 끝선 아래로 넘치는 대신 숨긴다 */
 .rw-gone{visibility:hidden}
-.rw{--rw-line:color-mix(in srgb,currentColor 18%,transparent);--rw-hot:var(--accent);color:var(--page-title);display:flex;flex-direction:column;overflow:hidden;min-width:0}
+/* 위젯 포인트색 — 위젯은 카드가 아니라 페이지 바탕 위라, 밝은 카드용으로 어둡게 보정한 --accent 대신
+   입력한 포인트색 그대로(--accent-fill)를 쓴다 (v3.6 이후 테마컬러 자관에서 불렛·탭 색이 탁해지던 것) */
+.rw{--rw-line:color-mix(in srgb,currentColor 18%,transparent);--rw-pt:var(--accent-fill,var(--accent));--rw-hot:var(--rw-pt);color:var(--page-title);display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .rw-lbl{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:2px;font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.42em;opacity:.7}
 .rw-tabs{display:flex;gap:16px}
 .rw-tabs button{background:none;border:0;padding:3px 0 2px;color:inherit;font:inherit;letter-spacing:inherit;cursor:pointer;opacity:.5;border-bottom:1px solid transparent}
-.rw-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--rw-tab,var(--accent))}
+.rw-tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--rw-tab,var(--rw-pt))}
 /* 포커스 테두리(outline)를 그리지 않는다 — 위젯 경계에 잘려 오른쪽 변만 남아 빨간 세로선처럼 보였다 (v3.3 사용자 제보).
    고른 탭은 밑줄 하나로만 표시한다(사용자 요청 — 다른 표시를 더하지 않는다). 키보드로 옮겨 간 탭은 글자만 또렷하게 */
 .rw-tabs button:focus{outline:none}
@@ -1069,7 +1071,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-top:9px;border-top:1px solid var(--rw-line);
   font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.16em;line-height:1;opacity:.85;white-space:nowrap}
 /* 고비 숫자 — 세리프의 옛 숫자꼴(작고 아래로 내려가는 5)이 흐려 보여 반듯한 숫자꼴로 (v3.3 사용자 제보) */
-.rw-foot b{color:var(--rw-tab,var(--accent));font-weight:600;letter-spacing:.02em;font-variant-numeric:lining-nums tabular-nums}
+.rw-foot b{color:var(--rw-tab,var(--rw-pt));font-weight:600;letter-spacing:.02em;font-variant-numeric:lining-nums tabular-nums}
 .rw-flow .rw-foot{margin-top:8px}
 /* 기념일 — 세로 타임라인 (남는 높이만큼 줄 간격을 벌려 끝선에서 끝난다) */
 /* 세로선은 한 줄로 긋지 않고 줄마다 점 위아래만 그린다 — 속이 빈 점 위로 선이 지나가 관통해 보였다 (v3.3 사용자 제보).
@@ -1086,7 +1088,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 지난 기념일은 글자·점만 흐리게 — 줄 전체를 흐리면 선도 그 칸만 옅어져 끊겨 보인다 */
 .rw-tl li.past > *{opacity:.45}
 .rw-tl li.past::before{background:color-mix(in srgb,currentColor 30%,transparent);border-color:color-mix(in srgb,currentColor 30%,transparent)}
-.rw-tl li.today::before{background:var(--rw-tab,var(--accent));border-color:var(--rw-tab,var(--accent));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--accent)) 22%,transparent)}
+.rw-tl li.today::before{background:var(--rw-tab,var(--rw-pt));border-color:var(--rw-tab,var(--rw-pt));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 22%,transparent)}
 .rw-tl .when,.rw-strip .when{opacity:.5;font-family:var(--serif);font-size:calc(12px*var(--fs,1));margin-left:6px;font-variant-numeric:tabular-nums}
 .rw-tl b{font-family:var(--serif);font-weight:600;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums;white-space:nowrap}
 .rw-tl b.near,.rw-strip b.near{color:var(--rw-hot)}
@@ -1122,7 +1124,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-strip li.past > *{opacity:.45}
 .rw-strip li.past::before{background:color-mix(in srgb,currentColor 30%,transparent);border-color:color-mix(in srgb,currentColor 30%,transparent)}
 .rw-strip li.today{width:118px}
-.rw-strip li.today::before{background:var(--rw-tab,var(--accent));border-color:var(--rw-tab,var(--accent));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--accent)) 22%,transparent)}
+.rw-strip li.today::before{background:var(--rw-tab,var(--rw-pt));border-color:var(--rw-tab,var(--rw-pt));box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 22%,transparent)}
 .rw-strip li b{display:block;font-family:var(--serif);font-weight:600;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums}
 .rw-strip li .when,.rw-strip li .lb{display:block;margin-left:0}
 .rw-strip li.today .rw-big{display:block;font-size:calc(32px*var(--fs,1))}
