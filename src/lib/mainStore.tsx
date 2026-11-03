@@ -58,7 +58,7 @@ interface MainState {
   settingsOrder?: string[];             // 환경설정 「위젯」 탭의 목록 순서 (위젯 id) — 설정 화면 전용, 실제 배치와 무관
   removedIds?: string[];                // 삭제한 기본 위젯 id — 로드 시 기본값 병합에서 되살아나지 않게 (v1.9)
   pcLayout?: PcLayout;                  // 없으면 top (v2.7)
-  centerBody?: boolean;                 // 가운데 정렬 — 본문·가운데 위젯을 화면 한가운데에 + 좌우 위젯과의 간격도 같게 (편집모드 버튼, v2.8 — 좌우 위젯을 대칭으로 옮김)
+  centerBody?: boolean;                 // 가운데 정렬 — 본문·가운데 위젯을 화면 한가운데에 + 좌우 위젯과의 간격도 같게 + 바깥 여백도 같게 (편집모드 버튼, v2.8 — 좌우 위젯을 대칭으로 옮김 · v3.2 — 좌우 열 폭을 평균으로 맞춤)
 }
 
 export const WIDGET_META: Record<WidgetType, { title: string; desc: string }> = {
@@ -177,7 +177,7 @@ interface MainCtx {
 const Ctx = createContext<MainCtx | null>(null);
 
 /** 「가운데 정렬」이 켜져 있으면 (v2.8 사용자 확정 — 화면 한가운데 + 좌우 간격 같게, 두 조건 모두)
- *  ① 좌우 위젯을 가운데선 기준 거울 대칭으로 옮기고 ② 가운데 위젯을 그 사이 한가운데(= 화면 한가운데)로.
+ *  ⓪ 좌우 열 폭을 같게 맞추고(v3.2 — 편집 중인 쪽 폭, 없으면 평균) ① 좌우 위젯을 가운데선 기준 거울 대칭으로 옮기고 ② 가운데 위젯을 그 사이 한가운데(= 화면 한가운데)로.
  *  anchor: 편집 중인 쪽 — 그쪽은 그대로 두고 반대쪽이 따라온다. 예전 저장분도 불러올 때 맞춰진다 */
 function recenter(s: MainState, anchor?: 1 | 3): MainState {
   if (!s.centerBody) return s;
