@@ -20,6 +20,7 @@ import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
 import { anniversaries, annivBadge, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
 import { relDday, relDdayDate } from '@/lib/relStore';
+import { AppLink } from '@/components/ui/AppLink';
 
 /* ---------- 글 목록 (LOG · LOREBOOK) ---------- */
 
@@ -273,7 +274,7 @@ function FeedPane({ kind, feed, rows, now, box }: {
   const goal = Math.ceil((feed.total + 1) / 10) * 10;
   return (
     <div className="rw-pane">
-      <a className="rw-feat" href={top.href}>
+      <AppLink className="rw-feat" href={top.href ?? feed.href}>
         <span className="meta">
           {kind === 'log' && <span>No.{top.no}</span>}
           {top.cat && <span>{top.cat}</span>}
@@ -281,13 +282,13 @@ function FeedPane({ kind, feed, rows, now, box }: {
         </span>
         <span className="t">{top.title}</span>
         {top.excerpt && !box && <span className="x">{top.excerpt}</span>}
-      </a>
+      </AppLink>
       {shown.map(it => (
-        <a key={it.id} className="rw-row" href={it.href}>
+        <AppLink key={it.id} className="rw-row" href={it.href ?? feed.href}>
           <span className="cat">{it.cat ?? ''}</span>
           <span className="ttl">{it.title}</span>
           <span className="dt">{fmtWidgetDate(it.time, now)}</span>
-        </a>
+        </AppLink>
       ))}
       <div className="rw-foot">
         {kind === 'log'
@@ -327,8 +328,8 @@ export function RelFeedWidget({ log, lore, fit, tab: tabColor }: { log: Feed; lo
           ))}
         </span>
         {cur[1].state !== 'none' && (
-          <a className="rw-all" href={cur[1].href}
-            {...(cur[1].state === 'external' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>ALL →</a>
+          <AppLink className="rw-all" href={cur[1].href}
+            {...(cur[1].state === 'external' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>ALL →</AppLink>
         )}
       </div>
       <FeedPane kind={cur[0]} feed={cur[1]} rows={rows} now={now} box={hideExcerpt} />

@@ -10,6 +10,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { BgmPlayer } from '@/components/shell/BgmPlayer';
 import { TipLayer } from '@/components/ui/TipLayer';
 import { ImgProtect } from '@/components/shell/ImgProtect';
+import { InternalLinkCatcher } from '@/components/ui/AppLink';
 import { SetupGate } from '@/components/shell/SetupGate';
 import { DocTitle } from '@/components/shell/DocTitle';
 import { DocIcon } from '@/components/shell/DocIcon';
@@ -100,6 +101,8 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   <TipLayer />
                   {/* 이미지 저장 방지 — 메뉴 관리 > 권한에서 영역별 지정 (v1.9) */}
                   <ImgProtect />
+                  {/* 글 본문 등 HTML 속 사이트 안 링크도 새로고침 없이 이동 (전체 새로고침이 느리다는 사용자 제보) */}
+                  <InternalLinkCatcher />
                   {/* 브라우저 탭 제목 — 디자인 탭에서 지정 (v1.9) */}
                   <DocTitle />
                   <DocIcon />

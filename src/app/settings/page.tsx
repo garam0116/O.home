@@ -62,6 +62,7 @@ import { validateConfig, configFileText, saveLocalConfig, parseFirebaseSnippet, 
 import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
+import { AppLink } from '@/components/ui/AppLink';
 
 /* ---------- 환경설정 구성 (v3.1 사용자 요청 — 전체 화면 · 4그룹 · 저장 하나) ----------
    예전 탭 11개를 그룹 4개로 묶었다. 그룹을 고르면 그 그룹의 항목이 한 장으로 이어지고, 옆 목차가 스크롤을 따라간다.
@@ -904,7 +905,7 @@ function BoardPane() {
         <div style={{ minWidth: 0 }}>
           <div className="d" style={{ marginBottom: 0 }}>카테고리 생성·삭제와 카테고리별 스킨·댓글 사용 — 저장하면 메뉴·목록·포스팅 쓰기에 반영</div>
         </div>
-        <a className="btn btn-ghost" href="/admin/posts">전체 포스팅 관리</a>
+        <AppLink className="btn btn-ghost" href="/admin/posts">전체 포스팅 관리</AppLink>
       </div>
 
       <h3 style={{ marginTop: 16 }}>카테고리 목록</h3>
