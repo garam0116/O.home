@@ -2,7 +2,7 @@
 // 위젯 프레임 (4.0 편집모드) — 드래그 이동 · 우하단 리사이즈 · 우클릭 겹침 순서 · 클릭 차단
 // 프로토타입의 편집 모델을 계승: 그리드 배치는 유지하고 transform 오프셋 + 크기 동결(px)로 조작
 import React, { useEffect, useRef, useState } from 'react';
-import { WidgetConf, useMainStore } from '@/lib/mainStore';
+import { WidgetConf, useMainStore, ratioLocked, AUTO_H_TYPES } from '@/lib/mainStore';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { sideOf, clampMenuX, LEFT_EDGE, RIGHT_EDGE, SIDE_MIN_W, CENTER_MIN_W } from '@/lib/widgetZone';
 
@@ -22,8 +22,10 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
   // 높이 자동 위젯 (사용자 요청) — 디데이는 항목이 늘면 위젯이 아래로 길어지고 페이지가 스크롤된다.
   // 저장 높이(h)는 무시하고 가로(w)만 적용 · 리사이즈 핸들도 가로만 바꾼다
   // 메뉴 카드(PC 2단형, v2.7)도 메뉴 개수만큼 높이가 정해진다
+  // 메뉴 카드는 아래 변으로 최소 높이(mh)를 늘릴 수 있다 — 메뉴가 더 많으면 내용만큼 자란다 (사용자 요청)
   const isMenu = conf.type === 'menu';
-  const autoH = conf.type === 'dday' || conf.type === 'ddaycard' || isMenu;
+  const autoH = AUTO_H_TYPES.includes(conf.type);
+  const locked = ratioLocked(conf);
   const ref = useRef<HTMLDivElement>(null);
   // Shift+드래그 중앙 정렬에서 폭이 20px 배수가 아니라 딱 가운데가 안 될 때의 안내 (v1.9 사용자 요청)
   const [centerAsk, setCenterAsk] = useState<{ w: number; canvasW: number; grow: number; shrink: number } | null>(null);
@@ -152,16 +154,21 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
   };
 
   // 리사이즈 — 절대배치라 흐름 재배치가 없어 실시간 적용해도 다른 위젯이 밀리지 않음 (v1.9)
-  const onResizeDown = (e: React.PointerEvent) => {
+  // 핸들 3개 (사용자 요청): r = 오른쪽 변(가로만) · b = 아래 변(세로만) · c = 모서리(둘 다).
+  // 비율 잠금이면 어느 핸들이든 시작 때의 가로:세로 비율을 지킨다 — Shift를 누르는 동안만 잠금이 풀린다.
+  const onResizeDown = (edge: 'r' | 'b' | 'c') => (e: React.PointerEvent) => {
     if (!editOn) return;
     e.stopPropagation(); e.preventDefault();
-    document.body.classList.add('drag-rs');   // 리사이즈 중 전역 커서 고정 (v1.9)
+    document.body.classList.add(edge === 'r' ? 'drag-rs-x' : edge === 'b' ? 'drag-rs-y' : 'drag-rs');   // 리사이즈 중 전역 커서 고정 (v1.9)
     const r = ref.current!.getBoundingClientRect();
     const sx = e.clientX, sy = e.clientY;
     // 절대 격자 스냅: 좌상단이 격자에서 벗어나 있어도 "우/하단 모서리"가 캔버스 격자 위에 놓이게
     const gr = ref.current!.closest('.main-grid')?.getBoundingClientRect();
     const absL = abs ? conf.ax! : (gr ? r.left - gr.left : 0);
     const absT = abs ? conf.ay! : (gr ? r.top - gr.top : 0);
+    // 기울인 위젯은 화면상 사각형이 커지므로 저장 크기로 비율을 잡는다
+    const w0 = conf.w ?? r.width, h0 = conf.h ?? r.height;
+    const ratio = w0 / Math.max(1, h0);
     // 좌우 열 위젯은 120px까지 줄일 수 있다 — 다른 페이지의 본문 폭을 넓히는 용도 (v2.4)
     const side = sideOf(conf);
     // 메뉴 카드(v2.7): 오른쪽 열에서 좁히면 중심이 가운데로 들어가므로 그만큼 최소 폭을 올린다
@@ -169,31 +176,63 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
       : side === 2 ? CENTER_MIN_W : SIDE_MIN_W;
     // 레일(다른 페이지)에서는 넓혀도 중심이 원래 열에 남게 — 왼쪽 열 위젯만 해당(오른쪽은 넓힐수록 중심이 오른쪽)
     const maxW = (rail || isMenu) && side === 1 && abs ? 2 * (LEFT_EDGE - conf.ax!) - 1 : Infinity;
+    const snapOn = gridOn && !conf.freeMove;
+    const snapW = (w: number) => snapOn ? Math.round((absL + w) / 10) * 10 - absL : w;
+    const snapH = (h: number) => snapOn ? Math.round((absT + h) / 10) * 10 - absT : h;
+    const clampW = (w: number) => Math.min(maxW, Math.max(minW, w));
+    const minH = isMenu ? 0 : 80;
+    // 메뉴 카드 높이는 내용 높이에서 시작 — 아래 변을 끌면 그만큼 최소 높이가 된다
+    const hStart = isMenu ? r.height : h0;
     const mv = (ev: PointerEvent) => {
-      const dw = ev.clientX - sx, dh = ev.clientY - sy;
-      let w = r.width + dw, h = r.height + dh;
-      if (gridOn && !conf.freeMove) {
-        w = Math.round((absL + w) / 10) * 10 - absL;
-        h = Math.round((absT + h) / 10) * 10 - absT;
+      const dw = edge === 'b' ? 0 : ev.clientX - sx;
+      const dh = edge === 'r' ? 0 : ev.clientY - sy;
+      if (autoH && !isMenu) {
+        if (edge !== 'b') updateWidget(conf.id, { w: clampW(snapW(w0 + dw)) });
+        return;
       }
-      w = Math.min(maxW, Math.max(minW, w));
-      updateWidget(conf.id, autoH ? { w } : { w, h: Math.max(80, h) });
+      if (isMenu) {
+        const next: Partial<WidgetConf> = {};
+        if (edge !== 'b') next.w = clampW(snapW(w0 + dw));
+        if (edge !== 'r') next.mh = Math.max(minH, Math.round(snapH(hStart + dh)));
+        updateWidget(conf.id, next);
+        return;
+      }
+      if (locked && !ev.shiftKey) {
+        // 가로가 기준 — 세로만 끌 때는 세로에서 가로를 구한 뒤 같은 식으로 맞춘다
+        let w = edge === 'b' ? (h0 + dh) * ratio : w0 + dw;
+        w = clampW(snapW(w));
+        let h = w / ratio;
+        if (h < minH) { h = minH; w = clampW(h * ratio); h = w / ratio; }
+        updateWidget(conf.id, { w: Math.round(w), h: Math.round(h) });
+        return;
+      }
+      const w = clampW(snapW(w0 + dw));
+      const h = Math.max(minH, snapH(h0 + dh));
+      updateWidget(conf.id, { w, h });
     };
-    const up = () => { document.body.classList.remove('drag-rs'); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
+    const up = () => {
+      document.body.classList.remove('drag-rs', 'drag-rs-x', 'drag-rs-y');
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+    };
     window.addEventListener('pointermove', mv);
     window.addEventListener('pointerup', up);
   };
+  // 세로를 바꿀 수 없는 위젯(높이 자동)은 아래 변 핸들을 숨긴다
+  const showB = !autoH || isMenu;
+  const lockTip = locked ? ' · 비율 잠금(Shift = 잠시 풀기)' : '';
 
   return (
     <div
       ref={ref}
       data-wid={conf.id}
-      className={`wgt ${useSize && conf.w != null ? 'sized' : ''} ${autoH ? 'auto-h' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${isMenu ? 'wgt-menu-card' : ''} ${className ?? ''}`}
+      className={`wgt ${locked ? 'ratio-lock' : 'ratio-free'} ${useSize && conf.w != null ? 'sized' : ''} ${autoH ? 'auto-h' : ''} ${conf.mOff ? 'wgt-hide-m' : ''} ${isMenu ? 'wgt-menu-card' : ''} ${className ?? ''}`}
       style={{
         ...style,
         order: mobileOrder,
         // PC 저장 비율 — 모바일에서 슬라이드 배너 높이를 이 비율로 정함 (globals.css)
         ...(conf.w && conf.h ? { '--wgt-ar': `${conf.w} / ${conf.h}` } as React.CSSProperties : {}),
+        // 메뉴 카드 최소 높이 (사용자 요청) — 카드가 이 높이까지는 늘어나고, 메뉴가 더 많으면 내용만큼
+        ...(isMenu && conf.mh ? { '--wgt-minh': `${conf.mh}px` } as React.CSSProperties : {}),
         // 절대배치 (v1.9) — PC 캔버스에는 흐름 없음. 모바일 CSS가 static으로 되돌려 스택 렌더
         // 기울기(rot)는 transform에 합성 — 모바일 스택에서는 CSS가 해제 (v1.9)
         ...(abs
@@ -258,7 +297,9 @@ export function WidgetFrame({ conf, mobileOrder, children, className, style, onC
           },
           { label: '그대로 두기', kind: 'ghost', onClick: () => setCenterAsk(null) },
         ]} />
-      <span className="rs" data-tip="드래그로 크기 조절" onPointerDown={onResizeDown} />
+      <span className="rs rs-r" data-tip={`가로 조절${lockTip}`} onPointerDown={onResizeDown('r')} />
+      {showB && <span className="rs rs-b" data-tip={`세로 조절${isMenu ? ' · 메뉴보다 짧게는 줄지 않음' : ''}${lockTip}`} onPointerDown={onResizeDown('b')} />}
+      <span className="rs" data-tip={`드래그로 크기 조절${lockTip}`} onPointerDown={onResizeDown('c')} />
       {rotatable && (
         <span className="rr" data-tip="드래그로 기울기 · 더블클릭 = 초기화"
           onPointerDown={onRotDown}

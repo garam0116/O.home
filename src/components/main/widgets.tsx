@@ -2,7 +2,7 @@
 // 메인 위젯 렌더러 (4.0) — DIARY/LATEST 등은 해당 기능(2·3차) 전까지 데모 데이터
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { WidgetConf, useMainStore, WIDGET_META, decoSlides } from '@/lib/mainStore';
+import { WidgetConf, useMainStore, WIDGET_META, decoSlides, ratioLocked } from '@/lib/mainStore';
 import { useAuth } from '@/lib/auth';
 import { useMenuSettings, canViewHref } from '@/lib/menuStore';
 import { sectionHref, MAIN_SEC } from '@/lib/sectionStore';
@@ -10,7 +10,7 @@ import { useBoards, boardHref, postHref, postNumbers, MAIN_BOARD_ID } from '@/li
 import { Modal } from '@/components/ui/Modal';
 import { KTextarea, KSelect, KStep, KCheck, KInput } from '@/components/ui/Kit';
 import { useFonts } from '@/lib/fontStore';
-import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor, LatestEditor, latestCountOf, type LatestSet } from '@/components/main/widgetEditors';
+import { BannerEditor, BannerSlide, DEMO_SLIDES, DdayEditor, DdayCardEditor, DdayCardItem, DDAY_CARD_RATIO, DecoEditor, TodoEditor, TodoSetItem, FreeTextColorField, type FreeTextColorMode, freeTextColor, LatestEditor, latestCountOf, latestFontOf, type LatestSet } from '@/components/main/widgetEditors';
 import { CroppedBlobImg, CropValue } from '@/components/ui/CropEditor';
 import { useLocalList, Post, BOARD_SEED } from '@/lib/postStore';
 import { DiaryPost, DIARY_SEED } from '@/lib/diaryStore';
@@ -69,6 +69,8 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
     jump(Math.min(cur, slides.length - 1) + (dx < 0 ? 1 : -1));
   };
 
+  // 비율 잠금을 끄면 박스는 자유롭게 바뀌고, 사진은 잘리지 않게 박스 안에 비율 그대로 맞춰 넣는다 (사용자 요청)
+  const fitIn = !ratioLocked(conf);
   const s = slides[Math.min(cur, slides.length - 1)];
   const go = () => {
     if (swiped.current) { swiped.current = false; return; }
@@ -86,10 +88,10 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
         <div key={sl.id} className={`slide ${i === Math.min(cur, slides.length - 1) ? 'on' : ''}`}>
           {sl.imgId
             /* 업로드 이미지 — 원본 보존 + 위치 크롭만 적용 (배너 크기가 바뀌어도 비율 좌표로 재현) */
-            ? <CroppedBlobImg fileRef={sl.imgId} crop={sl.crop} ph="" />
+            ? (fitIn ? <FitBlobImg fileRef={sl.imgId} /> : <CroppedBlobImg fileRef={sl.imgId} crop={sl.crop} ph="" />)
             : sl.img
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={sl.img} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={sl.img} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: fitIn ? 'contain' : 'cover' }} />
               : <div className={`ph ${sl.cls ?? ''}`} style={{ position: 'absolute', inset: 0 }}><span>SLIDE BANNER {String(i + 1).padStart(2, '0')}</span></div>}
         </div>
       ))}
@@ -116,6 +118,14 @@ export function BannerWidget({ conf }: { conf: WidgetConf }) {
       </div>
     </div>
   );
+}
+
+/** 박스 안에 원본 비율 그대로 전부 보이게 (비율 잠금 꺼진 배너) — 남는 자리는 배너 배경이 보인다 */
+function FitBlobImg({ fileRef }: { fileRef: string }) {
+  const url = useBlobUrl(fileRef);
+  if (!url) return <div className="ph" style={{ position: 'absolute', inset: 0 }} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt="" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }} />;
 }
 
 /* ---------- MEMO — 관리자 클릭 시 큰 편집 모달 (4.12 v1.8) ---------- */
@@ -205,7 +215,8 @@ export function LatestWidget({ conf }: { conf: WidgetConf }) {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, count);
   return (
-    <div className={`new-wgt${set.titleAlign === 'align' ? ' align' : ''}`} style={{ color: freeTextColor(set) }}>
+    <div className={`new-wgt${set.titleAlign === 'align' ? ' align' : ''}`}
+      style={{ color: freeTextColor(set), '--nw-k': latestFontOf(set) / 100 } as React.CSSProperties}>
       <div className="new-lbl" style={fontOf(set.lblFontId)}>LATEST</div>
       <div className="new-list">
       {latest.map(p => {
@@ -474,7 +485,8 @@ export function DecoWidget({ conf }: { conf: WidgetConf }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rounded = (conf.settings.rounded as boolean) ?? true;
-  const fit = (conf.settings.fit as 'cover' | 'contain') ?? 'cover';   // 꽉 채움(잘림) / 비율 유지 (v1.9)
+  // 꽉 채움(잘림) / 비율 유지 (v1.9) — 비율 잠금을 끄면 박스가 자유롭게 바뀌므로 늘 비율 유지로 (사용자 요청)
+  const fit = !ratioLocked(conf) ? 'contain' : ((conf.settings.fit as 'cover' | 'contain') ?? 'cover');
   // 여러 장 슬라이드 (v2.0) — 한 장만 넣던 옛 저장분도 같은 목록으로 읽힌다
   const slides = decoSlides(conf.settings);
   const sec = (conf.settings.interval as number) ?? 5;
