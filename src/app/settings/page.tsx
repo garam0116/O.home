@@ -138,12 +138,23 @@ const TAB_MAX = 4;
 function CP({ label, k, def }: { label?: string; k: keyof ThemeVars; def?: string }) {
   const { state, setVar } = useTheme();
   // def: 값이 없을 때 실제로 적용되는 기본색 (예: 입력 포커스 = 포인트색)
-  return (
-    <>
-      {label && <span className="cp-lb">{label}</span>}
-      <ColorField value={String(state.vars[k] ?? def ?? '#888888')} onChange={hex => setVar(k, hex as never)} />
-    </>
-  );
+  const field = <ColorField value={String(state.vars[k] ?? def ?? '#888888')} onChange={hex => setVar(k, hex as never)} />;
+  // 라벨과 입력칸을 한 덩어리로 — 줄이 넘어가도 라벨만 윗줄 끝에 남지 않는다 (v3.2 사용자 요청)
+  return label ? <span className="cp-item"><span className="cp-lb">{label}</span>{field}</span> : field;
+}
+
+/* ---------- 설정 줄 오른쪽 컨트롤 정렬 (v3.2 사용자 요청 — 「배치가 중구난방」) ----------
+   Ctl  : 컨트롤 묶음. PC에서는 줄 오른쪽에 붙고 안쪽 줄들은 왼쪽 끝이 맞는다. 좁으면 이름 아래로.
+   Line : 묶음 안의 한 줄.
+   Item : 「라벨 + 컨트롤」 한 쌍 — 라벨 칸 폭이 고정이라 위아래 줄의 입력칸이 같은 열에 선다. */
+function Ctl({ children }: { children: React.ReactNode }) {
+  return <div className="set-ctl">{children}</div>;
+}
+function Line({ children }: { children: React.ReactNode }) {
+  return <div className="ctl-line">{children}</div>;
+}
+function Item({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return <span className="cp-item"><span className="cp-lb">{label}</span>{children}</span>;
 }
 
 /**
@@ -162,13 +173,15 @@ function WidgetStyleRow() {
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>위젯 카드 색</b>
         <small>메인·사이드에 얹히는 카드 — 비워 두면 카드 색을 그대로 따라갑니다</small></div>
-      <div className="cp-group" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
-        <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
-        <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
-        <KToggle label="테두리" checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
-        {v.wgBorder && <CP k="wgBd" def="#e6e8ec" />}
-      </div>
+      <Ctl>
+        <div className="cp-group">
+          <CP label="배경" k="wgBg" def={v.cardBg ?? '#fbfbfc'} />
+          <CP label="타이틀" k="wgTitle" def={v.pageDesc ?? '#8a8f98'} />
+          <CP label="본문" k="wgFg" def={v.cardFg ?? '#1d2025'} />
+          {v.wgBorder && <CP label="테두리" k="wgBd" def="#e6e8ec" />}
+        </div>
+        <KToggle label="테두리 그리기" checked={!!v.wgBorder} onChange={b => setVar('wgBorder', b)} />
+      </Ctl>
     </div>
   );
 }
@@ -182,7 +195,7 @@ function BgmStyleRow() {
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>플레이어 색</b>
         <small>화면 구석 미니 플레이어와 팝업 리스트의 색</small></div>
-      <div className="cp-group" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div className="cp-group">
         <CP label="배경" k="bgmBg" />
         <CP label="글씨" k="bgmFg" />
         <CP label="아이콘" k="bgmIc" />
@@ -315,8 +328,10 @@ function ThemePane() {
       <div className="set-row">
         <div className="l"><b>포인트 컬러</b><small>포인트 자동 모드의 기준색 — 변경 즉시 재파생 (직접 지정한 항목은 유지)</small></div>
         <div className="cp-group">
-          <ColorField value={state.vars.accent}
-            onChange={hex => state.mode === 'point' ? setPointAccent(hex) : setVar('accent', hex)} />
+          <Item label="색">
+            <ColorField value={state.vars.accent}
+              onChange={hex => state.mode === 'point' ? setPointAccent(hex) : setVar('accent', hex)} />
+          </Item>
         </div>
       </div>
 
@@ -324,7 +339,7 @@ function ThemePane() {
       <div className="set-row" style={{ flexWrap: 'wrap' }} tabIndex={0}
         onDragOver={e => e.preventDefault()} {...backgroundSource.handlers}>
         <div className="l"><b>배경</b><small>그라데이션(시작→끝·각도) 또는 이미지(업로드·블러)</small></div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <Ctl>
           <div className="mini-seg">
             <button className={(state.vars.bgType ?? 'gradient') === 'gradient' ? 'on' : ''}
               onClick={() => setVar('bgType', 'gradient')}>그라데이션</button>
@@ -333,12 +348,14 @@ function ThemePane() {
           </div>
           {(state.vars.bgType ?? 'gradient') === 'gradient' ? (
             <>
-              <CP k="bgG1" />
-              <span style={{ color: 'var(--faint)', fontSize: 11 }}>→</span>
-              <CP k="bgG2" />
-              <span className="cp-lb">각도</span>
-              <KStep value={state.vars.bgAngle ?? 180} min={0} max={360} step={15} suffix="°"
-                onChange={v => setVar('bgAngle', v)} />
+              <div className="cp-group">
+                <Item label="시작"><CP k="bgG1" /></Item>
+                <Item label="끝"><CP k="bgG2" /></Item>
+              </div>
+              <Item label="각도">
+                <KStep value={state.vars.bgAngle ?? 180} min={0} max={360} step={15} suffix="°"
+                  onChange={v => setVar('bgAngle', v)} />
+              </Item>
             </>
           ) : (
             <>
@@ -348,6 +365,7 @@ function ThemePane() {
                   if (f) setVar('bgImageId', await putBlob(f));
                   e.target.value = '';
                 }} />
+              <Line>
               <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
                 onClick={() => document.getElementById('themeBgFile')?.click()}>
                 {state.vars.bgImageId ? 'CHANGE' : 'UPLOAD'}
@@ -357,16 +375,19 @@ function ThemePane() {
                 <button className="btn btn-ghost" style={{ height: 35, padding: '0 14px', fontSize: 11 }}
                   onClick={() => setVar('bgImageId', undefined)}>REMOVE</button>
               )}
-              <span className="cp-lb">블러</span>
-              <KStep value={state.vars.bgBlur ?? 0} min={0} max={30} step={2} suffix="px"
-                onChange={v => setVar('bgBlur', v)} />
+              </Line>
+              <Item label="블러">
+                <KStep value={state.vars.bgBlur ?? 0} min={0} max={30} step={2} suffix="px"
+                  onChange={v => setVar('bgBlur', v)} />
+              </Item>
               {/* 사진 덮개 (v2.0 사용자 요청) — 다크 계열은 어둡게, 라이트 계열은 밝게 눌러 준다 */}
-              <span className="cp-lb">{hexToHsl(state.vars.bgG2).l < 0.5 ? '어둡게' : '밝게'}</span>
-              <KStep value={state.vars.bgDim ?? BG_DIM} min={0} max={80} step={5} suffix="%"
-                onChange={v => setVar('bgDim', v)} />
+              <Item label={hexToHsl(state.vars.bgG2).l < 0.5 ? '어둡게' : '밝게'}>
+                <KStep value={state.vars.bgDim ?? BG_DIM} min={0} max={80} step={5} suffix="%"
+                  onChange={v => setVar('bgDim', v)} />
+              </Item>
             </>
           )}
-        </div>
+        </Ctl>
         {backgroundSource.element}
       </div>
 
@@ -399,7 +420,8 @@ function ThemePane() {
 
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>페이지 타이틀</b><small>각 메뉴 상단 큰 제목과 설명 문구</small></div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <Ctl>
+          <Line>
           {/* 헤더 표시 옵션 (v1.9): 둘 다 / 제목만 / 설명만 / 안 띄움 */}
           <KSelect minWidth={96} value={state.vars.pageHead ?? 'both'}
             onChange={v => setVar('pageHead', v as 'both' | 'title' | 'desc' | 'none')}
@@ -408,13 +430,17 @@ function ThemePane() {
               { value: 'desc', label: '설명만' }, { value: 'none', label: '안 띄움' },
             ]} />
           {/* 모바일에서만 헤더를 생략할지 (v1.9 사용자 요청) */}
-          <span className="cp-lb">모바일</span>
-          <KSelect minWidth={80} value={state.vars.pageHeadM ?? 'same'}
-            onChange={v => setVar('pageHeadM', v as 'same' | 'none')}
-            options={[{ value: 'same', label: '동일' }, { value: 'none', label: '생략' }]} />
-          <CP label="제목" k="pageTitle" />
-          <CP label="설명" k="pageDesc" />
-        </div>
+          <Item label="모바일">
+            <KSelect minWidth={80} value={state.vars.pageHeadM ?? 'same'}
+              onChange={v => setVar('pageHeadM', v as 'same' | 'none')}
+              options={[{ value: 'same', label: '동일' }, { value: 'none', label: '생략' }]} />
+          </Item>
+          </Line>
+          <div className="cp-group">
+            <CP label="제목" k="pageTitle" />
+            <CP label="설명" k="pageDesc" />
+          </div>
+        </Ctl>
       </div>
 
       </div>
@@ -486,29 +512,29 @@ function DetailPane() {
   return (
     <div className="set-sec">
       {/* 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통 */}
-      <div className="set-row" style={{ flexWrap: 'wrap' }}>
-        {/* 설명이 길어도 오른쪽 옵션 줄이 눌리지 않게 — 설명 쪽이 줄어들며 줄바꿈 */}
-        <div className="l" style={{ flex: '1 1 240px', minWidth: 0 }}><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링<br />번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
-        {/* 윗줄: 미리보기(오른쪽) / 아랫줄: 색·링 방식·두께를 한 줄로 (v2.6 사용자 요청) */}
-        <div style={{ display: 'grid', gap: 8, justifyItems: 'end', marginLeft: 'auto', flex: 'none', maxWidth: '100%' }}>
-          <KInput style={{ width: 130 }} defaultValue="포커스 미리보기" />
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <CP label="색" k="focusColor" def={state.vars.accent} />
+      <div className="set-row">
+        <div className="l"><b>입력 포커스</b><small>인풋·드롭다운을 선택했을 때의 테두리색과 강조 링<br />번짐: 은은하게 번지는 링 · 라인: 선명한 실선 링 · 테두리만: 링 없이 테두리 색만 바뀜</small></div>
+        {/* 색 / 링 방식·두께 / 미리보기 — 라벨 열을 맞춘 세 줄 (v3.2 사용자 요청) */}
+        <Ctl>
+          <CP label="색" k="focusColor" def={state.vars.accent} />
+          <Line>
             {/* 링 방식 — 선택창으로 (각 방식의 뜻은 왼쪽 설명에) */}
-            <KSelect minWidth={96} value={state.vars.focusRing ?? 'glow'}
-              onChange={v => setVar('focusRing', v as 'glow' | 'line' | 'none')}
-              options={[
-                { value: 'glow', label: '번짐' }, { value: 'line', label: '라인' }, { value: 'none', label: '테두리만' },
-              ]} />
+            <Item label="링">
+              <KSelect minWidth={96} value={state.vars.focusRing ?? 'glow'}
+                onChange={v => setVar('focusRing', v as 'glow' | 'line' | 'none')}
+                options={[
+                  { value: 'glow', label: '번짐' }, { value: 'line', label: '라인' }, { value: 'none', label: '테두리만' },
+                ]} />
+            </Item>
             {(state.vars.focusRing ?? 'glow') !== 'none' && (
-              <>
-                <span className="cp-lb">두께</span>
+              <Item label="두께">
                 <KStep value={state.vars.focusW ?? 3} min={1} max={6} step={1} suffix="px"
                   onChange={v => setVar('focusW', v)} />
-              </>
+              </Item>
             )}
-          </div>
-        </div>
+          </Line>
+          <Item label="미리보기"><KInput className="ctl-preview" defaultValue="눌러서 확인" /></Item>
+        </Ctl>
       </div>
 
       {/* 이미지 편집(크롭) 배경 (v1.9 사용자 요청) — 투명 PNG 위치 지정 시 보이는 판 */}
@@ -563,25 +589,28 @@ function DetailPane() {
       {/* 그림자 설정 — 블록/드롭다운 나란히 묶음 */}
       <div className="set-row">
         <div className="l"><b>블록 그림자</b><small>패널·카드·배너·모달의 드롭섀도우 세기 — 0%는 그림자 없음</small></div>
-        {/* 색은 왼쪽으로 빼고 세기 컨트롤은 오른쪽 — 아래 「드롭다운 그림자」 행과 열이 맞음 (v1.9 사용자 요청) */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-          <span className="cp-lb" style={{ marginLeft: 'auto' }}>색</span>
-          <ColorField value={state.vars.shColor ?? '#000000'} onChange={hex => setVar('shColor', hex)} />
-          <div style={{ marginLeft: 10 }}>
+        {/* 색 / 세기 두 줄 — 아래 「드롭다운 그림자」의 세기 줄과 열이 맞음 */}
+        <Ctl>
+          <Item label="색"><ColorField value={state.vars.shColor ?? '#000000'} onChange={hex => setVar('shColor', hex)} /></Item>
+          <Line>
+            <Item label="세기">
             <KSelect minWidth={96} value={String(state.vars.shadow)} placeholder="직접 지정"
-              onChange={v => setVar('shadow', Number(v))} options={SHADOW_PRESETS} />
-          </div>
-          <KStep value={state.vars.shadow} min={0} max={200} step={10} suffix="%" onChange={v => setVar('shadow', v)} />
-        </div>
+              onChange={v => setVar('shadow', Number(v))} options={SHADOW_PRESETS} /></Item>
+            <KStep value={state.vars.shadow} min={0} max={200} step={10} suffix="%" onChange={v => setVar('shadow', v)} />
+          </Line>
+        </Ctl>
       </div>
 
       <div className="set-row">
         <div className="l"><b>드롭다운 그림자</b><small>하위메뉴·프로필 메뉴·셀렉트 팝업·달력 — 블록 그림자와 별개, 없음도 가능</small></div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <KSelect minWidth={96} value={String(state.vars.ddShadow ?? 100)} placeholder="직접 지정"
-            onChange={v => setVar('ddShadow', Number(v))} options={SHADOW_PRESETS} />
-          <KStep value={state.vars.ddShadow ?? 100} min={0} max={200} step={10} suffix="%" onChange={v => setVar('ddShadow', v)} />
-        </div>
+        <Ctl>
+          <Line>
+            <Item label="세기">
+            <KSelect minWidth={96} value={String(state.vars.ddShadow ?? 100)} placeholder="직접 지정"
+              onChange={v => setVar('ddShadow', Number(v))} options={SHADOW_PRESETS} /></Item>
+            <KStep value={state.vars.ddShadow ?? 100} min={0} max={200} step={10} suffix="%" onChange={v => setVar('ddShadow', v)} />
+          </Line>
+        </Ctl>
       </div>
 
       </div>
