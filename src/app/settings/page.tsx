@@ -471,13 +471,10 @@ function SiteBasicPane() {
       {/* 로고 — 텍스트/서브타이틀/정렬/글씨색 (5.2) */}
       <div className="set-row" style={{ flexWrap: 'wrap' }}>
         <div className="l"><b>로고</b><small>상단바 로고 텍스트·아랫줄 서브타이틀·정렬</small></div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
+        <Ctl>
           <LogoControls />
-          {/* 글씨색은 줄 오른쪽 끝으로 (v1.9 사용자 요청) */}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-            <CP label="글씨" k="topBrand" />
-          </div>
-        </div>
+          <CP label="글씨" k="topBrand" />
+        </Ctl>
       </div>
 
       {/* 로고 이미지 (v2.2 사용자 요청) — 지정하면 로고 텍스트 대신 표시 */}
@@ -839,12 +836,9 @@ function BoardPane() {
 
   const colorCells = (b: BoardBadge, patch: (p: Partial<BoardBadge>) => void) => (
     <>
-      <span className="cp-lb">배경</span>
-      <ColorField value={b.bg} onChange={hex => patch({ bg: hex })} />
-      <span className="cp-lb">테두리</span>
-      <ColorField value={b.border} onChange={hex => patch({ border: hex })} />
-      <span className="cp-lb">글씨</span>
-      <ColorField value={b.fg} onChange={hex => patch({ fg: hex })} />
+      <Item label="배경"><ColorField value={b.bg} onChange={hex => patch({ bg: hex })} /></Item>
+      <Item label="테두리"><ColorField value={b.border} onChange={hex => patch({ border: hex })} /></Item>
+      <Item label="글씨"><ColorField value={b.fg} onChange={hex => patch({ fg: hex })} /></Item>
     </>
   );
 
@@ -891,35 +885,38 @@ function BoardPane() {
                   </>
                 )}
             </div>
-            <div className="cp-group" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              {/* 리스트 스킨 — 눌러서 고르는 선택창 (버튼 세 개 나열 대신) */}
-              <KSelect minWidth={110} value={b.skin}
-                onChange={v => patchBoard(b.id, { skin: v as typeof b.skin })}
-                options={BOARD_SKINS.map(k => ({ value: k.id, label: k.label }))} />
+            {/* 스킨·댓글·삭제 / 글씨색 두 줄 — 라벨 열을 맞춘다 (v3.2 사용자 요청) */}
+            <Ctl>
+              <Line>
+                {/* 리스트 스킨 — 눌러서 고르는 선택창 (버튼 세 개 나열 대신) */}
+                <Item label="스킨">
+                  <KSelect minWidth={110} value={b.skin}
+                    onChange={v => patchBoard(b.id, { skin: v as typeof b.skin })}
+                    options={BOARD_SKINS.map(k => ({ value: k.id, label: k.label }))} />
+                </Item>
+                {/* 댓글 사용 (v2.5 사용자 요청) — 끄면 글 아래 댓글 목록·입력창, 목록의 댓글 수를 숨긴다 */}
+                <Item label="댓글">
+                  <KToggle checked={!b.noComment} onChange={v => patchBoard(b.id, { noComment: v ? undefined : true })} />
+                </Item>
+                {b.id !== MAIN_BOARD_ID && (
+                  <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                    onClick={() => del.ask(`카테고리 「${b.name}」를 삭제하시겠습니까?`, () => {
+                      setBoards(boards.filter(x => x.id !== b.id));
+                    }, '메뉴에서 사라지지만 이 카테고리에 쓴 포스팅은 보존됩니다 (3장 원칙).')}>DELETE</button>
+                )}
+              </Line>
               {/* 목록 글씨색 (v1.9) — 미지정이면 테마 기본색.
                   갤러리형 1은 그림 위 흰 글씨로 고정이라 이 색을 쓰지 않는다 — 칸을 숨긴다 (v2.5 사용자 요청) */}
               {b.skin !== 'gallery' && (
-                <>
-                  <span className="cp-lb">글씨</span>
-                  <ColorField value={b.fg ?? '#2c3037'} onChange={hex => patchBoard(b.id, { fg: hex })} />
+                <Line>
+                  <Item label="글씨"><ColorField value={b.fg ?? '#2c3037'} onChange={hex => patchBoard(b.id, { fg: hex })} /></Item>
                   {b.fg && (
                     <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                       onClick={() => patchBoard(b.id, { fg: undefined })}>기본색</button>
                   )}
-                </>
+                </Line>
               )}
-              {/* 댓글 사용 (v2.5 사용자 요청) — 끄면 글 아래 댓글 목록·입력창, 목록의 댓글 수를 숨긴다 */}
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <span className="cp-lb">댓글</span>
-                <KToggle checked={!b.noComment} onChange={v => patchBoard(b.id, { noComment: v ? undefined : true })} />
-              </span>
-              {b.id !== MAIN_BOARD_ID && (
-                <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
-                  onClick={() => del.ask(`카테고리 「${b.name}」를 삭제하시겠습니까?`, () => {
-                    setBoards(boards.filter(x => x.id !== b.id));
-                  }, '메뉴에서 사라지지만 이 카테고리에 쓴 포스팅은 보존됩니다 (3장 원칙).')}>DELETE</button>
-              )}
-            </div>
+            </Ctl>
           </div>
         )} />
       <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
@@ -956,7 +953,7 @@ function BoardPane() {
       {st.system.map(b => (
         <div key={b.id} className="set-row">
           <div className="l"><span style={boardBadgeStyle(b)}>{b.label}</span></div>
-          <div className="cp-group" style={{ justifyContent: 'flex-end' }}>
+          <div className="cp-group">
             {colorCells(b, p => patchSystem(b.id, p))}
           </div>
         </div>
@@ -1502,34 +1499,39 @@ function CoverPick({ label, value, onChange }: { label: string; value?: string; 
 /** 로고 이미지 (v2.2 사용자 요청) — 텍스트 로고가 좁은 화면에서 잘릴 때 대신 쓰는 이미지. PC/모바일 따로 */
 function LogoImageControls() {
   const accept = 'image/png,image/svg+xml,image/webp,image/jpeg,image/gif';
-  // PC·모바일을 한 줄에 나란히 (v2.6 사용자 요청) — 좁으면 줄바꿈
+  // PC / 모바일 두 줄 — 라벨 열을 맞춘다 (v3.2 사용자 요청)
   return (
-    <div style={{ display: 'flex', gap: 8, rowGap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 14 }}>
-        <small style={{ color: 'var(--faint)' }}>PC</small>
+    <Ctl>
+      <Item label="PC">
         <SiteImageControl field="logoImage" wide emptyText="텍스트 로고" failText="로고 이미지" accept={accept} />
-      </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <small style={{ color: 'var(--faint)' }}>모바일</small>
+      </Item>
+      <Item label="모바일">
         <SiteImageControl field="logoImageM" wide emptyText="PC와 같음" failText="로고 이미지" accept={accept} />
-      </div>
-    </div>
+      </Item>
+    </Ctl>
   );
 }
 
 function LogoControls() {
   // 드래프트로만 반영 (v1.9) — 미리보기 즉시, 저장은 디자인 탭 SAVE에서
   const { site, set } = useSiteDraft();
+  // 로고 / 서브타이틀 / 정렬 — 라벨 열을 맞춘 세 줄 (v3.2 사용자 요청)
   return (
     <>
       {/* 로고 문구도 드래프트를 거쳐 되돌아오므로 한글 조합에 안전한 인풋으로 */}
-      <LiveInput value={site.title} onValue={v => set({ title: v })}
-        style={{ width: 130, height: 35, boxSizing: 'border-box' }} />
-      <LiveInput value={site.subtitle} onValue={v => set({ subtitle: v })}
-        style={{ width: 160, height: 35, boxSizing: 'border-box' }} />
-      <KSelect minWidth={88} value={site.align}
-        onChange={v => set({ align: v as typeof site.align })}
-        options={[{ value: 'left', label: '왼쪽' }, { value: 'center', label: '가운데' }, { value: 'right', label: '오른쪽' }]} />
+      <Item label="로고">
+        <LiveInput value={site.title} onValue={v => set({ title: v })}
+          className="ctl-text" style={{ height: 35, boxSizing: 'border-box' }} />
+      </Item>
+      <Item label="서브">
+        <LiveInput value={site.subtitle} onValue={v => set({ subtitle: v })}
+          className="ctl-text" style={{ height: 35, boxSizing: 'border-box' }} />
+      </Item>
+      <Item label="정렬">
+        <KSelect minWidth={88} value={site.align}
+          onChange={v => set({ align: v as typeof site.align })}
+          options={[{ value: 'left', label: '왼쪽' }, { value: 'center', label: '가운데' }, { value: 'right', label: '오른쪽' }]} />
+      </Item>
     </>
   );
 }
@@ -2358,25 +2360,22 @@ function MenuPane() {
         </div>
       ) : (
       <>
+      {/* 메뉴 트리는 표처럼 — 이름 / 페이지 타이틀 / 주소 / 버튼 열이 위아래로 맞는다 (v3.2 사용자 요청) */}
+      <div className="mt-row mt-head"><span /><span>메뉴 이름</span><span>페이지 타이틀</span><span>주소</span><span /></div>
       <DragList items={tree} keyOf={g => g.id} onReorder={setTree}
         render={g => (
           <div style={{ width: '100%', borderBottom: '1px dashed var(--line)', padding: '10px 0' }}>
-            <div className="set-row" style={{ border: 'none', padding: 0 }}>
-              <div className="l" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span className="drag-h">⠿</span>
-                <KInput value={g.label} onChange={e => patchGroup(g.id, { label: e.target.value })}
-                  style={{ width: 110, fontWeight: 700 }} />
-                {g.href ? (
-                  <>
-                    <span className="cp-lb">타이틀</span>
-                    <KInput value={g.pageTitle ?? ''} placeholder="기본"
-                      onChange={e => patchGroup(g.id, { pageTitle: e.target.value || undefined })}
-                      style={{ width: 120, fontSize: 12 }} />
-                    <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>단독 · {g.href}</small>
-                  </>
-                ) : <span className="pill">상위</span>}
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="mt-row">
+              <span className="drag-h">⠿</span>
+              <KInput value={g.label} onChange={e => patchGroup(g.id, { label: e.target.value })}
+                style={{ fontWeight: 700 }} />
+              {g.href
+                ? <KInput value={g.pageTitle ?? ''} placeholder="기본"
+                    onChange={e => patchGroup(g.id, { pageTitle: e.target.value || undefined })}
+                    style={{ fontSize: 12 }} />
+                : <span className="pill">상위</span>}
+              <small className="mt-path">{g.href ? `단독 · ${g.href}` : ''}</small>
+              <div className="mt-act">
                 {g.href && extraFor(g.href)}
                 <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                   onClick={() => askRemoveGroup(g)}>{g.href ? '빼기' : 'DELETE'}</button>
@@ -2384,27 +2383,26 @@ function MenuPane() {
             </div>
             {/* 하위 메뉴 — 그룹 안 순서(⠿)·이름·이동·빼기 + 부속 설정 */}
             {!g.href && (
-              <div style={{ padding: '8px 0 0 34px' }}>
+              <div className="mt-sub">
                 <DragList items={g.items} keyOf={it => it.href}
                   onReorder={items => patchGroup(g.id, { items })}
                   render={it => (
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', width: '100%', padding: '3px 0' }}>
+                    <div className="mt-row" style={{ padding: '3px 0' }}>
                       <span className="drag-h" style={{ fontSize: 11 }}>⠿</span>
                       <KInput value={it.label ?? ''} placeholder={defLabel(it.href)}
                         onChange={e => patchGroup(g.id, {
                           items: g.items.map(x => (x.href === it.href
                             ? { ...x, label: e.target.value || undefined } : x)),
                         })}
-                        style={{ width: 110, fontSize: 12 }} />
-                      <span className="cp-lb">타이틀</span>
+                        style={{ fontSize: 12 }} />
                       <KInput value={it.pageTitle ?? ''} placeholder="기본"
                         onChange={e => patchGroup(g.id, {
                           items: g.items.map(x => (x.href === it.href
                             ? { ...x, pageTitle: e.target.value || undefined } : x)),
                         })}
-                        style={{ width: 120, fontSize: 12 }} />
-                      <small style={{ color: 'var(--faint)', fontSize: 10.5 }}>{it.href}</small>
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        style={{ fontSize: 12 }} />
+                      <small className="mt-path">{it.href}</small>
+                      <div className="mt-act">
                         {extraFor(it.href)}
                         <KSelect minWidth={104} value="" placeholder="이동"
                           onChange={v => moveItem(g.id, it, v)} options={groupOptions(g.id)} />
@@ -2598,15 +2596,13 @@ function ThreadPane() {
               <span className="drag-h">⠿</span>
               <span className="pill" style={threadBadgeStyle(c)}>{c.label || '분류'}</span>
             </div>
-            <div className="cp-group" style={{ justifyContent: 'flex-end' }}>
-              <KInput value={c.label} onChange={e => patchCat(c.id, { label: e.target.value })}
-                style={{ width: 100, textAlign: 'right' }} />
-              <span className="cp-lb">배경</span>
-              <ColorField value={c.bg ?? '#1d2025'} onChange={hex => patchCat(c.id, { bg: hex })} />
-              <span className="cp-lb">테두리</span>
-              <ColorField value={c.border ?? c.bg ?? '#1d2025'} onChange={hex => patchCat(c.id, { border: hex })} />
-              <span className="cp-lb">글씨</span>
-              <ColorField value={c.fg ?? '#ffffff'} onChange={hex => patchCat(c.id, { fg: hex })} />
+            {/* 이름·삭제 / 색 세 칸(2열 격자) — 라벨 열을 맞춘다 (v3.2 사용자 요청) */}
+            <Ctl>
+              <Line>
+              <Item label="이름">
+                <KInput value={c.label} onChange={e => patchCat(c.id, { label: e.target.value })}
+                  style={{ width: 120 }} />
+              </Item>
               <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
                 onClick={() => {
                   const used = works.filter(w => w.catId === c.id && inSection(w.secId, cur)).length;
@@ -2614,7 +2610,13 @@ function ThreadPane() {
                     () => setCats(cats.filter(x => x.id !== c.id)),
                     used > 0 ? `이 분류의 타래 ${used}개는 유지되지만 분류가 「기타」로 표시됩니다.` : undefined);
                 }}>DELETE</button>
-            </div>
+              </Line>
+              <div className="cp-group">
+                <Item label="배경"><ColorField value={c.bg ?? '#1d2025'} onChange={hex => patchCat(c.id, { bg: hex })} /></Item>
+                <Item label="테두리"><ColorField value={c.border ?? c.bg ?? '#1d2025'} onChange={hex => patchCat(c.id, { border: hex })} /></Item>
+                <Item label="글씨"><ColorField value={c.fg ?? '#ffffff'} onChange={hex => patchCat(c.id, { fg: hex })} /></Item>
+              </div>
+            </Ctl>
           </div>
         )} />
       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>

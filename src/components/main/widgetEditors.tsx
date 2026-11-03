@@ -47,13 +47,23 @@ export function freeTextColor(s: FreeTextColorSet): string {
   return m === 'desc' ? 'var(--page-desc)' : 'var(--page-title)';
 }
 
-export function FreeTextColorField<T extends FreeTextColorSet>({ draft, setDraft }: {
-  draft: T; setDraft: React.Dispatch<React.SetStateAction<T>>;
+/** 위젯 편집기 한 줄 — 라벨 칸 폭이 고정이라 줄마다 컨트롤 시작 위치가 맞는다 (v3.2 사용자 요청) */
+function WRow({ label, children, style }: { label: React.ReactNode; children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div className="we-row" style={style}>
+      <span className="cp-lb">{label}</span>
+      <div className="we-ctl">{children}</div>
+    </div>
+  );
+}
+
+export function FreeTextColorField<T extends FreeTextColorSet>({ draft, setDraft, bare }: {
+  draft: T; setDraft: React.Dispatch<React.SetStateAction<T>>; bare?: boolean;
 }) {
   const mode = freeTextColorMode(draft);
   return (
     <>
-      <span className="cp-lb">글씨색</span>
+      {!bare && <span className="cp-lb">글씨색</span>}
       <KSelect minWidth={150} value={mode}
         onChange={v => setDraft(d => ({ ...d, colorMode: v as FreeTextColorMode }))}
         options={[
@@ -172,13 +182,13 @@ export function DdayEditor({ conf }: { conf: WidgetConf }) {
       </div>
       <p className="hint" style={{ marginTop: 6 }}>+1D — 시작일을 1일로 세는 기념일 카운트 (당일 = D+1)</p>
       {/* 날짜 표시(D-2·D+3 등) 폰트·색 (v2.0 사용자 요청) — 제목 글씨는 본문 폰트를 그대로 따라간다 */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
-        <span className="cp-lb">날짜표시 폰트</span>
-        <KSelect minWidth={150} value={fontId}
-          onChange={v => setMeta({ fontId: v })}
-          options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> }))} />
-        <span className="cp-lb">색</span>
-        <ColorField value={color ?? '#e6ebf2'} onChange={hex => setMeta({ color: hex })} />
+      <div style={{ display: 'grid', gap: 10, marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
+        <WRow label="날짜표시 폰트">
+          <KSelect minWidth={150} value={fontId}
+            onChange={v => setMeta({ fontId: v })}
+            options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> }))} />
+        </WRow>
+        <WRow label="색"><ColorField value={color ?? '#e6ebf2'} onChange={hex => setMeta({ color: hex })} /></WRow>
       </div>
     </div>
   );
@@ -288,13 +298,13 @@ export function DdayCardEditor({ conf }: { conf: WidgetConf }) {
       <p className="hint" style={{ marginTop: 6 }}>
         썸네일을 눌러 사진을 넣고 [✂ 위치]로 보이는 부분을 고르세요 — 원본은 잘리지 않습니다 · +1D — 시작일을 1일로 세는 기념일 카운트 (당일 = D+1)
       </p>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
-        <span className="cp-lb">글씨 폰트</span>
-        <KSelect minWidth={150} value={fontId}
-          onChange={v => setMeta({ fontId: v })}
-          options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> }))} />
-        <span className="cp-lb">글씨색</span>
-        <ColorField value={color ?? '#ffffff'} onChange={hex => setMeta({ color: hex })} />
+      <div style={{ display: 'grid', gap: 10, marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
+        <WRow label="글씨 폰트">
+          <KSelect minWidth={150} value={fontId}
+            onChange={v => setMeta({ fontId: v })}
+            options={fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> }))} />
+        </WRow>
+        <WRow label="글씨색"><ColorField value={color ?? '#ffffff'} onChange={hex => setMeta({ color: hex })} /></WRow>
       </div>
 
       {cropTarget && (
@@ -461,24 +471,21 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
         : <DragList items={slides} keyOf={sl => sl.id} onReorder={setSlides} render={row} />}
 
       {/* 표시 방식 (v1.9 사용자 요청) — 꽉 채움(위젯을 채우고 잘릴 수 있음) / 비율 유지(안 잘림, 여백 생길 수 있음) */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="cp-lb">표시</span>
+      <WRow label="표시">
         <div className="mini-seg">
           <button className={fit === 'cover' ? 'on' : ''} onClick={() => set({ fit: undefined })}>꽉 채움 (잘림)</button>
           <button className={fit === 'contain' ? 'on' : ''} onClick={() => set({ fit: 'contain' })}>비율 유지 (안 잘림)</button>
         </div>
-        {/* 넘길 이미지가 있을 때만 간격을 묻는다 */}
-        {slides.length > 1 && (
-          <>
-            <span className="cp-lb">전환 간격</span>
-            <KStep value={sec} min={2} max={60} suffix="초" onChange={v => set({ interval: v })} />
-          </>
-        )}
-      </div>
+      </WRow>
+      {/* 넘길 이미지가 있을 때만 간격을 묻는다 */}
+      {slides.length > 1 && (
+        <WRow label="전환 간격">
+          <KStep value={sec} min={2} max={60} suffix="초" onChange={v => set({ interval: v })} />
+        </WRow>
+      )}
 
       {/* 직접 크기 (v2.0 사용자 요청) — 비우면 지금처럼 자리(그리드 칸)에 맞춘다 */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="cp-lb">크기</span>
+      <WRow label="크기">
         <KInput placeholder="가로 px (비우면 자동)" value={String((conf.settings.wPx as number | undefined) ?? '')}
           onChange={e => { const n = parseInt(e.target.value, 10); set({ wPx: Number.isFinite(n) && n > 0 ? Math.min(n, 2000) : undefined }); }}
           style={{ width: 140 }} />
@@ -486,7 +493,7 @@ export function DecoEditor({ conf, onClose }: { conf: WidgetConf; onClose?: () =
         <KInput placeholder="세로 px (비우면 자동)" value={String((conf.settings.hPx as number | undefined) ?? '')}
           onChange={e => { const n = parseInt(e.target.value, 10); set({ hPx: Number.isFinite(n) && n > 0 ? Math.min(n, 2000) : undefined }); }}
           style={{ width: 140 }} />
-      </div>
+      </WRow>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
@@ -688,40 +695,34 @@ export function LatestEditor({ conf }: { conf: WidgetConf }) {
   const fmt = s.dateFmt ?? 'full';
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="cp-lb">표시 개수</span>
+      <WRow label="표시 개수">
         <KStep value={latestCountOf(s)} min={LATEST_COUNT.min} max={LATEST_COUNT.max} suffix="개"
           onChange={v => setDraft({ count: v })} />
         <small style={{ color: 'var(--faint)', fontSize: 11 }}>모든 게시판 글을 최신순으로 — 기본 {LATEST_COUNT.def}개</small>
-      </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="cp-lb">제목 시작 위치</span>
+      </WRow>
+      <WRow label="제목 시작 위치">
         <div className="mini-seg">
           <button className={align === 'len' ? 'on' : ''} onClick={() => setDraft({ titleAlign: undefined })}>게시판 이름 길이대로</button>
           <button className={align === 'align' ? 'on' : ''} onClick={() => setDraft({ titleAlign: 'align' })}>세로로 맞추기</button>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="cp-lb">날짜</span>
+      </WRow>
+      <WRow label="날짜">
         <div className="mini-seg">
           <button className={fmt === 'full' ? 'on' : ''} onClick={() => setDraft({ dateFmt: undefined })}>2026.09.27.</button>
           <button className={fmt === 'short' ? 'on' : ''} onClick={() => setDraft({ dateFmt: 'short' })}>09.27</button>
         </div>
-      </div>
+      </WRow>
       {([['lblFontId', 'LATEST 폰트'], ['catFontId', '카테고리 폰트'], ['dateFontId', '날짜 폰트']] as const).map(([key, label]) => (
-        <div key={key} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span className="cp-lb">{label}</span>
+        <WRow key={key} label={label}>
           <KSelect minWidth={170} value={s[key] ?? ''}
             onChange={v => setDraft({ [key]: v || undefined })}
             options={[
               { value: '', label: <span style={{ fontFamily: 'var(--serif)' }}>기본 (타이틀 폰트)</span> },
               ...fonts.map(f => ({ value: f.id, label: <span style={{ fontFamily: familyOf(f.id) }}>{f.name}</span> })),
             ]} />
-        </div>
+        </WRow>
       ))}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <FreeTextColorField draft={s} setDraft={setDraft} />
-      </div>
+      <WRow label="글씨색"><FreeTextColorField draft={s} setDraft={setDraft} bare /></WRow>
     </div>
   );
 }
