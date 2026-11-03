@@ -70,7 +70,8 @@ type GroupId = 'site' | 'design' | 'content' | 'manage';
 interface SetSection { id: string; label: string }
 const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[] }[] = [
   { id: 'site', label: '사이트', icon: '◇', sections: [
-    { id: 'basic', label: '기본 정보' }, { id: 'main', label: '메인 페이지' }, { id: 'widgets', label: '위젯' },
+    // 메인 페이지 탭은 모바일 표시·나열 순서만 다루므로 「모바일 메인 페이지」로, 위젯 아래에 둔다 (v3.1 사용자 요청)
+    { id: 'basic', label: '기본 정보' }, { id: 'widgets', label: '위젯' }, { id: 'main', label: '모바일 메인 페이지' },
   ] },
   { id: 'design', label: '디자인', icon: '◈', sections: [
     { id: 'theme', label: '테마·색' }, { id: 'layout', label: '레이아웃' },
@@ -763,7 +764,7 @@ function WidgetsPane() {
           {editorOf(w)}
         </div>
       )} />
-      <p className="hint">DIARY는 일기 실데이터를 그대로 보여주는 위젯이라 별도 설정값이 없습니다 · 위젯 켜기/끄기와 순서는 「메인 페이지」에서</p>
+      <p className="hint">DIARY는 일기 실데이터를 그대로 보여주는 위젯이라 별도 설정값이 없습니다 · 모바일에서 위젯 켜기/끄기와 순서는 아래 「모바일 메인 페이지」에서</p>
     </div>
   );
 }
