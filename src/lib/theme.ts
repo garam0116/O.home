@@ -22,6 +22,9 @@ export interface ThemeVars {
   bgDim?: number;
   // 카드(패널·게시판 리스트·필터 등) 배경/글씨 (v1.9) — 보조 글씨색은 글씨색에서 자동 파생
   cardBg?: string; cardFg?: string;
+  /* 카드 배경 불투명도 % (v3.4 사용자 요청) — 배경 이미지가 카드 뒤로 비쳐 보이게 하던 고정 94%를 설정으로.
+     색 입력칸의 투명도(rgba)와 곱해진다. 비워 두면 CARD_ALPHA(지금까지의 모습) */
+  cardAlpha?: number;
   // 상단메뉴: 배경 · 글씨 · 호버 글씨(v1.9 분리) · 로고 글씨
   topBg: string; topFg: string; topHv: string; topBrand: string;
   // 하위메뉴 드롭다운: 배경 · 글씨 · 호버(오버레이 색)
@@ -71,6 +74,8 @@ export interface ThemeState {
 }
 
 /** 배경 이미지 덮개 기본값 % — 모든 모드 공통 (색은 모드의 배경 끝색을 따라간다) */
+/** 카드 배경 불투명도 기본값 % — v3.4 이전에 고정으로 쓰던 값 */
+export const CARD_ALPHA = 94;
 export const BG_DIM = 35;
 
 /** 다크 모드 (기본 디폴트) — 프로토타입 "시크 모노톤" 기준 */
@@ -264,6 +269,8 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
   const focusC = t.focusColor ?? t.accent;
   const focusRing = t.focusRing ?? 'glow';
   const focusW = Math.max(0, Math.min(6, t.focusW ?? 3));
+  // 카드·위젯 배경 불투명도 (v3.4) — 0~100%
+  const cardA = Math.max(0, Math.min(100, t.cardAlpha ?? CARD_ALPHA)) / 100;
   return {
     '--bg-angle': `${t.bgAngle ?? 180}deg`,
     '--bg-blur': `${Math.max(0, t.bgBlur ?? 0)}px`,
@@ -272,7 +279,7 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
       ? (() => { const c = withAlpha(t.bgG2, Math.min(100, t.bgDim ?? BG_DIM) / 100); return `linear-gradient(${c},${c})`; })()
       : 'none',
     '--panel-solid': t.cardBg ?? '#fbfbfc',
-    '--panel': withAlpha(t.cardBg ?? '#fcfcfd', 0.94),
+    '--panel': withAlpha(t.cardBg ?? '#fcfcfd', cardA),
     '--ink': cardFg, '--sub': cardSub, '--faint': cardFaint,
     '--sh-sm': sh(8, 26, 0.22),   // 작은 카드
     '--sh-md': sh(10, 40, 0.25),  // 패널·배너
@@ -312,7 +319,7 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     '--seg-fg': t.segFg ?? '#8a8f98',
     // 위젯 (v2.0 사용자 요청) — 안 정하면 카드 색을 그대로 따라간다(지금까지의 모습).
     // 배경만 반투명 처리하는 것은 카드와 같은 규칙 — 배경 이미지를 깔았을 때 비쳐 보이게 한다
-    '--wg-bg': t.wgBg ? withAlpha(t.wgBg, 0.94) : withAlpha(t.cardBg ?? '#fcfcfd', 0.94),
+    '--wg-bg': t.wgBg ? withAlpha(t.wgBg, cardA) : withAlpha(t.cardBg ?? '#fcfcfd', cardA),
     '--wg-title': t.wgTitle ?? 'var(--faint)',
     '--wg-fg': t.wgFg ?? 'var(--ink)',
     // 테두리는 켤 때만 그린다 — 끄면 0이라 지금까지처럼 그림자만 남는다
