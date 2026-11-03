@@ -19,6 +19,7 @@ import { ListSync } from '@/components/shell/ListSync';
 import { NumberSync } from '@/components/shell/NumberSync';
 import { UploadBusy } from '@/components/shell/UploadBusy';
 import { BoardWidth } from '@/components/shell/BoardWidth';
+import { PageHeadStyle } from '@/components/shell/PageHeadStyle';
 import { PageFrame } from '@/lib/pageRefresh';
 import { MenuGuard } from '@/components/shell/MenuGuard';
 import { RailHost } from '@/components/main/SideRails';
@@ -102,6 +103,8 @@ if(navigator.userAgent.indexOf('Whale/')>-1){document.documentElement.style.colo
                   {/* 브라우저 탭 제목 — 디자인 탭에서 지정 (v1.9) */}
                   <DocTitle />
                   <DocIcon />
+                  {/* 페이지 헤더 모양 — 환경설정 > 디자인에서 고른 모양을 <html> 클래스로 (v3.2) */}
+                  <PageHeadStyle />
                   {/* 설정이 서버에 저장되지 않았을 때 알림 (v2.0) — 조용히 실패하면 원인을 알 수 없다 */}
                   <SettingSync />
                   {/* 관리자 로그인 때 예전에 공개로 저장된 비밀 데이터를 옮긴다 (보안 검토) */}

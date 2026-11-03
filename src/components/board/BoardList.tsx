@@ -142,8 +142,9 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
     </span>
   ) : null;
 
-  /* 카테고리 헤더 모양 (v3.2 사용자 요청 — 환경설정 > 디자인 「카테고리 헤더」, 모든 게시판 공통).
-     통합 검색 화면은 게시판 하나의 표지가 아니라서 늘 지금 모양을 쓴다 */
+  /* 페이지 헤더 모양 (v3.2 사용자 요청 — 환경설정 > 디자인 「페이지 헤더」, 사이트 공통).
+     카테고리 목록은 머리글(BOARD · 글 수)·탭 줄까지 전용 마크업으로 그린다.
+     통합 검색 화면은 게시판 하나의 표지가 아니라서 여기선 기본 마크업 — 모양은 다른 페이지처럼 공통 CSS가 입힌다 */
   const headStyle = searchAll ? 'basic' : (boardSet.headStyle ?? 'basic');
   const title = (
     <PageTitle href={boardHref(board.id, boards)}>{board.id === MAIN_BOARD_ID ? 'BOARD' : board.name}</PageTitle>

@@ -2370,7 +2370,7 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
 .set-fold-head button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
 /* ---------- 카테고리 헤더 모양 (v3.2 사용자 요청) ----------
-   환경설정 > 디자인 「카테고리 헤더」 — 모든 게시판 공통. 기본(.bhs-basic)은 위의 .page-head·.toolrow 그대로.
+   환경설정 > 디자인 「페이지 헤더」 — 카테고리 목록 전용 마크업(머리글·탭 줄). 다른 페이지는 아래 「페이지 헤더 모양」. 기본(.bhs-basic)은 위의 .page-head·.toolrow 그대로.
    글씨색은 페이지 타이틀·설명 색(--page-title / --page-desc)을 따르고, 선은 제목색을 옅게 쓴다.
    제목·설명 표시 옵션(--ph-title 등)은 h1·p의 display 규칙이 그대로 처리한다 */
 .board-page .bhead{display:block;min-height:0}
@@ -2447,7 +2447,7 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
   .bhs-emblem .searchbar.open input{width:90px}
 }
 
-/* 환경설정 > 디자인 「카테고리 헤더」 고르기 (v3.2) — 작은 모형 그림 + 이름 + 설명 */
+/* 환경설정 > 디자인 「페이지 헤더」 고르기 (v3.2) — 작은 모형 그림 + 이름 + 설명 */
 .bh-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;margin-top:10px}
 .bh-pick-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px;border:1.5px solid var(--line);border-radius:12px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
 .bh-pick-card:hover{border-color:var(--line-dark)}
@@ -2479,4 +2479,79 @@ html.ohome-preview .up-busy,html.ohome-preview .top-btn{display:none !important}
   .bh-pick{grid-template-columns:1fr}
   .bh-pick-card{display:grid;grid-template-columns:96px 1fr;column-gap:12px;row-gap:4px}
   .bh-pick-card .bh-thumb{grid-row:1 / span 2;height:64px}
+}
+
+/* ---------- 페이지 헤더 모양 — 사이트 공통 (v3.2 사용자 요청) ----------
+   PageHeadStyle이 <html>에 phs-mast / phs-emblem을 단다. 로드비·다이어리·자관·갤러리·감상타래·TRPG·글쓰기 등
+   모든 .page-head와, 그 바로 아래 탭 줄(.page-head + .toolrow)에 같은 모양을 입힌다.
+   카테고리 목록은 전용 마크업(.bhead · .bh-row, 위 「카테고리 헤더 모양」)이 있어 여기서 뺀다 */
+html.phs-mast,html.phs-emblem{--ph-line:color-mix(in srgb,var(--page-title) 35%,transparent);--ph-soft:color-mix(in srgb,var(--page-title) 58%,transparent)}
+/* 헤더·탭 줄의 진한 버튼 → 글자 버튼(마스트헤드) / 테두리 알약(각인), 검색창 → 투명 */
+.phs-mast :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) :is(.btn-dark,.btn-ghost){background:none;border:0;height:auto;padding:6px 2px;color:var(--page-title);font-family:var(--font-pagetitle,var(--serif));font-weight:500;letter-spacing:.2em;font-size:calc(14px*var(--fs,1))}
+.phs-mast :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) :is(.btn-dark,.btn-ghost):hover{opacity:.7;background:none}
+.phs-emblem :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) :is(.btn-dark,.btn-ghost){background:none;border:1.5px solid var(--ph-line);border-radius:999px;color:var(--page-title);height:36px;padding:0 16px}
+.phs-emblem :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) :is(.btn-dark,.btn-ghost):hover{background:color-mix(in srgb,var(--page-title) 12%,transparent)}
+:is(.phs-mast,.phs-emblem) :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) .searchbar{background:none;border-color:transparent}
+:is(.phs-mast,.phs-emblem) :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) .searchbar.open{border-color:var(--ph-line)}
+:is(.phs-mast,.phs-emblem) :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) .searchbar :is(button,input){color:var(--page-title)}
+.phs-emblem :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) .searchbar{border-color:var(--ph-line);border-radius:999px;height:36px;min-width:36px}
+/* 탭 줄의 분류 버튼(.seg, 줄 바로 아래 칸) → 글자 탭 */
+:is(.phs-mast,.phs-emblem) .page-head + .toolrow:not(.bh-row) > .seg{background:none;border:0;padding:0;border-radius:0;gap:8px 22px;flex-wrap:wrap;max-width:100%}
+:is(.phs-mast,.phs-emblem) .page-head + .toolrow:not(.bh-row) > .seg button{background:none;border-radius:0;padding:0 0 10px;font-size:calc(13px*var(--fs,1));font-weight:500;color:var(--ph-soft)}
+:is(.phs-mast,.phs-emblem) .page-head + .toolrow:not(.bh-row) > .seg button:hover,
+:is(.phs-mast,.phs-emblem) .page-head + .toolrow:not(.bh-row) > .seg button.on{background:none;color:var(--page-title)}
+
+/* 마스트헤드 — 이탤릭 큰 제목 · 설명(오른쪽 버튼이 없으면 PC에선 제목 오른쪽 끝) · 가는 선 */
+.phs-mast .page-head:not(.bhead){padding-top:12px;margin-bottom:22px}
+.phs-mast .page-head:not(.bhead) h1{font-size:calc(64px*var(--fs,1));font-style:italic;font-weight:500;letter-spacing:.01em;line-height:1.05;overflow-wrap:break-word;max-width:100%}
+.phs-mast .page-head:not(.bhead) p{margin-top:8px;font-size:calc(13px*var(--fs,1));letter-spacing:.04em}
+/* 탭 줄이 없는 페이지는 헤더 아래에 선을 긋고, 오른쪽 버튼은 그 선 위에 */
+.phs-mast .page-head:not(.bhead):not(:has(+ .toolrow)){padding-bottom:12px;border-bottom:1px solid var(--ph-line)}
+/* 오른쪽 버튼이 있으면 설명과 같은 줄에 나란히 — 긴 설명이 버튼 밑으로 겹치지 않게(절대배치 해제) */
+.phs-mast .page-head:not(.bhead):has(.head-actions){grid-template-columns:minmax(0,1fr) auto}
+.phs-mast .page-head:not(.bhead):has(.head-actions) h1{grid-column:1 / -1}
+.phs-mast .page-head:not(.bhead) .head-actions{position:static;grid-column:2;grid-row:2;align-self:end;gap:16px}
+/* 탭 줄이 있는 페이지는 탭 줄 아래에 선 — 탭 밑줄이 선에 겹친다 */
+.phs-mast .page-head + .toolrow:not(.bh-row){border-bottom:1px solid var(--ph-line);align-items:flex-end;padding-bottom:6px;margin-bottom:16px}
+.phs-mast .page-head + .toolrow:not(.bh-row):has(> .seg){padding-bottom:0}
+.phs-mast .page-head + .toolrow:not(.bh-row):has(> .seg) > :last-child{padding-bottom:5px}
+.phs-mast .page-head + .toolrow:not(.bh-row) > .seg button{border-bottom:2px solid transparent;margin-bottom:-1px}
+.phs-mast .page-head + .toolrow:not(.bh-row) > .seg button.on{border-bottom-color:var(--page-title)}
+@media (min-width:621px){
+  .phs-mast .page-head:not(.bhead):not(:has(.head-actions)){grid-template-columns:auto minmax(0,1fr)}
+  .phs-mast .page-head:not(.bhead):not(:has(.head-actions)) p{grid-column:2;grid-row:1;align-self:end;justify-self:end;text-align:right;max-width:420px;margin:0 0 8px}
+}
+
+/* 각인 — 가운데 정렬 · 양옆 장식선 ✦ · 넓은 자간 제목 · 이탤릭 설명 · 버튼은 가운데 한 묶음 */
+.phs-emblem .page-head:not(.bhead){display:block;text-align:center;padding-top:16px;margin-bottom:22px}
+.phs-emblem .page-head:not(.bhead)::before{content:"✦";display:block;width:min(100%,330px);margin:0 auto;font-size:calc(12px*var(--fs,1));line-height:14px;color:color-mix(in srgb,var(--page-title) 80%,transparent);
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--page-title) 55%,transparent)) left center/140px 1px no-repeat,
+    linear-gradient(270deg,transparent,color-mix(in srgb,var(--page-title) 55%,transparent)) right center/140px 1px no-repeat}
+.phs-emblem .page-head:not(.bhead) h1{font-size:calc(46px*var(--fs,1));letter-spacing:.24em;padding-left:.24em;margin-top:10px;line-height:1.15;overflow-wrap:break-word}
+.phs-emblem .page-head:not(.bhead) p{font-family:var(--font-pagetitle,var(--serif));font-style:italic;font-size:calc(17px*var(--fs,1));margin-top:4px}
+.phs-emblem .page-head:not(.bhead) .desc-edit{text-align:center}
+.phs-emblem .page-head:not(.bhead) .head-actions{position:static;justify-content:center;margin-top:16px}
+.phs-emblem .page-head + .toolrow:not(.bh-row){justify-content:center;gap:12px 22px;margin-bottom:18px}
+.phs-emblem .page-head + .toolrow:not(.bh-row) > :last-child{margin-left:0}
+.phs-emblem .page-head + .toolrow:not(.bh-row) > .seg{gap:4px 0;align-items:center;justify-content:center}
+.phs-emblem .page-head + .toolrow:not(.bh-row) > .seg button{padding:4px 12px}
+.phs-emblem .page-head + .toolrow:not(.bh-row) > .seg button + button{position:relative}
+.phs-emblem .page-head + .toolrow:not(.bh-row) > .seg button + button::before{content:"·";position:absolute;left:-2px;color:var(--ph-line);pointer-events:none}
+
+@media (max-width:620px){
+  .phs-mast .page-head:not(.bhead){padding-top:6px;margin-bottom:16px}
+  .phs-mast .page-head:not(.bhead) h1{font-size:calc(40px*var(--fs,1))}
+  .phs-mast .page-head:not(.bhead) p{font-size:calc(11.5px*var(--fs,1));margin-top:6px}
+  /* 모바일은 오른쪽 버튼이 제목 아래로 내려가는 폭 — 선 위에 오른쪽 정렬 */
+  .phs-mast .page-head:not(.bhead):has(.head-actions){grid-template-columns:1fr}
+  .phs-mast .page-head:not(.bhead) .head-actions{grid-column:1;grid-row:auto;justify-content:flex-end;margin-top:10px}
+  .phs-mast :is(.page-head:not(.bhead),.page-head + .toolrow:not(.bh-row)) :is(.btn-dark,.btn-ghost){font-size:calc(12.5px*var(--fs,1));letter-spacing:.16em}
+  .phs-emblem .page-head:not(.bhead){padding-top:8px;margin-bottom:16px}
+  .phs-emblem .page-head:not(.bhead)::before{width:min(100%,150px);background-size:56px 1px,56px 1px}
+  .phs-emblem .page-head:not(.bhead) h1{font-size:calc(32px*var(--fs,1));letter-spacing:.2em;padding-left:.2em;margin-top:6px}
+  .phs-emblem .page-head:not(.bhead) p{font-size:calc(13px*var(--fs,1))}
+  .phs-emblem .page-head:not(.bhead) .head-actions{flex-wrap:wrap}
+  .phs-emblem .page-head + .toolrow:not(.bh-row){gap:10px 14px}
+  /* 좁은 폭은 탭이 줄바꿈되므로 가운뎃점을 빼고 간격만 — 줄 첫머리에 점이 남지 않게 */
+  .phs-emblem .page-head + .toolrow:not(.bh-row) > .seg button + button::before{content:none}
 }
