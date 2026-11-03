@@ -20,7 +20,7 @@ import { useMenuSettings } from '@/lib/menuStore';
 export function SectionsBlock() {
   const { list } = useSections();
   const [kind, setKind] = React.useState<SectionKind>('gallery');
-  /* 평소에는 접어 둔다 (v3.1 사용자 요청) — 제목 줄의 토글이나 종류 버튼을 누르면 그때 펼친다 */
+  /* 평소에는 접어 둔다 (v3.1 사용자 요청) — 접혀 있으면 제목·설명만, 종류 버튼과 목록은 펼친 뒤에 (v3.3 사용자 요청) */
   const [open, setOpen] = React.useState(false);
   return (
     <>
@@ -34,18 +34,21 @@ export function SectionsBlock() {
         갤러리·다이어리 등도 카테고리처럼 여러 개 만들 수 있습니다 — 만들면 메뉴에 자동으로 붙습니다.
         <b> 서버 설정을 다시 할 필요는 없습니다</b> (내용은 원래 있던 곳에 그대로 쌓입니다)
       </div>
-      <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 4 }}>
-        {SECTION_KINDS.map(k => {
-          const n = list(k).length;
-          return (
-            <button key={k} className={open && kind === k ? 'on' : ''}
-              onClick={() => { if (open && kind === k) setOpen(false); else { setKind(k); setOpen(true); } }}>
-              {SECTION_META[k].label}{n > 1 ? ` ${n}` : ''}
-            </button>
-          );
-        })}
-      </div>
-      {open && <SectionList kind={kind} />}
+      {open && (
+        <>
+          <div className="mini-seg" style={{ flexWrap: 'wrap', marginBottom: 4 }}>
+            {SECTION_KINDS.map(k => {
+              const n = list(k).length;
+              return (
+                <button key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>
+                  {SECTION_META[k].label}{n > 1 ? ` ${n}` : ''}
+                </button>
+              );
+            })}
+          </div>
+          <SectionList kind={kind} />
+        </>
+      )}
     </>
   );
 }

@@ -37,7 +37,7 @@ export default function BackupDetailPage() {
   if (!p || (p.visibility === 'private' && !isAdmin) || (p.visibility === 'member' && !user)) {
     return (
       <section className="page">
-        <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>게시물을 찾을 수 없거나 열람 권한이 없습니다</p></div>
+        <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>포스팅을 찾을 수 없거나 열람 권한이 없습니다</p></div>
       </section>
     );
   }
@@ -146,7 +146,7 @@ export default function BackupDetailPage() {
         <Lightbox srcs={p.images} index={cur} onClose={() => setLbOpen(false)} />
       )}
 
-      <ConfirmModal open={delAsk} title="게시물을 삭제하시겠습니까?" body="삭제한 게시물은 복구할 수 없습니다."
+      <ConfirmModal open={delAsk} title="포스팅을 삭제하시겠습니까?" body="삭제한 포스팅은 복구할 수 없습니다."
         onClose={() => setDelAsk(false)}
         buttons={[
           { label: 'DELETE', kind: 'accent', onClick: () => { setPosts(posts.filter(x => x.id !== p.id)); router.push(tt.href); } },

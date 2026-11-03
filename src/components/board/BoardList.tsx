@@ -94,8 +94,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
   const [prevBid, setPrevBid] = useState(bid);
   if (prevBid !== bid) { setPrevBid(bid); setCat('전체'); }
 
-  /* 통합 검색에서는 메뉴에서 감춘 게시판의 글은 뺀다 — 메뉴·위젯·페이지 차단과 같은 판정(canViewHref).
-     「주소로는 열람 허용」 게시판도 감춘 것이므로 목록에 띄우지 않는다 */
+  /* 통합 검색에서는 메뉴에서 감춘 게시판의 글은 뺀다 — 메뉴·위젯·페이지 차단과 같은 판정(canViewHref) */
   const [menuSet, , menuLoaded] = useMenuSettings();
   const viewer = { loggedIn: !!user, isAdmin, id: user?.id };
   const searchable = new Set(boards.filter(b => canViewHref(menuSet, boardHref(b.id, boards), viewer)).map(b => b.id));
@@ -249,7 +248,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
           })}
           {pageList.length === 0 && (
             <div className="panel" style={{ gridColumn: '1 / -1', padding: 36, textAlign: 'center', fontSize: 12.5, color: 'var(--faint)' }}>
-              {searchAll ? (q ? '검색 결과가 없습니다' : '검색어를 입력하세요') : '게시글이 없습니다'}
+              {searchAll ? (q ? '검색 결과가 없습니다' : '검색어를 입력하세요') : '포스팅이 없습니다'}
             </div>
           )}
         </div>
@@ -287,7 +286,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
           ))}
           {pageList.length === 0 && (
             <div style={{ padding: 36, textAlign: 'center', fontSize: 12.5, color: 'var(--faint)' }}>
-              {searchAll ? (q ? '검색 결과가 없습니다' : '검색어를 입력하세요') : '게시글이 없습니다'}
+              {searchAll ? (q ? '검색 결과가 없습니다' : '검색어를 입력하세요') : '포스팅이 없습니다'}
             </div>
           )}
         </div>

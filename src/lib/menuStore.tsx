@@ -16,6 +16,7 @@ export type MenuVis = 'all' | 'member' | 'admin';
 
 /** 트리의 하위 메뉴 한 항목 — label 없으면 기본 이름(FEATURES/게시판명) · pageTitle은 페이지 상단 큰 제목 덮어쓰기
  *  visMembers (v2.0 사용자 요청): 「비로그인 숨김」일 때 **이 회원들에게만** 보이게 좁힌다 — 비우면 로그인한 모든 회원 */
+/* open: 옛 「주소로는 열람 허용」 값 — v3.3에서 기능을 지워 더는 읽지 않는다(저장된 값만 남아 있을 수 있음) */
 export interface MenuLeaf { href: string; label?: string; pageTitle?: string; vis?: MenuVis; open?: boolean; visMembers?: string[] }
 /** 트리의 상위 한 항목 — href가 있으면 단독 메뉴(하위 없음) */
 export interface MenuGroupNode { id: string; label: string; href?: string; items: MenuLeaf[]; pageTitle?: string; vis?: MenuVis; open?: boolean; visMembers?: string[] }
@@ -230,27 +231,27 @@ export function menuLabelFor(href: string, extra?: ExtraEntry[]): string | null 
  */
 const VIS_RANK: Record<MenuVis, number> = { all: 0, member: 1, admin: 2 };
 
-/** 이 주소에 걸린 메뉴 항목의 공개범위 + 「주소로는 열람 허용」 + 멤버 선택 목록 (v2.0) */
-function hrefEntry(s: MenuSettings, path: string): { vis: MenuVis; open: boolean; members?: string[] } {
+/** 이 주소에 걸린 메뉴 항목의 공개범위 + 멤버 선택 목록 (v2.0) */
+function hrefEntry(s: MenuSettings, path: string): { vis: MenuVis; members?: string[] } {
   const covers = (href: string) =>
     path === href || path.startsWith(`${href}/`) || path.startsWith(`${href}?`);
   let bestLen = -1;
-  let best: { vis: MenuVis; open: boolean; members?: string[] } = { vis: 'all', open: false };
-  const take = (href: string, e: { vis: MenuVis; open: boolean; members?: string[] }) => {
+  let best: { vis: MenuVis; members?: string[] } = { vis: 'all' };
+  const take = (href: string, e: { vis: MenuVis; members?: string[] }) => {
     if (href.length > bestLen) { bestLen = href.length; best = e; }
     else if (href.length === bestLen && VIS_RANK[e.vis] < VIS_RANK[best.vis]) best = e;
   };
   for (const g of s.tree ?? defaultTree()) {
     const gv = g.vis ?? 'all';
-    if (g.href && covers(g.href)) take(g.href, { vis: gv, open: !!g.open, members: g.visMembers });
+    if (g.href && covers(g.href)) take(g.href, { vis: gv, members: g.visMembers });
     // 상위가 더 좁으면 하위는 그 뒤에 숨는다 — 상위가 안 보이면 하위도 안 보이므로
     for (const it of g.items) {
       if (!covers(it.href)) continue;
       const iv = it.vis ?? 'all';
       const narrower = VIS_RANK[gv] >= VIS_RANK[iv];
       take(it.href, narrower
-        ? { vis: gv, open: !!g.open, members: g.visMembers }
-        : { vis: iv, open: !!it.open, members: it.visMembers });
+        ? { vis: gv, members: g.visMembers }
+        : { vis: iv, members: it.visMembers });
     }
   }
   return best;
@@ -261,16 +262,12 @@ export function hrefVis(s: MenuSettings, path: string): MenuVis {
 }
 
 /**
- * **들어갈 수 있는가**의 기준 (v2.0 사용자 요청) — 「숨기되 주소로는 열람 허용」.
- *
- * 공개범위는 원래 「메뉴에 보이는가」와 「들어갈 수 있는가」를 한꺼번에 정했다.
- * 그래서 **링크로만 돌리고 싶은 게시판**을 만들 수가 없었다 — 메뉴에서 감추면 남에게
- * 주소를 줘도 못 열었기 때문. 항목마다 「주소로는 열람 허용」을 켜면 **메뉴·위젯에서는
- * 그대로 감추되 들어오는 것만 열어 준다.**
+ * **들어갈 수 있는가**의 기준 — 공개범위 그대로 (v3.3).
+ * 예전에는 「주소로는 열람 허용」을 켜면 감춘 메뉴도 주소로 들어올 수 있었지만, 쓰지 않는
+ * 기능이라 지웠다(사용자 요청). 저장된 `open` 값이 남아 있어도 무시한다.
  */
 export function hrefAccess(s: MenuSettings, path: string): MenuVis {
-  const e = hrefEntry(s, path);
-  return e.open ? 'all' : e.vis;
+  return hrefEntry(s, path).vis;
 }
 
 /* 「비로그인 숨김」에 멤버를 골라 뒀으면(visMembers) 그 회원(+관리자)에게만 (v2.0 사용자 요청).
@@ -291,8 +288,7 @@ export function canGalleryWrite(s: MenuSettings, secId: string, viewer: MenuView
   return !members?.length || (!!viewer.id && members.includes(viewer.id));
 }
 
-/** 이 방문자에게 **드러내도 되는가** (v2.0) — 메뉴·위젯이 쓴다.
- *  「주소로는 열람 허용」이어도 여기서는 감춘다 — 링크로만 돌리려는 것이지 알리려는 게 아니다 */
+/** 이 방문자에게 **드러내도 되는가** (v2.0) — 메뉴·위젯이 쓴다 */
 export function canViewHref(
   s: MenuSettings, path: string, viewer: MenuViewer,
 ): boolean {
@@ -305,7 +301,6 @@ export function canAccessHref(
   s: MenuSettings, path: string, viewer: MenuViewer,
 ): boolean {
   const e = hrefEntry(s, path);
-  if (e.open) return true;   // 주소로는 열람 허용 — 주소를 아는 사람 누구나
   return allows(e.vis, viewer, e.members);
 }
 

@@ -478,7 +478,7 @@ a{color:inherit;text-decoration:none}
 /* 진한 버튼 — 테마 변수 연동 (라이트 모드는 뮤트 톤 기본, 환경설정 > 디자인 「진한 버튼」) */
 .btn-dark{background:var(--btn-dark,var(--ink));color:var(--btn-dark-fg,#fff);height:35px;padding-top:0;padding-bottom:0;box-sizing:border-box}
 .btn-dark:hover{background:var(--btn-dark-hv,#33373e)}
-/* 게시글 작성자·작성일 줄의 EDIT/DELETE — 그 줄과 같은 글씨 크기의 작은 버튼 (사용자 요청) */
+/* 포스팅 작성자·작성일 줄의 EDIT/DELETE — 그 줄과 같은 글씨 크기의 작은 버튼 (사용자 요청) */
 .btn.post-meta-btn{height:20px;padding:0 8px;font-size:inherit;border-radius:6px;vertical-align:middle;margin:-2px 0 0 6px}
 .btn-ghost{border:1.5px solid var(--line);color:var(--sub);background:#fff}
 .btn-ghost:hover{border-color:var(--steel-3);color:var(--ink)}
@@ -1910,7 +1910,7 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
   .rel-desc{padding:11px 10px;font-size:calc(10.5px*var(--fs,1))}
 }
 
-/* 전체 게시글 관리 표 — 제목 칸이 남는 폭을 모두 차지하고, 나머지는 내용만큼만 (사용자 요청) */
+/* 전체 포스팅 관리 표 — 제목 칸이 남는 폭을 모두 차지하고, 나머지는 내용만큼만 (사용자 요청) */
 .admin-posts th,.admin-posts td{padding:12px;vertical-align:middle}
 .admin-posts .ap-check{width:1%;padding-right:4px}
 .admin-posts .ap-title{width:100%;min-width:140px;word-break:break-all}
@@ -1935,7 +1935,7 @@ body{height:100dvh} /* 지원 브라우저는 실제 보이는 높이 기준 (PC
 .search-wg-box button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .search-wg-box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;display:block}
 
-/* 게시글 하단 다음 글 / 이전 글 / 목록가기 (사용자 요청) — 패널 밖 배경 위에 얇은 줄로.
+/* 포스팅 하단 다음 글 / 이전 글 / 목록가기 (사용자 요청) — 패널 밖 배경 위에 얇은 줄로.
    글씨색은 페이지 제목/설명 색(--page-title/--page-desc)을 따라 모바일 흰 바탕에서도 보인다.
    제목만 표시하고(날짜 없음), 길면 말줄임 */
 .post-nav{margin-top:22px;color:var(--page-title);--pn-line:color-mix(in srgb,var(--page-title) 14%,transparent)}

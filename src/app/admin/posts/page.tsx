@@ -91,7 +91,7 @@ function PostList() {
             <button className="btn btn-ghost" onClick={() => setSelected(new Set())}>선택 해제</button>}
         </div>
       </div>
-      {!postsLoaded || !boardsLoaded ? <p role="status">게시글을 불러오는 중…</p> : (
+      {!postsLoaded || !boardsLoaded ? <p role="status">포스팅을 불러오는 중…</p> : (
         <>
           <p className="hint" style={{ textAlign: 'right', margin: '0 0 14px' }}>
             총 {filtered.length}개 · 글을 체크한 뒤 옮길 게시판을 고르고 이동을 누르세요
@@ -124,7 +124,7 @@ function PostList() {
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center' }}>게시글이 없습니다</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center' }}>포스팅이 없습니다</td></tr>}
               </tbody>
             </table>
           </div>
@@ -140,10 +140,10 @@ export default function AdminPostsPage() {
   const router = useRouter();
   return (
     <section className="page">
-      {/* 환경설정 — 게시글 본문의 EDIT/DELETE 같은 작은 버튼으로 제목 옆 한 줄에 (사용자 요청) */}
+      {/* 환경설정 — 포스팅 본문의 EDIT/DELETE 같은 작은 버튼으로 제목 옆 한 줄에 (사용자 요청) */}
       <div className="page-head">
         <div style={{ gridColumn: 1, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
-          <h1>전체 게시글 관리</h1>
+          <h1>전체 포스팅 관리</h1>
           {ready && isAdmin &&
             <button className="btn btn-dark post-meta-btn" style={{ fontSize: 12, margin: 0, flex: 'none' }}
               onClick={() => router.push('/settings')}>환경설정</button>}
