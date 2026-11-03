@@ -26,8 +26,9 @@ export interface BoardSettings {
   boxAlpha?: number;
   /** 박스 안 글씨색 — 'keep': 지금처럼 어두운 글씨(기본) / 'theme': 테마 따라감(다크면 밝게, 라이트면 어둡게) */
   boxText?: 'keep' | 'theme';
-  /** 카테고리 목록 상단 헤더 모양 (v3.2 사용자 요청) — 모든 게시판 공통, 환경설정 > 디자인 「카테고리 헤더」.
-   *  'basic' 지금 모양(기본) · 'mast' 마스트헤드(머리글 + 이탤릭 큰 제목 + 밑줄 탭) · 'emblem' 각인(가운데 정렬 + 장식) */
+  /** 페이지 헤더 모양 (v3.2 사용자 요청) — 환경설정 > 디자인 「페이지 헤더」. 카테고리만이 아니라 사이트의
+   *  모든 페이지 헤더에 공통(PageHeadStyle). 처음엔 카테고리 전용이라 이 자리에 두었고, 저장값이 이어지게 그대로 쓴다.
+   *  'basic' 지금 모양(기본) · 'mast' 마스트헤드(이탤릭 큰 제목 + 밑줄 탭) · 'emblem' 각인(가운데 정렬 + 장식) */
   headStyle?: BoardHeadStyle;
 }
 export type BoardHeadStyle = 'basic' | 'mast' | 'emblem';
