@@ -9,7 +9,7 @@ import {
   useLocalList, BOARD_SEED, Post, Comment, newId, fmtDate, fmtListDate,
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor,
 } from '@/lib/postStore';
-import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey, postHref, useBoardBoxStyle } from '@/lib/boardStore';
+import { useBoards, boardHref, MAIN_BOARD_ID, BoardPerm, postNumbers, findPostByKey, postHref, useBoardBoxStyle, useBoardSettings } from '@/lib/boardStore';
 import { renderBody } from '@/lib/sanitize';
 import { KInput } from '@/components/ui/Kit';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
@@ -28,6 +28,7 @@ export default function BoardDetailPage() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const toast = useToast();
+  const { st: boardSet } = useBoardSettings();     // 페이지 헤더 모양 — 글 위 목록 줄 글씨에 쓴다
   const [posts, setPosts, loaded] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   // 댓글은 글과 따로 저장된다 (v2.0) — 글 안에 두면 댓글을 달 때 글을 UPDATE 해야 해서
   // 일반 회원이 관리자 글에 댓글을 달 수 없었다 (포크 사용자 제보)
@@ -158,6 +159,15 @@ export default function BoardDetailPage() {
 
   return (
     <section className="page board-detail">
+      {/* 글 위 목록 줄 (v3.2 사용자 요청) — 게시판 이름은 글 박스 라벨에 이미 있어서 위에는 목록 링크와 글 번호만.
+          모양은 환경설정 > 디자인 「페이지 헤더」를 따르고, 모바일(620px 이하)은 CSS로 숨겨 지금 화면 그대로 둔다 */}
+      <div className="post-top">
+        <button className="post-top-list" onClick={() => router.push(boardHref(board.id, boards))}>
+          {boardSet.headStyle === 'mast' ? '← Back to list' : '← LIST'}
+        </button>
+        {(boardSet.headStyle ?? 'basic') === 'emblem' && <span className="post-top-star" aria-hidden>✦</span>}
+        {no !== undefined && <span className="post-top-no">NO. {no}</span>}
+      </div>
       {/* 게시판 이름은 박스 바깥 큰 제목 대신 헤더 안 라벨로 (v2.7 사용자 요청) */}
       <div className="panel board-post">
         {/* 썸네일 헤더 (v2.7 사용자 요청) — 대표 썸네일이 박스 맨 위를 가로로 꽉 채우고 아래로 흐려진다.
