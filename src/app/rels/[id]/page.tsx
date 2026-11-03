@@ -28,6 +28,7 @@ import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { useNoKey, maxNo } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
+import { useHeaderTone } from '@/lib/headerTone';
 import { useRelFeeds, RelAnnivColumn, RelAnnivStrip, RelFeedWidget } from '@/components/rels/RelWidgets';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
@@ -236,11 +237,24 @@ export default function RelDetailPage() {
   const bgG1 = themeAuStyle?.pageBgG1;
   const bgG2 = themeAuStyle?.pageBgG2;
   const bgAngle = themeAuStyle?.pageBgAngle;
+  /* 테마컬러 자관은 헤더 끝색을 단색으로 이어 칠한다 (v3.5 사용자 확정 시안 B) —
+     헤더가 투명해진 자리에 테마 그라데이션이 드러나 끊겨 보이던 것. 배경을 직접 지정해 뒀으면 그것이 우선 */
+  const hdrAu = rel?.aus.find(a => a.id === auId);
+  const hdrIsBase = (hdrAu?.id ?? 'base') === 'base';
+  const headerTone = useHeaderTone({
+    enabled: !!pageColor && !bgG1 && !bgG2,
+    imgRef: (hdrIsBase ? rel?.headerImgId : hdrAu?.headerImgId) ?? undefined,
+    crop: hdrIsBase ? rel?.headerCrop : hdrAu?.headerCrop,
+    g1: themeAuStyle?.headerBgG1, g2: themeAuStyle?.headerBgG2, angle: themeAuStyle?.headerBgAngle,
+  });
   useEffect(() => {
-    if (!bgG1 && !bgG2) return;
-    setPageBg({ g1: bgG1 ?? '#2b3038', g2: bgG2 ?? '#121418', angle: bgAngle ?? 180 });
+    if (bgG1 || bgG2) {
+      setPageBg({ g1: bgG1 ?? '#2b3038', g2: bgG2 ?? '#121418', angle: bgAngle ?? 180 });
+    } else if (headerTone) {
+      setPageBg({ g1: headerTone, g2: headerTone, angle: 180 });
+    } else return;
     return () => setPageBg(null);
-  }, [bgG1, bgG2, bgAngle, setPageBg]);
+  }, [bgG1, bgG2, bgAngle, headerTone, setPageBg]);
 
   const isDuo = rel ? (rel.kind ? rel.kind === 'pair' : rel.members.length === 2) : false;
   const au = rel?.aus.find(a => a.id === auId) ?? rel?.aus[0];
