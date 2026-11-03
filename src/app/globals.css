@@ -1406,6 +1406,24 @@ html.bbox-theme.bbox-zero .post-hd{--hd-scrim:color-mix(in srgb,var(--bg-g2,#121
   .post-hd-title{font-size:calc(26px*var(--fs,1)*var(--fs-posttitle,1))}
 }
 .board-comments-body{padding:16px 18px}
+/* 글 위 목록 줄 (v3.2 사용자 요청) — 왼쪽 목록 링크 · 오른쪽 끝 글 번호. 「페이지 헤더」 모양(phs-mast/phs-emblem)을 따른다.
+   PC(621px 이상)에서만 보인다 — 모바일 글 화면은 예전 그대로 두기 위해 규칙 전체를 PC 구간 안에 둔다
+   (밖에 두면 각인 모양의 display:grid가 모바일 숨김을 이겨 버린다) */
+.post-top{display:none}
+@media(min-width:621px){
+  .post-top{display:flex;align-items:center;gap:16px;min-width:0;margin-bottom:18px;color:var(--page-title)}
+  .post-top-list{background:none;border:0;padding:0;cursor:pointer;font-family:var(--font-pagetitle,var(--serif));font-weight:600;font-size:calc(12px*var(--fs,1));letter-spacing:.2em;color:var(--page-title);white-space:nowrap;transition:opacity .15s}
+  .post-top-list:hover{opacity:.7}
+  .post-top-list:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+  .post-top-no{margin-left:auto;font-size:calc(11px*var(--fs,1));letter-spacing:.2em;color:color-mix(in srgb,var(--page-title) 55%,transparent);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .post-top-star{font-size:calc(10px*var(--fs,1));color:color-mix(in srgb,var(--page-title) 70%,transparent)}
+  .phs-mast .post-top{padding:4px 0 10px;border-bottom:1px solid color-mix(in srgb,var(--page-title) 35%,transparent)}
+  .phs-mast .post-top-list{font-style:italic;font-weight:500;font-size:calc(17px*var(--fs,1));letter-spacing:.05em}
+  .phs-emblem .post-top{display:grid;grid-template-columns:1fr auto 1fr;padding-top:2px}
+  .phs-emblem .post-top-list{justify-self:start}
+  .phs-emblem .post-top-star{grid-column:2}
+  .phs-emblem .post-top-no{grid-column:3;justify-self:end;margin-left:0}
+}
 @media(max-width:620px){
   /* 박스 없는 전체화면은 그대로, 뒤에 흰 배경(80%)을 깐다 (사용자 요청) */
   #appMain:has(.board-detail){background:rgba(255,255,255,.8)}
