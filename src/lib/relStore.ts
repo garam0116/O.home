@@ -183,7 +183,10 @@ export interface RelAu {
   theme?: { mode: 'site' | 'custom'; color?: string; tone?: 'dark' | 'light' };
   ddayDate?: string;
   sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
+  /** 예전 HTML 프리 스페이스 — 이제 widgets의 'html' 종류로 읽는다 (relWidgetsOf). 고치면 widgets로 옮겨 저장하고 지운다 */
   freeBlocks?: { id: string; title?: string; html: string }[];
+  /** 자관 선택 위젯 (v4.6) — 없으면 원본(base) 것을 그대로 */
+  widgets?: import('./relWidgets').RelWidget[];
 }
 
 export interface Relation {
@@ -228,7 +231,10 @@ export interface Relation {
   thumbCrop?: import("@/components/ui/CropEditor").CropValue;
   ddayDate?: string;             // 디데이 기준일 (YYYY-MM-DD)
   sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
+  /** 예전 HTML 프리 스페이스 — 이제 widgets의 'html' 종류로 읽는다 (relWidgetsOf). 고치면 widgets로 옮겨 저장하고 지운다 */
   freeBlocks?: { id: string; title?: string; html: string }[];
+  /** 자관 선택 위젯 (v4.6) — 상세 아래 자유 공간. 디데이·LOG/LOREBOOK 같은 고정 위젯과 달리 고른 것만 보인다 */
+  widgets?: import('./relWidgets').RelWidget[];
   logUrl?: string;
   lorebookUrl?: string;
   members: RelMember[];          // 2인 = 좌/우, 3인+ = 다인 리스트

@@ -25,12 +25,13 @@ import { useToast } from '@/components/ui/Toast';
 import { PageTitle } from '@/components/ui/PageText';
 import { BackArrow } from '@/components/ui/BackArrow';
 import { useSectionTitle, sectionHref, MAIN_SEC } from '@/lib/sectionStore';
-import { sanitizeHtml } from '@/lib/sanitize';
 import { useNoKey, maxNo } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 import { useHeaderTone } from '@/lib/headerTone';
 import { useRelFeeds, RelAnnivColumn, RelAnnivStrip, RelFeedWidget } from '@/components/rels/RelWidgets';
 import { AppLink } from '@/components/ui/AppLink';
+import { RelBoard } from '@/components/rels/RelBoard';
+import { relWidgetsOf, type RelWidget } from '@/lib/relWidgets';
 
 /** 전신 이미지 — 비율 유지, 하단 정렬, 크기 %는 자관 수정 미리보기에서 지정 (v1.9) */
 // 전신 그림자는 「그림자 직접 지정」의 색·강도를 따른다 (v2.0 사용자 요청) — 자관명 그림자와 같은 설정
@@ -281,7 +282,8 @@ export default function RelDetailPage() {
   const ddayDate = au?.ddayDate ?? rel?.ddayDate;
   const dday = relDday(ddayDate);
   const ddayDateLabel = relDdayDate(ddayDate);
-  const freeBlocks = (isBaseAu ? rel?.freeBlocks : au?.freeBlocks) ?? rel?.freeBlocks ?? [];
+  // 자관 선택 위젯 (v4.6) — AU가 따로 가진 게 없으면 원본 것. 예전 HTML 프리 스페이스도 여기로 읽힌다
+  const widgets = rel ? relWidgetsOf(rel, au) : [];
   /* 2인 자관 위젯 (v3.3 사용자 확정) — 기념일 · LOG/LOREBOOK 탭.
      위젯이 생기면 자관명 위 LOG·LOREBOOK 버튼과 이름 아래 SINCE 한 줄은 그리지 않는다 (같은 내용이 위젯에 있다) */
   const { feeds: [logFeed, loreFeed], sources: feedSources } = useRelFeeds([rel?.logUrl, rel?.lorebookUrl]);
@@ -315,6 +317,11 @@ export default function RelDetailPage() {
 
   const updateRel = (patch: Partial<Relation>) =>
     setRels(rels.map(r => (r.id === rel.id ? { ...r, ...patch } : r)));
+  /** 선택 위젯 저장 — 보고 있는 AU에 담는다(원본을 물려받던 AU는 이때부터 자기 것). 예전 freeBlocks는 옮겼으니 지운다 */
+  const saveWidgets = (next: RelWidget[]) => {
+    if (isBaseAu) updateRel({ widgets: next, freeBlocks: undefined });
+    else updateRel({ aus: rel.aus.map(a => (a.id === au!.id ? { ...a, widgets: next, freeBlocks: undefined } : a)) });
+  };
   // AU별 프로필 데이터 갱신 (v1.9) — base는 최상위 필드, 그 외 AU는 aus 항목에
   const patchAuData = (p: { arts?: string[] }) => {
     if (isBaseAu) updateRel(p);
@@ -717,12 +724,14 @@ export default function RelDetailPage() {
       {/* LOG·LOREBOOK 목록을 불러오는 보이지 않는 부품 */}
       {feedSources}
 
-      {freeBlocks.map(block => (
-        <section key={block.id} className="panel rel-free-block">
-          {block.title && <h3>{block.title}</h3>}
-          <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
-        </section>
-      ))}
+      {/* 자관 선택 위젯 (v4.6) — 관리자는 「배치 편집」으로 넣고 크기·모양을 바꾼다 */}
+      <RelBoard widgets={widgets} isAdmin={isAdmin} onChange={saveWidgets}
+        ctx={{
+          relName: (isBaseAu ? undefined : au?.name) || rel.name,
+          members: rel.members.map(m => auMember(m, au)),
+          logItems: recapLogs, loreItems: loreFeed.state === 'ok' ? loreFeed.items : undefined,
+          startDate: ddayDate,
+        }} />
 
       {/* ---------- 멤버 추가·수정 모달 — 인물 이름 + 사진 ---------- */}
       <Modal open={memberOpen} onClose={() => setMemberOpen(false)} small title={mEditId ? '멤버 수정' : '멤버 추가'}

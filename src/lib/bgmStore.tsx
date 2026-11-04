@@ -36,8 +36,16 @@ const DEFAULT_STATE: BgmState = {
 
 const STORAGE_KEY = 'ohome.bgm.v1';
 
+/** 잠시 바꿔 트는 재생 목록 (v4.6 자관 테마곡 위젯 · 시안 T-1) — 이 방문자의 플레이어에서만, 저장하지 않는다.
+ *  관리자가 정한 사이트 BGM 목록(state.tracks)은 그대로이고, 「원래 목록」(clearQueue)으로 돌아간다.
+ *  nonce는 같은 목록의 다른 곡을 눌러도 플레이어가 새로 재생하게 하는 표시 */
+export interface BgmQueue { label: string; tracks: BgmTrack[]; start: number; nonce: number }
+
 interface BgmCtx {
   state: BgmState;
+  queue: BgmQueue | null;
+  playQueue: (label: string, tracks: BgmTrack[], start: number) => void;
+  clearQueue: () => void;
   setTracks: (t: BgmTrack[]) => void;
   addTrack: (title: string, desc: string, urlOrId: string, cover?: string) => boolean;
   removeTrack: (id: string) => void;
@@ -56,6 +64,11 @@ export function parseVideoId(input: string): string | null {
 
 export function BgmStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<BgmState>(DEFAULT_STATE);
+  const [queue, setQueue] = useState<BgmQueue | null>(null);
+  const playQueue = useCallback((label: string, tracks: BgmTrack[], start: number) => {
+    if (tracks.length) setQueue(q => ({ label, tracks, start, nonce: (q?.nonce ?? 0) + 1 }));
+  }, []);
+  const clearQueue = useCallback(() => setQueue(null), []);
 
   // 환경설정에서 SAVE 없이 변경을 취소하면 저장본을 다시 읽는다 (v2.5)
   useEffect(() => {
@@ -97,7 +110,7 @@ export function BgmStoreProvider({ children }: { children: React.ReactNode }) {
     setState(s => { const n = { ...s, settings: { ...s.settings, ...patch } }; persist(n); return n; });
   }, []);
 
-  return <Ctx.Provider value={{ state, setTracks, addTrack, removeTrack, setSettings }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ state, queue, playQueue, clearQueue, setTracks, addTrack, removeTrack, setSettings }}>{children}</Ctx.Provider>;
 }
 
 export function useBgm(): BgmCtx {

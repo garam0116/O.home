@@ -31,7 +31,6 @@ export interface RelFormValue {
   thumbCrop?: CropValue;
   ddayDate?: string;
   sideSlots?: { l?: RelSideSlot; r?: RelSideSlot };
-  freeBlocks?: { id: string; title?: string; html: string }[];
   logUrl?: string;
   lorebookUrl?: string;
   headerImgId?: string;      // 헤더 이미지 (v1.5 — 풀폭 블러 + 페이드아웃)
@@ -223,7 +222,6 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
       r: slots.r?.imgId ? { ref: slots.r.imgId, crop: slots.r.crop } : undefined };
   });
   const [sideCropOpen, setSideCropOpen] = useState<'l' | 'r' | null>(null);
-  const [freeBlocks, setFreeBlocks] = useState(() => auObj?.freeBlocks ?? (auObj ? [] : initial?.freeBlocks ?? []));
   const [logUrl, setLogUrl] = useState(initial?.logUrl ?? '');
   const [lorebookUrl, setLorebookUrl] = useState(initial?.lorebookUrl ?? '');
   const [lb, setLb] = useState<number | null>(null);   // 아트 썸네일 클릭 → 원본 보기
@@ -397,7 +395,6 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
       thumbCrop: thumbDraft ? thumbDraft.crop : thumbCrop,
       ddayDate: ddayDate || undefined,
       sideSlots: sideSlotValues.l || sideSlotValues.r ? sideSlotValues : undefined,
-      freeBlocks: freeBlocks.length ? freeBlocks : undefined,
       logUrl: auObj ? undefined : (logUrl.trim() || undefined),
       lorebookUrl: auObj ? undefined : (lorebookUrl.trim() || undefined),
       headerImgId: headerImage ? await resolveImageRef(headerImage) : (headerRemoved ? undefined : initHeaderId),
@@ -819,31 +816,8 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
                 )}
               </div>
             )}
-            <div>
-              <label className="k-label" style={{ marginBottom: 5 }}>하단 HTML 프리 스페이스</label>
-              <p className="hint" style={{ margin: '0 0 8px' }}>입력한 HTML은 출력 시 안전하게 정리됩니다.</p>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {freeBlocks.map((block, index) => (
-                  <div key={block.id} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 8, display: 'grid', gap: 6 }}>
-                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                      <KInput placeholder="블록 제목 (선택)" value={block.title ?? ''}
-                        onChange={e => setFreeBlocks(items => items.map((item, i) => i === index ? { ...item, title: e.target.value } : item))} />
-                      <button type="button" className="btn btn-ghost" disabled={index === 0}
-                        onClick={() => setFreeBlocks(items => { const next = [...items]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}>↑</button>
-                      <button type="button" className="btn btn-ghost" disabled={index === freeBlocks.length - 1}
-                        onClick={() => setFreeBlocks(items => { const next = [...items]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>↓</button>
-                      <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => items.filter((_, i) => i !== index))}>✕</button>
-                    </div>
-                    <KTextarea autoGrow={false} placeholder="<p>HTML</p>" value={block.html}
-                      onChange={e => setFreeBlocks(items => items.map((item, i) => i === index ? { ...item, html: e.target.value } : item))}
-                      style={{ height: 220, minHeight: 220, maxHeight: 220, overflowY: 'auto', resize: 'none', fontFamily: 'monospace' }} />
-                  </div>
-                ))}
-                <button type="button" className="btn btn-ghost" onClick={() => setFreeBlocks(items => [...items, { id: newId(), title: '', html: '' }])}>
-                  ＋ 블록 추가
-                </button>
-              </div>
-            </div>
+            {/* 하단 자유 공간은 자관 페이지에서 바로 고친다 (v4.6 — 선택 위젯 · 시안 W-1). 예전 HTML 블록은 「HTML」 위젯이 되었다 */}
+            <p className="hint" style={{ margin: 0 }}>하단 자유 공간(테마곡·메모·HTML 등 위젯)은 자관 페이지의 「배치 편집」에서 추가하고 고칩니다.</p>
             <KInput placeholder="캐치프레이즈" value={catchphrase} onChange={e => setCatchphrase(e.target.value)} />
             {/* 자관명·캐치프레이즈 글씨색 (v1.9 사용자 요청) — 기본은 테마색. AU마다 따로 정할 수 있다 (v2.0) */}
             {(
