@@ -22,7 +22,7 @@ import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
 import { anniversaries, annivBadge, annivMessage, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
 import { relDday, relDdayDate } from '@/lib/relStore';
-import { logRecap, lookback, skyRecap, WEEKDAYS, type RecapLog } from '@/lib/relRecap';
+import { logRecap, lookback, paceTo, pickAgain, skyRecap, WEEKDAYS, type RecapLog } from '@/lib/relRecap';
 import { AppLink } from '@/components/ui/AppLink';
 
 /* ---------- 글 목록 (LOG · LOREBOOK) ---------- */
@@ -233,11 +233,13 @@ const num = (v: React.ReactNode, unit?: string) => <><span className="num">{v}</
 /**
  * 장부 세 장의 줄 (v3.8 사용자 확정). 줄 순서가 곧 중요도 — 칸이 모자라면 아래 줄부터 뺀다.
  * 값이 없는 줄(로그 목록을 못 읽음·0)은 만들지 않고, 줄이 하나도 없는 장은 장 이름째 뺀다.
+ * 장마다 맨 아래 줄(foot)이 따로 있다 (v4.0 사용자 확정): 1장 다시 꺼내 볼 로그 · 2장 이 속도라면 · 3장 다음 기념일.
+ * 맨 아래 줄은 칸이 모자라도 빼지 않는다.
  */
 function recapPages(p: {
   a: { future: Anniv[]; dayCount: number }; x: Anniv; now: Date; startDate?: string;
   logs?: RecapLog[]; loreCount?: number;
-}): { name: string; rows: RecapRow[] }[] {
+}): { name: string; rows: RecapRow[]; foot?: RecapRow }[] {
   const { x, now } = p;
   const lg = logRecap(p.logs, p.startDate, now);
   const back = lookback(p.logs, x, p.startDate, now);
@@ -257,30 +259,37 @@ function recapPages(p: {
     if (lg.lastAgo != null) r1.push({ k: '마지막 로그', v: lg.lastAgo === 0 ? '오늘' : num(lg.lastAgo, '일 전') });
     if (lg.first) r1.push({ k: '첫 로그', v: num(fullDate(new Date(lg.first.time))) });
   }
+  const again = pickAgain(p.logs, [back?.log, lg?.first], p.startDate, now);
+  const t1 = again && <>No.{again.no} {again.title}</>;
+  const foot1: RecapRow | undefined = again && { k: '다시 꺼내 볼 로그', hot: true, v: again.href ? <AppLink href={again.href}>{t1}</AppLink> : t1 };
   const r2: RecapRow[] = [];
   if (lg?.avg) r2.push({ k: '한 달 평균', v: num(lg.avg, '편') });
   if (lg?.weekday) r2.push({ k: '즐겨 쓴 요일', v: <>{WEEKDAYS[lg.weekday.day]} <small>{lg.weekday.n}편</small></> });
   if (lg?.gap) r2.push({ k: '가장 길었던 공백', v: num(lg.gap, '일') });
   if (lg?.thisYear) r2.push({ k: '올해 쓴 로그', v: num(lg.thisYear, '편') });
   if (p.loreCount) r2.push({ k: '쌓인 로어북', v: num(p.loreCount, '편') });
+  const pace = lg ? paceTo(lg.total, lg.avg, now) : undefined;
+  const foot2: RecapRow | undefined = pace && { k: '이 속도라면', hot: true, v: <>{pace.target}편째 {num(`${pace.y}.${pace.m}`)} <small>무렵</small></> };
   const r3: RecapRow[] = [];
   if (sky?.galaxyEok) r3.push({ k: '은하를 따라 흘러간 거리', v: num(sky.galaxyEok.toLocaleString(), '억 km') });
   if (sky?.moons) r3.push({ k: '함께 본 보름달', v: num(sky.moons, '번') });
   if (sky?.weekends) r3.push({ k: '함께 보낸 주말', v: num(sky.weekends, '번') });
   if (sky?.newYears) r3.push({ k: '함께 넘긴 새해', v: num(sky.newYears, '번') });
   if (sky?.seasons) r3.push({ k: '지나온 계절', v: num(sky.seasons, '번') });
+  const next = p.a.future[1];
+  const foot3: RecapRow | undefined = next && { k: '다음 기념일', hot: true, v: <>{next.label} <span className="num">{annivBadge(next.diff)}</span></> };
   return [
-    { name: '그때 그 로그', rows: r1 },
-    { name: '기록 습관', rows: r2 },
-    { name: '함께 맞은 것들', rows: r3 },
+    { name: '그때 그 로그', rows: r1, foot: foot1 },
+    { name: '기록 습관', rows: r2, foot: foot2 },
+    { name: '함께 맞은 것들', rows: r3, foot: foot3 },
   ].filter(pg => pg.rows.length);
 }
 
 /**
  * 「지나온 N일」 장부 — 기념일 당일 돌아보기를 누르면 PC는 타임라인 자리에, 모바일은 띠 아래에 펼친다.
- * 세 장으로 나눠 제목 아래 장 이름으로 넘긴다 (v3.8 · 시안 V2). 장마다 다섯 줄 + 맨 아래 「다음 기념일」.
+ * 세 장으로 나눠 제목 아래 장 이름으로 넘긴다 (v3.8 · 시안 V2). 장마다 다섯 줄 + 그 장의 맨 아래 줄(recapPages의 foot).
  * 모바일은 장부를 옆으로 밀어도 넘어간다. 닫았다 다시 열면 첫 장부터.
- * PC는 칸 높이가 가운데 일러로 정해져 있어, 넘치면 장의 아래 줄부터 뺀다 (다음 기념일은 남긴다).
+ * PC는 칸 높이가 가운데 일러로 정해져 있어, 넘치면 장의 아래 줄부터 뺀다 (맨 아래 줄은 남긴다).
  */
 function AnnivRecap({ a, x, now, startDate, logs, loreCount, strip, onClose, closeRef }: {
   a: { past: Anniv[]; future: Anniv[]; dayCount: number }; x: Anniv; now: Date; startDate?: string;
@@ -293,9 +302,8 @@ function AnnivRecap({ a, x, now, startDate, logs, loreCount, strip, onClose, clo
   const box = useRef<HTMLDivElement>(null);
   const rowsN = cur?.rows.length ?? 0;
   const { drop } = useFitDrop(box, rowsN, !strip, `${pg}|${rowsN}`);
-  const next = a.future[1];
   const rows = (cur?.rows ?? []).slice(0, Math.max(0, rowsN - drop));
-  if (next) rows.push({ k: '다음 기념일', hot: true, v: <>{next.label} <span className="num">{annivBadge(next.diff)}</span></> });
+  if (cur?.foot) rows.push(cur.foot);
   const go = (d: number) => setPg(i => Math.min(pages.length - 1, Math.max(0, i + d)));
   const swipe = useRef<number | null>(null);
   return (

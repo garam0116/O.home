@@ -3,7 +3,8 @@
  *  - 1장 그때 그 로그   남긴 로그 · N 전 이맘때(멀면 무렵) · 가장 많이 쓴 달 · 마지막 로그 · 첫 로그
  *  - 2장 기록 습관      한 달 평균 · 즐겨 쓴 요일 · 가장 길었던 공백 · 올해 쓴 로그 · 쌓인 로어북
  *  - 3장 함께 맞은 것들 은하를 따라 흘러간 거리 · 함께 본 보름달 · 함께 보낸 주말 · 함께 넘긴 새해 · 지나온 계절
- * 어느 장이든 맨 아래 줄은 「다음 기념일」 (RelWidgets가 붙인다).
+ * 장마다 맨 아래 줄이 하나씩 따로 있다 (v4.0 사용자 확정 — RelWidgets가 붙인다, PC에서 칸이 모자라도 남긴다):
+ *  - 1장 다시 꺼내 볼 로그 (pickAgain)   - 2장 이 속도라면 (paceTo)   - 3장 다음 기념일
  *
  * 로그 숫자는 LOG 위젯이 읽은 목록(이 방문자에게 보이는 글)으로 센다 — 위젯 LOG 탭과 같은 글이다.
  * 날짜 숫자는 자관 디데이 기준일 하나로 센다. 값이 0이거나 셀 수 없는 줄은 만들지 않는다.
@@ -102,6 +103,43 @@ export function lookback(logs: RecapLog[] | undefined, x: Anniv, startStr: strin
   }
   const far = best > NEAR_DAYS;
   return { label: `${name} ${far ? '무렵' : '이맘때'}`, log: pick, far };
+}
+
+/** 글자 → 32비트 수 (FNV-1a). 같은 글자면 늘 같은 수 */
+function hash(s: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+
+/**
+ * 1장 맨 아래 「다시 꺼내 볼 로그」 — 무작위 한 편 (v4.0 사용자 확정 · 시안 F, 기준 「무작위」).
+ * 오늘 날짜 + 자관 시작일을 씨앗으로 골라, 같은 날에는 새로고침해도 같은 글이고 날이 바뀌면(= 다음 기념일) 다른 글이다.
+ * 같은 장에 이미 나온 글(exclude — 「이맘때」·첫 로그)은 뺀다. 남는 글이 없으면 undefined.
+ * 후보는 이 방문자에게 보이는 글이라 비밀글이 있으면 방문자마다 다른 글이 나올 수 있다 (사용자 확인).
+ */
+export function pickAgain(logs: RecapLog[] | undefined, exclude: (RecapLog | undefined)[], startStr: string | undefined, now = new Date()) {
+  if (!logs?.length) return undefined;
+  const pool = logs.filter(l => !exclude.includes(l)).sort((a, b) => a.time - b.time || a.no - b.no);
+  if (!pool.length) return undefined;
+  const seed = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}|${startStr ?? ''}`;
+  return pool[hash(seed) % pool.length];
+}
+
+/** 「이 속도라면」을 보여 줄 가장 먼 거리 — 이보다 멀면 줄을 만들지 않는다 */
+const PACE_MAX_MONTHS = 24;
+
+/**
+ * 2장 맨 아래 「이 속도라면」 — 한 달 평균대로 쓰면 다음 100단위 편수(100·200…)에 닿는 달 (v4.0 사용자 확정 · 시안 A의 2장).
+ * 평균이 없거나 2년보다 멀면 undefined.
+ */
+export function paceTo(total: number, avg: number | undefined, now = new Date()) {
+  if (!avg || avg <= 0) return undefined;
+  const target = (Math.floor(total / 100) + 1) * 100;
+  const months = (target - total) / avg;
+  if (months > PACE_MAX_MONTHS) return undefined;
+  const at = addDays(dayOf(now), Math.round(months * 30.44));
+  return { target, y: at.getFullYear(), m: at.getMonth() + 1 };
 }
 
 /* ---------- 3장 — 날짜만으로 ---------- */
