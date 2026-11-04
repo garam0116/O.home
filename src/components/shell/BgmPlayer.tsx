@@ -119,8 +119,11 @@ function useBarDrag(onRatio: (r: number, done: boolean) => void) {
 }
 
 export function BgmPlayer() {
-  const { state } = useBgm();
-  const { tracks, settings } = state;
+  const { state, queue, clearQueue } = useBgm();
+  const { settings } = state;
+  /* 지금 트는 목록 — 자관 테마곡 위젯이 잠시 바꿔 둔 목록이 있으면 그것, 없으면 사이트 BGM 목록 (v4.6 · 시안 T-1).
+     아래 코드는 모두 이 목록(tracks)을 기준으로 움직인다 */
+  const tracks = queue?.tracks ?? state.tracks;
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [open, setOpen] = useState(false);          // 플레이어 팝업
@@ -311,6 +314,22 @@ export function BgmPlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.autoplay, settings.enabled, tracks.length]);
 
+  // 테마곡 위젯에서 곡을 누르면 그 목록의 그 곡부터, 「원래 목록」으로 돌아가면 사이트 목록 첫 곡부터(듣던 중이었을 때만)
+  const queueKey = queue ? queue.nonce : 0;
+  const firstQueueRun = useRef(true);
+  useEffect(() => {
+    if (firstQueueRun.current) { firstQueueRun.current = false; return; }
+    if (queue) {
+      if (readyRef.current && playerRef.current) playAtRef.current(queue.start);
+      else { setIdx(queue.start); armedRef.current = true; }   // 플레이어가 막 만들어지는 중 — 준비되면 재생
+    } else {
+      setIdx(0);
+      if (playingRef.current && tracks.length && readyRef.current) playAtRef.current(0);
+      else setPlaying(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueKey]);
+
   const prev = () => {
     // 3초 넘게 들었으면 처음으로, 아니면 이전 곡 (일반적인 플레이어 동작)
     if (startedRef.current && time > 3 && playerRef.current) { playerRef.current.seekTo(0, true); setTime(0); return; }
@@ -396,6 +415,12 @@ export function BgmPlayer() {
               <div className="lb">now playing</div>
               <Marquee className="tt" text={track?.title ?? ''} active={playing} />
               {track?.desc && <div className="ds">{track.desc}</div>}
+              {queue && (
+                <div className="bgm-q">
+                  <span><b>{queue.label}</b> 플레이리스트</span>
+                  <button type="button" onClick={clearQueue}>원래 목록</button>
+                </div>
+              )}
             </div>
             <div className="prog">
               <span className="tm">{fmt(shownTime)}</span>

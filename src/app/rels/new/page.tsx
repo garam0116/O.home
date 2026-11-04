@@ -49,7 +49,7 @@ function RelNewInner() {
             name: v.name, catchphrase: v.catchphrase, kind: v.kind,
             fontId: v.fontId, bodyFontId: v.bodyFontId, visibility: v.visibility,
             arts: v.arts, thumbId: v.thumbId, thumbCrop: v.thumbCrop,
-            ddayDate: v.ddayDate, sideSlots: v.sideSlots, freeBlocks: v.freeBlocks,
+            ddayDate: v.ddayDate, sideSlots: v.sideSlots,
             logUrl: v.logUrl, lorebookUrl: v.lorebookUrl,
             headerImgId: v.headerImgId, headerCrop: v.headerCrop,
             themeMode: v.themeMode, themeColor: v.themeColor, themeTone: v.themeTone,
