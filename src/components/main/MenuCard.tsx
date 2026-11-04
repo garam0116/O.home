@@ -137,6 +137,7 @@ export function MenuCard({ conf }: { conf: WidgetConf }) {
                       </button>
                     );
                   })}
+                  {style === 'thread' && <span className="mc-star" aria-hidden />}
                 </div>
               )}
             </div>
@@ -161,6 +162,7 @@ function roman(n: number): string {
  *  · halo:   마우스 위치를 --mx/--my로 (카드 · 펼친 하위 메뉴 각각). 손을 떼면 현재 메뉴 자리로
  *  · prism:  빛줄기(.mc-glow/.mc-beam)를 마우스가 올라간 대메뉴로, 손을 떼면 현재 메뉴로(없으면 숨김)
  *  · thread: 대메뉴 이름 폭을 --lw로 — 하위 메뉴로 뻗는 점선이 이름 끝에서 시작하게(이름을 덮지 않게, 사용자 요청)
+ *            큰 ◆(.mc-star)의 높이를 --sy로 — 마우스를 올린 하위 항목, 손을 떼면 선택한 항목(없으면 첫 항목) (사용자 확정 시안 C)
  */
 function useCardMotion(style: MenuCardStyle, cardRef: React.RefObject<HTMLDivElement | null>, listRef: React.RefObject<HTMLElement | null>, key: string) {
   useEffect(() => {
@@ -223,6 +225,25 @@ function useCardMotion(style: MenuCardStyle, cardRef: React.RefObject<HTMLDivEle
       ro = new ResizeObserver(measure);
       list.querySelectorAll('.mc-lbl').forEach(l => ro!.observe(l));
       measure();
+
+      // 큰 ◆ 자리 — 하위 메뉴는 닫혀 있으면(display:none) 잴 수 없으므로 펼치는 순간(대메뉴에 올리거나 포커스)에 잰다
+      list.querySelectorAll<HTMLElement>('.mc-grp').forEach(item => {
+        const sub = item.querySelector<HTMLElement>(':scope > .mc-sub');
+        if (!sub?.querySelector('.mc-star')) return;
+        const btns = [...sub.querySelectorAll<HTMLElement>(':scope > button')];
+        const place = (b?: HTMLElement) => {
+          const t = b ?? btns.find(x => x.classList.contains('on')) ?? btns[0];
+          if (!t) return;
+          sub.style.setProperty('--sy', `${t.offsetTop + t.offsetHeight / 2}px`);
+          btns.forEach(x => x.classList.toggle('at', x === t));
+          item.classList.toggle('star0', t === btns[0]);
+        };
+        on(item, 'mouseenter', () => place());
+        on(item, 'focusin', e => { const b = (e.target as HTMLElement).closest?.('.mc-sub > button') as HTMLElement | null; place(b ?? undefined); });
+        btns.forEach(b => on(b, 'mouseenter', () => place(b)));
+        on(sub, 'mouseleave', () => place());
+        place();
+      });
     }
 
     return () => {

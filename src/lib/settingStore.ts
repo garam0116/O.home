@@ -41,6 +41,7 @@ export const SETTING_KEYS = [
   'ohome.main.v1',
   'ohome.membertags.v1', 'ohome.invite.v1', 'ohome.roadnext.v1', 'ohome.repo.v1',
   'ohome.sections.v1', 'ohome.links.v1',
+  'ohome.shortcuts.v1',
 ];
 
 /** 앱 시작 시 1회 — 서버에 저장된 설정을 전부 받아 캐시 */

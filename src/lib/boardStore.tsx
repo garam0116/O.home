@@ -126,6 +126,11 @@ const normBoards = (list: Board[]): Board[] =>
   list.map(b => (BOARD_SKINS.some(k => k.id === b.skin) ? b : { ...b, skin: b.skin === ('ticket' as string) ? 'gallery' : 'list' }));
 export type BoardPerm = 'guest' | 'member' | 'admin';
 
+/** 이 게시판에 글을 쓸 수 있는가 — 로그인이 전제이고, 「관리자」로 둔 게시판은 관리자만.
+ *  목록의 WRITE 버튼과 단축키 글쓰기 창(components/shell/Shortcuts)이 같이 쓴다 */
+export const canBoardWrite = (perm: BoardPerm, viewer: { loggedIn: boolean; isAdmin: boolean }) =>
+  viewer.loggedIn && (perm !== 'admin' || viewer.isAdmin);
+
 export interface Board {
   id: string;              // 'main' = 기본 게시판 (삭제 불가)
   name: string;            // 메뉴·페이지 타이틀 표시명

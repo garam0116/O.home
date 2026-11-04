@@ -2325,8 +2325,10 @@ body.no-topbar .topbar{display:none}
 
 /* Thread — 상자 없이 점선 실과 ◆ 마디. 대메뉴에 올리면 이름 끝에서 점선이 하위 메뉴까지 뻗음(--lw = 이름 폭, MenuCard가 잼).
    하위 메뉴는 위젯 가로 끝에 바로 붙여 연다(간격 0 — 실선 길이가 위젯 폭을 따라감).
-   이음새는 '테두리 줄기'(사용자 확정 시안 A2): 하위 메뉴 왼쪽 경계선 전체가 금색 점선 줄기이고, 가로 점선 끝 ◆가
-   그 줄기 위 연결 마디가 된다. 첫 하위 항목의 ◇는 이 ◆와 겹치므로 숨긴다. 펼칠 때 줄기에서 바깥쪽으로 그려지듯 열림.
+   이음새는 '테두리 줄기'(사용자 확정 시안 A2): 하위 메뉴 왼쪽 경계선 전체가 금색 점선 줄기이고, 가로 점선 끝의 작은 ◇가
+   그 줄기 위 연결 마디가 된다. 첫 하위 항목의 ◇는 이 마디와 겹치므로 숨긴다. 펼칠 때 줄기에서 바깥쪽으로 그려지듯 열림.
+   큰 ◆(.mc-star)는 줄기 위를 미끄러지며 마우스를 올린 하위 항목을 가리키고, 손을 떼면 선택한 항목(없으면 첫 항목)으로
+   돌아간다(사용자 확정 시안 C — 위치는 MenuCard useCardMotion이 --sy로 잰다). 별이 앉은 항목의 작은 ◇는 숨긴다(.at).
    하위 메뉴는 본문 위젯 위에 겹쳐도 읽히도록 드롭다운 배경을 옅게 깐다 */
 .mc-s-thread{--mc-gap:0px;padding:6px 0 4px 22px;background:none;border:0;border-radius:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .mc-s-thread::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:1px;opacity:.5;pointer-events:none;
@@ -2347,8 +2349,8 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(3px)}
 .mc-s-thread .mc-wire{position:absolute;top:50%;right:calc(-1 * var(--mc-gap));width:calc(100% - var(--lw,40px) - 10px + var(--mc-gap));
   border-top:1px dashed var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.3,.8,.25,1);pointer-events:none}
-.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-4px;top:-4px;width:7px;height:7px;transform:rotate(45deg);background:var(--gold);
-  box-shadow:0 0 10px 1px color-mix(in srgb,var(--gold) 60%,transparent)}
+.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-3px;top:-3px;width:5px;height:5px;transform:rotate(45deg);
+  background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-wire,.mc-s-thread .mc-grp:has(:focus-visible) > .mc-top .mc-wire{transform:scaleX(1)}
 .mc-s-thread .mc-item.shut > .mc-top .mc-wire{transform:scaleX(0)}
 .mc-s-thread .mc-sub{top:-2px;min-width:150px;padding:4px 14px 4px 18px;border:0;border-radius:0 10px 10px 0;box-shadow:none;
@@ -2361,7 +2363,12 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread .mc-sub button::before{content:"";position:absolute;left:-21px;top:50%;width:5px;height:5px;margin-top:-2.5px;transform:rotate(45deg);
   background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
 .mc-s-thread .mc-sub button.on::before{background:var(--gold);box-shadow:0 0 8px color-mix(in srgb,var(--gold) 70%,transparent)}
-.mc-s-thread .mc-sub button:first-child::before{visibility:hidden}
+.mc-s-thread .mc-sub button:first-child::before,.mc-s-thread .mc-sub button.at::before{visibility:hidden}
+.mc-s-thread .mc-item.star0 > .mc-top .mc-wire::after{visibility:hidden} /* 별이 첫 항목(마디 자리)에 있으면 마디는 별 뒤로 */
+.mc-star{display:none}
+.mc-s-thread .mc-star{display:block;position:absolute;left:0;top:var(--sy,20px);width:8px;height:8px;z-index:2;pointer-events:none;
+  transform:translate(-50%,-50%) rotate(45deg);background:var(--gold);box-shadow:0 0 10px 2px color-mix(in srgb,var(--gold) 60%,transparent);
+  transition:top .38s cubic-bezier(.3,.8,.25,1)}
 .mc-s-thread .mc-sub button.on{color:var(--gold)}
 .mc-s-thread .mc-cnt{color:var(--gold);opacity:.85}
 .mc-s-thread .mc-foot{position:relative;margin-top:14px;padding-top:10px;border-top:0}
@@ -2372,13 +2379,14 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread.mc-right .mc-top,.mc-s-thread.mc-right .mc-sub button{flex-direction:row-reverse}
 .mc-s-thread.mc-right .mc-top::before,.mc-s-thread.mc-right .mc-sub button::before{left:auto;right:-21px}
 .mc-s-thread.mc-right .mc-wire{right:auto;left:calc(-1 * var(--mc-gap));transform-origin:right}
-.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-4px}
+.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-3px}
+.mc-s-thread.mc-right .mc-star{left:auto;right:0;transform:translate(50%,-50%) rotate(45deg)}
 .mc-s-thread.mc-right .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(-3px)}
 .mc-s-thread.mc-right .mc-sub{padding:4px 18px 4px 14px;border-radius:10px 0 0 10px}
 .mc-s-thread.mc-right .mc-sub::after{left:auto;right:0}
 .mc-s-thread.mc-right .mc-item:hover > .mc-sub,.mc-s-thread.mc-right .mc-item:has(:focus-visible) > .mc-sub{animation-name:mcThreadOpenR}
 @keyframes mcThreadOpenR{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
-@media (prefers-reduced-motion:reduce){.mc-s-thread .mc-item > .mc-sub{animation:none !important}}
+@media (prefers-reduced-motion:reduce){.mc-s-thread .mc-item > .mc-sub{animation:none !important}.mc-s-thread .mc-star{transition:none}}
 .mc-s-thread.mc-right .mc-foot{display:flex;justify-content:flex-end}
 .mc-s-thread.mc-right .mc-foot::before{left:auto;right:-21px}
 @media (prefers-reduced-motion:reduce){
@@ -2842,3 +2850,26 @@ html.phs-mast,html.phs-emblem{--ph-line:color-mix(in srgb,var(--page-title) 35%,
   /* 좁은 폭은 탭이 줄바꿈되므로 가운뎃점을 빼고 간격만 — 줄 첫머리에 점이 남지 않게 */
   .phs-emblem .page-head + .toolrow:not(.bh-row) > .seg button + button::before{content:none}
 }
+
+/* ---------- 단축키 (사용자 요청) — 글쓰기 창(W) · 단축키 목록(?) · 환경설정 > 단축키 ---------- */
+.kbd,.sc-pick kbd,.sc-help kbd,.sc-set kbd{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;
+  border-radius:6px;border:1px solid var(--line);border-bottom-width:2px;background:var(--panel-solid);
+  font-family:var(--sans);font-size:calc(11.5px*var(--fs,1));font-weight:700;color:var(--ink);line-height:1;flex:none}
+.sc-pick-list{display:flex;flex-direction:column;gap:1px;max-height:56vh;overflow:auto}
+.sc-pick-grp{margin:8px 0 2px 4px;font-size:calc(10px*var(--fs,1));letter-spacing:.1em;color:var(--faint)}
+.sc-pick-grp:first-child{margin-top:0}
+.sc-pick-list button{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;text-align:left;font-size:calc(13px*var(--fs,1));color:var(--sub)}
+.sc-pick-list button.on{background:rgba(127,127,127,.14);color:var(--ink)}
+.sc-pick-list button.on kbd{border-color:var(--accent);color:var(--accent)}
+.sc-kbd-gap{width:24px;flex:none}
+.sc-help-list{display:flex;flex-direction:column;gap:9px}
+.sc-help-list div{display:flex;align-items:center;gap:12px;font-size:calc(13px*var(--fs,1));color:var(--sub)}
+.sc-set .sc-key{display:flex;align-items:center;gap:12px;min-width:0}
+.sc-set .sc-key kbd{cursor:pointer;min-width:30px;height:28px}
+.sc-set .sc-key kbd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sc-set .sc-key.wait kbd{min-width:120px;font-weight:500;border-color:var(--accent);color:var(--accent)}
+.sc-set .sc-who{font-size:calc(11px*var(--fs,1));padding:2px 9px;border-radius:99px;background:rgba(127,127,127,.12);color:var(--sub);white-space:nowrap}
+.sc-set .sc-off{opacity:.45}
+.sc-set .sc-clash{color:var(--danger,#c0392b)}
+.sc-set .sc-reset{font-size:calc(11px*var(--fs,1));color:var(--faint);text-decoration:underline;text-underline-offset:2px;justify-self:start}
+.sc-hide{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
