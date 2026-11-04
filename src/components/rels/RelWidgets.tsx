@@ -200,7 +200,7 @@ const IC_CLOSE = 'M3.5 3.5 8.5 8.5M8.5 3.5 3.5 8.5';
  * 기념일 당일의 오늘 칸 (v3.7 사용자 확정 — 시안 P1 「장부 한 장」).
  * 그날 기념일은 따로 한 줄로 두지 않고 오늘 칸에 합친다: 「TODAY · 이름」 + 날수 + 한마디 + 돌아보기 링크.
  * 모바일 띠는 꼬리말이 없어 오늘 칸에 SINCE를 둔다 — 날수 오른쪽에 「SINCE / 날짜」 두 줄로,
- * 오른쪽 끝을 한마디(「…되는 날」) 끝에 맞춘다 (v3.9 사용자 확정 · 시안 S2-R). PC는 꼬리말에 SINCE가 늘 있으니 넣지 않는다.
+ * 오른쪽 끝을 오늘 칸에서 가장 긴 줄 끝에 맞춘다 (v3.9 사용자 확정 · 시안 S2-R). PC는 꼬리말에 SINCE가 늘 있으니 넣지 않는다.
  */
 function TodayAnniv({ x, days, strip, since, open, onToggle, btnRef }: {
   x: Anniv; days: number; strip?: boolean; since?: string; open: boolean; onToggle: () => void;
