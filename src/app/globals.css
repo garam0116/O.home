@@ -2314,7 +2314,9 @@ body.no-topbar .topbar{display:none}
 .mc-s-prism .mc-cnt{opacity:1;background:linear-gradient(90deg,var(--accent-soft),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* Thread — 상자 없이 점선 실과 ◆ 마디. 대메뉴에 올리면 이름 끝에서 점선이 하위 메뉴까지 뻗음(--lw = 이름 폭, MenuCard가 잼).
-   하위 메뉴는 위젯 가로 끝에 바로 붙여 연다(간격 0 — 실선 길이가 위젯 폭을 따라감) · 실선 끝 위젯 끝선 자리에 ◆ 마디 (사용자 요청 시안 3).
+   하위 메뉴는 위젯 가로 끝에 바로 붙여 연다(간격 0 — 실선 길이가 위젯 폭을 따라감).
+   이음새는 '테두리 줄기'(사용자 확정 시안 A2): 하위 메뉴 왼쪽 경계선 전체가 금색 점선 줄기이고, 가로 점선 끝 ◆가
+   그 줄기 위 연결 마디가 된다. 첫 하위 항목의 ◇는 이 ◆와 겹치므로 숨긴다. 펼칠 때 줄기에서 바깥쪽으로 그려지듯 열림.
    하위 메뉴는 본문 위젯 위에 겹쳐도 읽히도록 드롭다운 배경을 옅게 깐다 */
 .mc-s-thread{--mc-gap:0px;padding:6px 0 4px 22px;background:none;border:0;border-radius:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .mc-s-thread::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:1px;opacity:.5;pointer-events:none;
@@ -2326,6 +2328,7 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread .mc-top{position:relative;padding:8px 0;border-radius:0}
 .mc-s-thread .mc-item:hover > .mc-top,.mc-s-thread .mc-item.on > .mc-top{background:none}
 .mc-s-thread .mc-grp > .mc-top::after{content:none}
+.mc-s-thread .mc-grp > .mc-top{z-index:6} /* 점선 끝 연결 ◆가 하위 메뉴(z 5)의 줄기 위에 온전히 보이게 */
 .mc-s-thread .mc-top::before{content:"";position:absolute;left:-21px;top:50%;width:7px;height:7px;margin-top:-3.5px;transform:rotate(45deg);
   background:var(--bg-g2,#121418);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--top-fg) 70%,transparent);transition:.25s}
 .mc-s-thread .mc-item:hover > .mc-top::before{box-shadow:inset 0 0 0 1px var(--gold);transform:rotate(45deg) scale(1.2)}
@@ -2334,18 +2337,22 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(3px)}
 .mc-s-thread .mc-wire{position:absolute;top:50%;right:calc(-1 * var(--mc-gap));width:calc(100% - var(--lw,40px) - 10px + var(--mc-gap));
   border-top:1px dashed var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.3,.8,.25,1);pointer-events:none}
-.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-3px;top:-3.5px;width:6px;height:6px;transform:rotate(45deg);background:var(--gold);
-  box-shadow:0 0 8px color-mix(in srgb,var(--gold) 70%,transparent)}
+.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-4px;top:-4px;width:7px;height:7px;transform:rotate(45deg);background:var(--gold);
+  box-shadow:0 0 10px 1px color-mix(in srgb,var(--gold) 60%,transparent)}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-wire,.mc-s-thread .mc-grp:has(:focus-visible) > .mc-top .mc-wire{transform:scaleX(1)}
 .mc-s-thread .mc-item.shut > .mc-top .mc-wire{transform:scaleX(0)}
 .mc-s-thread .mc-sub{top:-2px;min-width:150px;padding:4px 14px 4px 18px;border:0;border-radius:0 10px 10px 0;box-shadow:none;
   background:color-mix(in srgb,var(--dd-bg) 82%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.mc-s-thread .mc-sub::after{content:"";position:absolute;left:0;top:20px;bottom:20px;border-left:1px dashed var(--gold)}
+.mc-s-thread .mc-sub::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:1px dashed var(--gold)}
+.mc-s-thread .mc-item:hover > .mc-sub,.mc-s-thread .mc-item:has(:focus-visible) > .mc-sub{animation:mcThreadOpen .32s .14s cubic-bezier(.3,.8,.25,1) backwards}
+@keyframes mcThreadOpen{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
 .mc-s-thread .mc-sub button{position:relative;padding:8px 0;border-radius:0;opacity:.85}
 .mc-s-thread .mc-sub button:hover,.mc-s-thread .mc-sub button.on{background:none;opacity:1}
 .mc-s-thread .mc-sub button::before{content:"";position:absolute;left:-21px;top:50%;width:5px;height:5px;margin-top:-2.5px;transform:rotate(45deg);
   background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
 .mc-s-thread .mc-sub button.on::before{background:var(--gold);box-shadow:0 0 8px color-mix(in srgb,var(--gold) 70%,transparent)}
+.mc-s-thread .mc-sub button:first-child::before{visibility:hidden}
+.mc-s-thread .mc-sub button.on{color:var(--gold)}
 .mc-s-thread .mc-cnt{color:var(--gold);opacity:.85}
 .mc-s-thread .mc-foot{position:relative;margin-top:14px;padding-top:10px;border-top:0}
 .mc-s-thread .mc-foot::before{content:"";position:absolute;left:-21px;top:-1px;width:5px;height:5px;transform:rotate(45deg);background:var(--gold)}
@@ -2355,10 +2362,13 @@ body.no-topbar .topbar{display:none}
 .mc-s-thread.mc-right .mc-top,.mc-s-thread.mc-right .mc-sub button{flex-direction:row-reverse}
 .mc-s-thread.mc-right .mc-top::before,.mc-s-thread.mc-right .mc-sub button::before{left:auto;right:-21px}
 .mc-s-thread.mc-right .mc-wire{right:auto;left:calc(-1 * var(--mc-gap));transform-origin:right}
-.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-3px}
+.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-4px}
 .mc-s-thread.mc-right .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(-3px)}
 .mc-s-thread.mc-right .mc-sub{padding:4px 18px 4px 14px;border-radius:10px 0 0 10px}
 .mc-s-thread.mc-right .mc-sub::after{left:auto;right:0}
+.mc-s-thread.mc-right .mc-item:hover > .mc-sub,.mc-s-thread.mc-right .mc-item:has(:focus-visible) > .mc-sub{animation-name:mcThreadOpenR}
+@keyframes mcThreadOpenR{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
+@media (prefers-reduced-motion:reduce){.mc-s-thread .mc-item > .mc-sub{animation:none !important}}
 .mc-s-thread.mc-right .mc-foot{display:flex;justify-content:flex-end}
 .mc-s-thread.mc-right .mc-foot::before{left:auto;right:-21px}
 @media (prefers-reduced-motion:reduce){
