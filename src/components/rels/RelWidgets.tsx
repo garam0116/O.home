@@ -262,7 +262,8 @@ const num = (v: React.ReactNode, unit?: string) => <><span className="num">{v}</
  * 장부 세 장의 줄 (v3.8 사용자 확정). 줄 순서가 곧 중요도 — 칸이 모자라면 아래 줄부터 뺀다.
  * 값이 없는 줄(로그 목록을 못 읽음·0)은 만들지 않고, 줄이 하나도 없는 장은 장 이름째 뺀다.
  * 장마다 맨 아래 줄(foot)이 따로 있다 (v4.0 사용자 확정): 1장 다시 꺼내 볼 로그 · 2장 이 속도라면 · 3장 다음 기념일.
- * 2장 「이 속도라면」은 셈이 세 가지(다음 목표 편수 · 다음 큰 기념일 · 다음 주년)라 누를 때마다 바뀐다 (v4.2 사용자 확정 — 따로 표시는 붙이지 않는다).
+ * 2장 「이 속도라면」은 셈이 세 가지(다음 목표 편수 · 다음 큰 기념일 · 다음 주년)라 누를 때마다 바뀐다 (v4.2 사용자 확정).
+ * 표시는 값 끝의 옅은 꺾쇠 › 하나, 바뀔 때 값이 살짝 올라온다 (v4.3 사용자 확정 · 시안 B). 셈이 하나뿐이면 둘 다 없다.
  * 맨 아래 줄은 칸이 모자라도 빼지 않는다.
  * x는 오늘이 기념일일 때만 있다 — 평소 날(v4.1)에는 「1년 전 이맘때」로 찾고, 3장 맨 아래는 가장 가까운 기념일이다.
  * 장부 속 로그는 글 번호 없이 제목만 (v4.1 사용자 확정 — 「No.23」을 뺀다).
@@ -391,7 +392,10 @@ function AnnivRecap({ dayCount, x, now, pages, start, strip, onClose, closeRef }
         {foot && (foot.alts ? (
           <div key={foot.k} className={`${foot.hot ? 'hot ' : ''}rw-recap-cyc`} onClick={turn}>
             <dt>{foot.k}</dt><i aria-hidden="true" />
-            <dd><button type="button" aria-live="polite" onClick={e => { e.stopPropagation(); turn(); }}>{foot.alts[alt % foot.alts.length]}</button></dd>
+            <dd><button type="button" aria-live="polite" onClick={e => { e.stopPropagation(); turn(); }}>
+              <span key={alt} className={alt ? 'rw-recap-v' : undefined}>{foot.alts[alt % foot.alts.length]}</span>
+              <span className="rw-recap-chev" aria-hidden="true">›</span>
+            </button></dd>
           </div>
         ) : (
           <div key={foot.k} className={foot.hot ? 'hot' : undefined}><dt>{foot.k}</dt><i aria-hidden="true" /><dd>{foot.v}</dd></div>
