@@ -61,9 +61,11 @@ export interface ThemeVars {
   // 입력 포커스 (v1.9 사용자 요청) — 인풋·텍스트에리어·드롭다운·에디터 공통
   // focusColor: 테두리·링 색 / focusRing: 링 방식(은은한 글로우 · 선명한 라인 · 없음) / focusW: 링 두께 px
   focusColor?: string; focusRing?: 'glow' | 'line' | 'none'; focusW?: number;
-  // 드래그 효과 (v3.7 사용자 요청) — 글자를 끌어 선택할 때 바탕은 그대로, 글자만 흐린다.
+  // 드래그 효과 (v3.7 사용자 요청, v3.8 3종 추가) — 글자를 끌어 선택했을 때의 모양.
   // fog: 안개(글자색으로 번짐, 기본) / ghost: 삼중 잔상(포인트색·푸른 회색이 좌우로 엇갈리고 가운데 흐린 글자색)
-  selFx?: 'fog' | 'ghost';
+  // block: 포인트 블록(글자는 그대로, 포인트색을 옅게 깐 바탕) / tint: 연회색 바탕(고정) + 포인트 글씨
+  // half: 반칸 형광펜(글자는 그대로, 글자 아래 절반에만 포인트색 띠 — 띠는 SelectionBand가 그린다)
+  selFx?: SelFx;
   // 포인트 컬러
   accent: string; accentSoft: string;
   /* 가독성 보정 (v3.6) — 포인트 자동이 채운다. 있으면 카드 보조·옅은 글씨, 카드 위 포인트 글씨,
@@ -233,6 +235,12 @@ export interface ThemeStore {
    새 모드의 초기값 위에 얹었다 — 다크용으로 고른 색이 라이트 초기값 위에 섞여 반은 어둡고
    반은 밝은 화면이 됐다. 이제 모드와 상관없는 값(포인트 컬러·배경 이미지·모서리·표시 옵션)만
    이어 가고, 색 구성은 그 모드의 기본을 쓴다. 직접 꾸민 색 구성은 [커스텀]에 그대로 남는다. */
+/** 드래그 효과 종류 — 환경설정 드롭다운 순서 그대로 */
+export const SEL_FX = ['fog', 'ghost', 'block', 'tint', 'half'] as const;
+export type SelFx = typeof SEL_FX[number];
+/** 「연회색 바탕」 효과의 바탕 — 모드·포인트색과 상관없이 고정 (v3.8 사용자 요청) */
+const SEL_TINT_BG = '#f1f2f4';
+
 export const SHARED_KEYS = [
   'accent', 'accentSoft',
   'bgType', 'bgAngle', 'bgImageId', 'bgBlur',
@@ -365,12 +373,7 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     // 이미지 편집(크롭) 배경 (v1.9)
     '--crop-bg': t.cropBg ?? '#2c313a',
     // 입력 포커스 (v1.9) — 테두리색 + 링(글로우: 반투명 번짐 / 라인: 선명한 테두리 / 없음)
-    // 드래그 효과 (v3.7) — globals.css의 ::selection이 이 그림자만 쓴다(글자·바탕은 투명).
-    // 번짐은 카드 글씨색 + 페이지 제목색 두 겹 — 선택 영역에선 원래 글자색을 알 수 없어서(글자가 투명),
-    // 카드 위(카드 글씨색)와 배경 위(제목색) 어느 쪽에서든 한 겹은 보이게 한다
-    '--sel-shadow': (t.selFx ?? 'fog') === 'ghost'
-      ? `-2px 0 3px ${withAlpha(t.accent, 0.85)},2px 0 3px ${withAlpha(fgDark ? '#5f7f9e' : '#86a6c4', 0.85)},0 0 2.5px ${withAlpha(cardFg, 0.6)},0 0 2.5px ${withAlpha(t.pageTitle, 0.45)}`
-      : `0 0 4px ${withAlpha(cardFg, 0.7)},0 0 4px ${withAlpha(t.pageTitle, 0.55)}`,
+    ...selectionVars(t, cardFg, fgDark),
     '--focus-bd': focusC,
     '--focus-ring': focusRing === 'none' || focusW === 0
       ? 'none'
@@ -390,4 +393,31 @@ export function themeToCssVars(t: ThemeVars): Record<string, string> {
     '--wg-bd': t.wgBd ?? 'var(--line)',
     '--radius': `${t.radius}px`, '--radius-s': `${t.radiusS}px`,
   };
+}
+
+/* 드래그 효과 (v3.7, v3.8 3종 추가) — globals.css의 ::selection이 글자(--sel-color)·바탕(--sel-bg)·그림자(--sel-shadow)
+   세 값만 쓴다. 안개·삼중 잔상은 글자를 투명하게 하고 그림자로만 그린다 — 선택 영역에선 원래 글자색을 알 수 없어서,
+   번짐은 카드 글씨색 + 페이지 제목색 두 겹으로 카드 위·배경 위 어느 쪽에서든 한 겹은 보이게 한다.
+   포인트 블록·반칸 형광펜은 글자를 원래 색(currentColor) 그대로 둔다. 반칸 형광펜의 띠는 ::selection으로 그릴 수 없어
+   (선택 영역 밑줄은 위로 못 올림) SelectionBand가 --sel-fx를 보고 --sel-half 색으로 겹쳐 그린다.
+   --sel-pv-img는 환경설정 미리보기 글자에 같은 띠를 칠하는 용도 */
+function selectionVars(t: ThemeVars, cardFg: string, fgDark: boolean): Record<string, string> {
+  const fx: SelFx = t.selFx && (SEL_FX as readonly string[]).includes(t.selFx) ? t.selFx : 'fog';
+  const half = withAlpha(t.accent, 0.45);
+  const base = { '--sel-fx': fx, '--sel-half': half, '--sel-pv-img': 'none', '--sel-shadow': 'none' };
+  switch (fx) {
+    case 'ghost':
+      return { ...base, '--sel-color': 'transparent', '--sel-bg': 'transparent',
+        '--sel-shadow': `-2px 0 3px ${withAlpha(t.accent, 0.85)},2px 0 3px ${withAlpha(fgDark ? '#5f7f9e' : '#86a6c4', 0.85)},0 0 2.5px ${withAlpha(cardFg, 0.6)},0 0 2.5px ${withAlpha(t.pageTitle, 0.45)}` };
+    case 'block':
+      return { ...base, '--sel-color': 'currentColor', '--sel-bg': withAlpha(t.accent, 0.24) };
+    case 'tint':
+      return { ...base, '--sel-color': ensureContrast(t.accent, SEL_TINT_BG, 4.5), '--sel-bg': SEL_TINT_BG };
+    case 'half':
+      return { ...base, '--sel-color': 'currentColor', '--sel-bg': 'transparent',
+        '--sel-pv-img': `linear-gradient(transparent 46%,${half} 46%,${half} 96%,transparent 96%)` };
+    default:
+      return { ...base, '--sel-color': 'transparent', '--sel-bg': 'transparent',
+        '--sel-shadow': `0 0 4px ${withAlpha(cardFg, 0.7)},0 0 4px ${withAlpha(t.pageTitle, 0.55)}` };
+  }
 }

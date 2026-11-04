@@ -136,6 +136,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         pageHead: site.pageHead, pageHeadM: site.pageHeadM,
         /* 카드 불투명도도 사이트 설정 그대로 (v3.5 사용자 제보 — 테마컬러 자관에서만 94%로 돌아갔다) */
         cardAlpha: site.cardAlpha,
+        /* 드래그 효과도 사이트 설정 그대로 (v3.8) — 빠뜨리면 테마컬러 자관에서만 안개로 돌아간다 */
+        selFx: site.selFx,
       }
       : site);
     // 페이지 배경 지정 (v2.0) — 팔레트를 적용한 뒤에 배경 세 값만 덮어쓴다.
