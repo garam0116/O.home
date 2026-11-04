@@ -24,7 +24,7 @@ import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
 import { anniversaries, annivBadge, annivMessage, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
 import { relDday, relDdayDate } from '@/lib/relStore';
-import { logRecap, lookback, paceTo, pickAgain, pickDaily, skyRecap, WEEKDAYS, type RecapLog } from '@/lib/relRecap';
+import { logRecap, lookback, paceAt, paceTo, pickAgain, pickDaily, skyRecap, WEEKDAYS, type RecapLog } from '@/lib/relRecap';
 import { AppLink } from '@/components/ui/AppLink';
 
 /* ---------- 글 목록 (LOG · LOREBOOK) ---------- */
@@ -251,7 +251,8 @@ function TodayAnniv({ x, days, strip, since, peek, open, onToggle, btnRef }: {
   );
 }
 
-type RecapRow = { k: string; v: React.ReactNode; hot?: boolean };
+/** alts가 있으면 누를 때마다 alts를 돌아가며 보인다 (v는 그 첫 값) */
+type RecapRow = { k: string; v: React.ReactNode; hot?: boolean; alts?: React.ReactNode[] };
 type RecapPage = { name: string; rows: RecapRow[]; foot?: RecapRow };
 /** 오늘의 한 줄 — 장부 속 한 줄을 글자로만 (버튼 안에 링크를 둘 수 없어서). pg는 그 줄이 있는 장 */
 type Peek = { k: string; v: string; pg: number };
@@ -261,6 +262,7 @@ const num = (v: React.ReactNode, unit?: string) => <><span className="num">{v}</
  * 장부 세 장의 줄 (v3.8 사용자 확정). 줄 순서가 곧 중요도 — 칸이 모자라면 아래 줄부터 뺀다.
  * 값이 없는 줄(로그 목록을 못 읽음·0)은 만들지 않고, 줄이 하나도 없는 장은 장 이름째 뺀다.
  * 장마다 맨 아래 줄(foot)이 따로 있다 (v4.0 사용자 확정): 1장 다시 꺼내 볼 로그 · 2장 이 속도라면 · 3장 다음 기념일.
+ * 2장 「이 속도라면」은 셈이 세 가지(다음 목표 편수 · 다음 큰 기념일 · 다음 주년)라 누를 때마다 바뀐다 (v4.2 사용자 확정 — 따로 표시는 붙이지 않는다).
  * 맨 아래 줄은 칸이 모자라도 빼지 않는다.
  * x는 오늘이 기념일일 때만 있다 — 평소 날(v4.1)에는 「1년 전 이맘때」로 찾고, 3장 맨 아래는 가장 가까운 기념일이다.
  * 장부 속 로그는 글 번호 없이 제목만 (v4.1 사용자 확정 — 「No.23」을 뺀다).
@@ -297,7 +299,15 @@ function recapData(p: {
   if (lg?.thisYear) r2.push({ k: '올해 쓴 로그', v: num(lg.thisYear, '편') });
   if (p.loreCount) r2.push({ k: '쌓인 로어북', v: num(p.loreCount, '편') });
   const pace = lg ? paceTo(lg.total, lg.avg, now) : undefined;
-  const foot2: RecapRow | undefined = pace && { k: '이 속도라면', hot: true, v: <>{pace.target}편째 {num(`${pace.y}.${pace.m}`)} <small>무렵</small></> };
+  const at = lg ? paceAt(lg.total, lg.avg, p.a.future) : {};
+  // 「이 속도라면」 셈 — 화면용(v)과 오늘의 한 줄용 글자(t)를 같은 순서로
+  const paces: { v: React.ReactNode; t: string }[] = [];
+  if (pace) paces.push({ v: <>{pace.target}편째 {num(`${pace.y}.${pace.m}`)} <small>무렵</small></>, t: `${pace.target}편째 ${pace.y}.${pace.m} 무렵` });
+  if (at.big) paces.push({ v: <>{at.big.label}엔 {num(at.big.n, '편')}</>, t: `${at.big.label}엔 ${at.big.n}편` });
+  if (at.year) paces.push({ v: <>{at.year.label}엔 {num(at.year.n, '편')} <small>· {at.year.gain}편 더</small></>, t: `${at.year.label}엔 ${at.year.n}편 · ${at.year.gain}편 더` });
+  const foot2: RecapRow | undefined = paces.length ? {
+    k: '이 속도라면', hot: true, v: paces[0].v, alts: paces.length > 1 ? paces.map(x => x.v) : undefined,
+  } : undefined;
   const r3: RecapRow[] = [];
   if (sky?.galaxyEok) r3.push({ k: '은하를 따라 흘러간 거리', v: num(sky.galaxyEok.toLocaleString(), '억 km') });
   if (sky?.moons) r3.push({ k: '함께 본 보름달', v: num(sky.moons, '번') });
@@ -313,18 +323,18 @@ function recapData(p: {
     { name: '함께 맞은 것들', rows: r3, foot: foot3 },
   ].filter(pg => pg.rows.length);
 
-  const at = (name: string) => pages.findIndex(pg => pg.name === name);
+  const pageAt = (name: string) => pages.findIndex(pg => pg.name === name);
   const cand: (Omit<Peek, 'pg'> & { page: string })[] = [];
   const backPeek = back && { page: '그때 그 로그', k: back.label, v: back.log.title };
   if (backPeek) cand.push(backPeek);
   if (lg?.peak) cand.push({ page: '그때 그 로그', k: '가장 많이 쓴 달', v: `${lg.peak.y}.${lg.peak.m} · ${lg.peak.n}편` });
   if (lg?.weekday) cand.push({ page: '기록 습관', k: '즐겨 쓴 요일', v: `${WEEKDAYS[lg.weekday.day]} · ${lg.weekday.n}편` });
-  if (pace) cand.push({ page: '기록 습관', k: '이 속도라면', v: `${pace.target}편째 ${pace.y}.${pace.m} 무렵` });
+  if (paces.length) cand.push({ page: '기록 습관', k: '이 속도라면', v: paces[0].t });
   if (sky?.moons) cand.push({ page: '함께 맞은 것들', k: '함께 본 보름달', v: `${sky.moons}번` });
   if (sky?.galaxyEok) cand.push({ page: '함께 맞은 것들', k: '은하를 따라 흘러간 거리', v: `${sky.galaxyEok.toLocaleString()}억 km` });
-  const usable = cand.filter(c => at(c.page) >= 0);
-  const pick = x && backPeek && at(backPeek.page) >= 0 ? backPeek : pickDaily(usable, p.startDate, now);
-  const peek = pick && { k: pick.k, v: pick.v, pg: at(pick.page) };
+  const usable = cand.filter(c => pageAt(c.page) >= 0);
+  const pick = x && backPeek && pageAt(backPeek.page) >= 0 ? backPeek : pickDaily(usable, p.startDate, now);
+  const peek = pick && { k: pick.k, v: pick.v, pg: pageAt(pick.page) };
   return { pages, peek };
 }
 
@@ -345,8 +355,11 @@ function AnnivRecap({ dayCount, x, now, pages, start, strip, onClose, closeRef }
   const rowsN = cur?.rows.length ?? 0;
   const { drop } = useFitDrop(box, rowsN, !strip, `${pg}|${rowsN}`);
   const rows = (cur?.rows ?? []).slice(0, Math.max(0, rowsN - drop));
-  if (cur?.foot) rows.push(cur.foot);
-  const go = (d: number) => setPg(i => Math.min(pages.length - 1, Math.max(0, i + d)));
+  const foot = cur?.foot;
+  // 맨 아래 줄에 셈이 여러 개면(alts) 줄을 누를 때마다 다음 셈 — 장을 넘기면 첫 셈으로
+  const [alt, setAlt] = useState(0);
+  const turn = () => setAlt(i => i + 1);
+  const go = (d: number) => { setPg(i => Math.min(pages.length - 1, Math.max(0, i + d))); setAlt(0); };
   const swipe = useRef<number | null>(null);
   return (
     <div className={`rw-recap${strip ? ' rw-recap-m' : ''}`} ref={box}
@@ -364,7 +377,7 @@ function AnnivRecap({ dayCount, x, now, pages, start, strip, onClose, closeRef }
           {pages.length > 1 && (
             <span className="rw-recap-tabs" role="tablist" aria-label="돌아보기 장">
               {pages.map((q, i) => (
-                <button key={q.name} type="button" role="tab" aria-selected={q === cur} onClick={() => setPg(i)}>{q.name}</button>
+                <button key={q.name} type="button" role="tab" aria-selected={q === cur} onClick={() => { setPg(i); setAlt(0); }}>{q.name}</button>
               ))}
             </span>
           )}
@@ -374,6 +387,14 @@ function AnnivRecap({ dayCount, x, now, pages, start, strip, onClose, closeRef }
       <dl key={cur?.name} role={pages.length > 1 ? 'tabpanel' : undefined}>
         {rows.map(r => (
           <div key={r.k} className={r.hot ? 'hot' : undefined}><dt>{r.k}</dt><i aria-hidden="true" /><dd>{r.v}</dd></div>
+        ))}
+        {foot && (foot.alts ? (
+          <div key={foot.k} className={`${foot.hot ? 'hot ' : ''}rw-recap-cyc`} onClick={turn}>
+            <dt>{foot.k}</dt><i aria-hidden="true" />
+            <dd><button type="button" aria-live="polite" onClick={e => { e.stopPropagation(); turn(); }}>{foot.alts[alt % foot.alts.length]}</button></dd>
+          </div>
+        ) : (
+          <div key={foot.k} className={foot.hot ? 'hot' : undefined}><dt>{foot.k}</dt><i aria-hidden="true" /><dd>{foot.v}</dd></div>
         ))}
       </dl>
     </div>

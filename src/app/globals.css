@@ -1221,6 +1221,11 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-recap .num{font-family:var(--serif);font-weight:600;font-size:calc(17px*var(--fs,1));font-variant-numeric:lining-nums tabular-nums}
 .rw-recap dd small{font-size:calc(11px*var(--fs,1));opacity:.7;margin-left:2px}
 .rw-recap .hot dd{color:var(--rw-hot)}
+/* 누를 때마다 셈이 바뀌는 맨 아래 줄 (이 속도라면, v4.2) — 따로 표시는 붙이지 않는다 */
+.rw-recap-cyc{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.rw-recap-cyc dd button{background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rw-recap-cyc dd button:focus{outline:none}
+.rw-recap-cyc dd button:focus-visible{outline:1px solid currentColor;outline-offset:3px}
 .rw-recap-m{margin:14px 0 0;overflow:visible}
 .rw-recap-m dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px 22px}
 @media (prefers-reduced-motion:no-preference){.rw-recap dl > div{animation:rw-rise .4s ease-out both}
