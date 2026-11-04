@@ -2,7 +2,8 @@
 /**
  * 자관 상세 위젯 (v3.3 사용자 확정 시안)
  *  - 기념일: PC는 양옆 카드 아래 세로 타임라인(「오늘 마디」 + 꼬리말 L), 모바일은 이름 아래 가로 띠(N3)
- *    기념일 당일에는 그날 기념일을 오늘 칸에 합치고, 「지나온 날 돌아보기」로 장부를 연다 (v3.7 · 시안 P1)
+ *    기념일 당일에는 그날 기념일을 오늘 칸에 합치고, 「지나온 날 돌아보기」로 장부를 연다 (v3.7 · 시안 P1).
+ *    장부는 세 장(그때 그 로그 · 기록 습관 · 함께 맞은 것들)이고 제목 아래 장 이름으로 넘긴다 (v3.8 · 시안 V2)
  *  - LOG / LOREBOOK: 오른쪽 카드 아래 탭 위젯(M1) — 자관 수정의 LOG·LOREBOOK 주소가 가리키는 이 홈 안의
  *    목록에서 글을 읽는다. 「ALL →」은 열린 탭의 주소로 간다 (예전 자관명 위 버튼 대신)
  *
@@ -21,6 +22,7 @@ import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
 import { anniversaries, annivBadge, annivMessage, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
 import { relDday, relDdayDate } from '@/lib/relStore';
+import { logRecap, lookback, skyRecap, WEEKDAYS, type RecapLog } from '@/lib/relRecap';
 import { AppLink } from '@/components/ui/AppLink';
 
 /* ---------- 글 목록 (LOG · LOREBOOK) ---------- */
@@ -154,8 +156,10 @@ function useFitDrop(ref: React.RefObject<HTMLElement | null>, max: number, activ
 interface AnnivProps {
   startDate?: string;
   firstLog?: number;
-  /** LOG 목록에서 이 방문자에게 보이는 글 수 — 기념일 당일 「돌아보기」의 남긴 로그 (목록을 못 읽으면 없음) */
-  logCount?: number;
+  /** LOG 목록에서 이 방문자에게 보이는 글 — 기념일 당일 「돌아보기」 1·2장 (목록을 못 읽으면 없음) */
+  logs?: RecapLog[];
+  /** LOREBOOK 목록에서 이 방문자에게 보이는 글 수 — 2장 「쌓인 로어북」 (못 읽으면 없음) */
+  loreCount?: number;
   /** 디데이 글씨색 (자관 수정 「디데이 글씨색」) — 가까운 기념일 강조에 쓴다 */
   color?: string;
   /** 위젯 탭 색 (자관 수정 「위젯 탭 색」) — 오늘 표시 점 */
@@ -195,15 +199,18 @@ const IC_CLOSE = 'M3.5 3.5 8.5 8.5M8.5 3.5 3.5 8.5';
 /**
  * 기념일 당일의 오늘 칸 (v3.7 사용자 확정 — 시안 P1 「장부 한 장」).
  * 그날 기념일은 따로 한 줄로 두지 않고 오늘 칸에 합친다: 「TODAY · 이름」 + 날수 + 한마디 + 돌아보기 링크.
+ * 모바일 띠는 꼬리말이 없어 평소처럼 날수 아래에 SINCE를 둔다 (v3.8 사용자 확정 · 시안 M1).
+ * PC는 꼬리말에 SINCE가 늘 있으니 넣지 않는다.
  */
-function TodayAnniv({ x, days, strip, open, onToggle, btnRef }: {
-  x: Anniv; days: number; strip?: boolean; open: boolean; onToggle: () => void;
+function TodayAnniv({ x, days, strip, since, open, onToggle, btnRef }: {
+  x: Anniv; days: number; strip?: boolean; since?: string; open: boolean; onToggle: () => void;
   btnRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <>
       <span className="rw-eyebrow">TODAY · {x.label}</span>
       <span className="rw-big">{days}{!strip && <small>DAYS</small>}</span>
+      {strip && since && <span className="when">SINCE {since}</span>}
       <span className="rw-msg">{annivMessage(x.label)}</span>
       <button type="button" className="rw-recap-btn" ref={btnRef} aria-expanded={open} onClick={onToggle}>
         {open ? '접기' : '지나온 날 돌아보기'}<RwIcon d={open ? IC_UP : IC_RIGHT} />
@@ -212,35 +219,96 @@ function TodayAnniv({ x, days, strip, open, onToggle, btnRef }: {
   );
 }
 
+type RecapRow = { k: string; v: React.ReactNode; hot?: boolean };
+const num = (v: React.ReactNode, unit?: string) => <><span className="num">{v}</span>{unit && <small>{unit}</small>}</>;
+
+/**
+ * 장부 세 장의 줄 (v3.8 사용자 확정). 줄 순서가 곧 중요도 — 칸이 모자라면 아래 줄부터 뺀다.
+ * 값이 없는 줄(로그 목록을 못 읽음·0)은 만들지 않고, 줄이 하나도 없는 장은 장 이름째 뺀다.
+ */
+function recapPages(p: {
+  a: { future: Anniv[]; dayCount: number }; x: Anniv; now: Date; startDate?: string;
+  logs?: RecapLog[]; loreCount?: number;
+}): { name: string; rows: RecapRow[] }[] {
+  const { x, now } = p;
+  const lg = logRecap(p.logs, p.startDate, now);
+  const back = lookback(p.logs, x, now);
+  const sky = skyRecap(p.startDate, now);
+  const r1: RecapRow[] = [];
+  if (lg) {
+    r1.push({ k: '남긴 로그', v: num(lg.total, '편') });
+    if (back) r1.push({ k: back.label, v: back.log.href
+      ? <AppLink href={back.log.href}>No.{back.log.no} {back.log.title}</AppLink>
+      : <>No.{back.log.no} {back.log.title}</> });
+    if (lg.peak) r1.push({ k: '가장 많이 쓴 달', v: <>{num(`${lg.peak.y}.${lg.peak.m}`)} <small>{lg.peak.n}편</small></> });
+    if (lg.lastAgo != null) r1.push({ k: '마지막 로그', v: lg.lastAgo === 0 ? '오늘' : num(lg.lastAgo, '일 전') });
+    if (lg.first) r1.push({ k: '첫 로그', v: num(fullDate(new Date(lg.first.time))) });
+  }
+  const r2: RecapRow[] = [];
+  if (lg?.avg) r2.push({ k: '한 달 평균', v: num(lg.avg, '편') });
+  if (lg?.weekday) r2.push({ k: '즐겨 쓴 요일', v: <>{WEEKDAYS[lg.weekday.day]} <small>{lg.weekday.n}편</small></> });
+  if (lg?.gap) r2.push({ k: '가장 길었던 공백', v: num(lg.gap, '일') });
+  if (lg?.thisYear) r2.push({ k: '올해 쓴 로그', v: num(lg.thisYear, '편') });
+  if (p.loreCount) r2.push({ k: '쌓인 로어북', v: num(p.loreCount, '편') });
+  const r3: RecapRow[] = [];
+  if (sky?.galaxyEok) r3.push({ k: '은하를 따라 흘러간 거리', v: num(sky.galaxyEok.toLocaleString(), '억 km') });
+  if (sky?.moons) r3.push({ k: '함께 본 보름달', v: num(sky.moons, '번') });
+  if (sky?.weekends) r3.push({ k: '함께 보낸 주말', v: num(sky.weekends, '번') });
+  if (sky?.newYears) r3.push({ k: '함께 넘긴 새해', v: num(sky.newYears, '번') });
+  if (sky?.seasons) r3.push({ k: '지나온 계절', v: num(sky.seasons, '번') });
+  return [
+    { name: '그때 그 로그', rows: r1 },
+    { name: '기록 습관', rows: r2 },
+    { name: '함께 맞은 것들', rows: r3 },
+  ].filter(pg => pg.rows.length);
+}
+
 /**
  * 「지나온 N일」 장부 — 기념일 당일 돌아보기를 누르면 PC는 타임라인 자리에, 모바일은 띠 아래에 펼친다.
- * 항목과 값 사이는 점선으로 잇는다. 값이 없는 줄(로그 목록을 못 읽음·지난 기념일 없음)은 뺀다.
+ * 세 장으로 나눠 제목 아래 장 이름으로 넘긴다 (v3.8 · 시안 V2). 장마다 다섯 줄 + 맨 아래 「다음 기념일」.
+ * 모바일은 장부를 옆으로 밀어도 넘어간다. 닫았다 다시 열면 첫 장부터.
+ * PC는 칸 높이가 가운데 일러로 정해져 있어, 넘치면 장의 아래 줄부터 뺀다 (다음 기념일은 남긴다).
  */
-function AnnivRecap({ a, x, now, firstLog, logCount, strip, onClose, closeRef }: {
-  a: { past: Anniv[]; future: Anniv[]; dayCount: number }; x: Anniv; now: Date;
-  firstLog?: number; logCount?: number; strip?: boolean; onClose: () => void;
+function AnnivRecap({ a, x, now, startDate, logs, loreCount, strip, onClose, closeRef }: {
+  a: { past: Anniv[]; future: Anniv[]; dayCount: number }; x: Anniv; now: Date; startDate?: string;
+  logs?: RecapLog[]; loreCount?: number; strip?: boolean; onClose: () => void;
   closeRef: React.RefObject<HTMLButtonElement | null>;
 }) {
-  const last = a.past[0];
+  const pages = useMemo(() => recapPages({ a, x, now, startDate, logs, loreCount }), [a, x, now, startDate, logs, loreCount]);
+  const [pg, setPg] = useState(0);
+  const cur = pages[Math.min(pg, pages.length - 1)];
+  const box = useRef<HTMLDivElement>(null);
+  const rowsN = cur?.rows.length ?? 0;
+  const { drop } = useFitDrop(box, rowsN, !strip, `${pg}|${rowsN}`);
   const next = a.future[1];
-  const rows: { k: string; v: React.ReactNode; hot?: boolean }[] = [
-    { k: '함께한 날', v: <><span className="num">{a.dayCount}</span><small>일</small></> },
-  ];
-  if (a.past.length) rows.push({ k: '지나온 기념일', v: <><span className="num">{a.past.length}</span><small>개</small></> });
-  if (logCount != null) rows.push({ k: '남긴 로그', v: <><span className="num">{logCount}</span><small>편</small></> });
-  if (firstLog != null) rows.push({ k: '첫 로그', v: <span className="num">{fullDate(new Date(firstLog))}</span> });
-  if (last) rows.push({ k: '가장 최근 기념일', v: <>{last.label} <span className="num sub">{fmtWidgetDate(last.date, now)}</span></> });
+  const rows = (cur?.rows ?? []).slice(0, Math.max(0, rowsN - drop));
   if (next) rows.push({ k: '다음 기념일', hot: true, v: <>{next.label} <span className="num">{annivBadge(next.diff)}</span></> });
+  const go = (d: number) => setPg(i => Math.min(pages.length - 1, Math.max(0, i + d)));
+  const swipe = useRef<number | null>(null);
   return (
-    <div className={`rw-recap${strip ? ' rw-recap-m' : ''}`}>
+    <div className={`rw-recap${strip ? ' rw-recap-m' : ''}`} ref={box}
+      onTouchStart={strip ? e => { swipe.current = e.touches[0].clientX; } : undefined}
+      onTouchEnd={strip ? e => {
+        if (swipe.current == null) return;
+        const dx = e.changedTouches[0].clientX - swipe.current;
+        swipe.current = null;
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      } : undefined}>
       <div className="rw-recap-h">
         <span className="t">
           <span className="rw-eyebrow">TODAY · {x.label}</span>
           <span className="rw-recap-ttl">지나온 {a.dayCount}<small>일</small></span>
+          {pages.length > 1 && (
+            <span className="rw-recap-tabs" role="tablist" aria-label="돌아보기 장">
+              {pages.map((q, i) => (
+                <button key={q.name} type="button" role="tab" aria-selected={q === cur} onClick={() => setPg(i)}>{q.name}</button>
+              ))}
+            </span>
+          )}
         </span>
         <button type="button" className="rw-recap-x" ref={closeRef} onClick={onClose}>닫기<RwIcon d={IC_CLOSE} /></button>
       </div>
-      <dl>
+      <dl key={cur?.name} role={pages.length > 1 ? 'tabpanel' : undefined}>
         {rows.map(r => (
           <div key={r.k} className={r.hot ? 'hot' : undefined}><dt>{r.k}</dt><i aria-hidden="true" /><dd>{r.v}</dd></div>
         ))}
@@ -265,7 +333,7 @@ function useRecap() {
 }
 
 /** PC — 카드 아래 세로 타임라인. 넘치면 지난 것(오래된 것부터) → 다가올 것(먼 것부터) 순서로 뺀다 */
-export function RelAnnivColumn({ startDate, firstLog, logCount, color, tab }: AnnivProps) {
+export function RelAnnivColumn({ startDate, firstLog, logs, loreCount, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
   const box = useRef<HTMLDivElement>(null);
   const { open, toggle, openRef, closeRef } = useRecap();
@@ -286,7 +354,7 @@ export function RelAnnivColumn({ startDate, firstLog, logCount, color, tab }: An
     <div className={`rw rw-anniv${gone ? ' rw-gone' : ''}`} ref={box} style={rwVars(color, tab)}>
       <div className="rw-lbl"><span>ANNIVERSARY</span></div>
       {recapOn ? (
-        <AnnivRecap a={a} x={todayA} now={now} firstLog={firstLog} logCount={logCount} onClose={toggle} closeRef={closeRef} />
+        <AnnivRecap a={a} x={todayA} now={now} startDate={startDate} logs={logs} loreCount={loreCount} onClose={toggle} closeRef={closeRef} />
       ) : (
         <ul className="rw-tl">
           {shownPast.map(x => (
@@ -322,7 +390,7 @@ const sinceFull = (v?: string) => {
 };
 
 /** 모바일 — 이름 아래 가로 띠 (옆으로 밀어 보기). 기념일 당일 돌아보기는 띠 아래에 펼친다 */
-export function RelAnnivStrip({ startDate, firstLog, logCount, color, tab }: AnnivProps) {
+export function RelAnnivStrip({ startDate, firstLog, logs, loreCount, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
   const { open, toggle, openRef, closeRef } = useRecap();
   if (!a) return null;
@@ -341,7 +409,7 @@ export function RelAnnivStrip({ startDate, firstLog, logCount, color, tab }: Ann
           ))}
           {todayA ? (
             <li className="today is-anniv">
-              <TodayAnniv x={todayA} days={a.dayCount} strip open={open} onToggle={toggle} btnRef={openRef} />
+              <TodayAnniv x={todayA} days={a.dayCount} strip since={sinceFull(startDate)} open={open} onToggle={toggle} btnRef={openRef} />
             </li>
           ) : (
             <li className="today">
@@ -359,7 +427,7 @@ export function RelAnnivStrip({ startDate, firstLog, logCount, color, tab }: Ann
       </div>
       {todayA && open && (
         <div className="rw" style={rwVars(color, tab)}>
-          <AnnivRecap a={a} x={todayA} now={now} firstLog={firstLog} logCount={logCount} strip onClose={toggle} closeRef={closeRef} />
+          <AnnivRecap a={a} x={todayA} now={now} startDate={startDate} logs={logs} loreCount={loreCount} strip onClose={toggle} closeRef={closeRef} />
         </div>
       )}
     </>

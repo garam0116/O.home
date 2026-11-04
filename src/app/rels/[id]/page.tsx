@@ -288,8 +288,10 @@ export default function RelDetailPage() {
   const feedOn = logFeed.state !== 'none' || loreFeed.state !== 'none';
   const annivOn = !!dday;
   const firstLog = logFeed.state === 'ok' ? logFeed.first : undefined;
-  /** 기념일 당일 「돌아보기」의 남긴 로그 — 이 방문자에게 보이는 LOG 글 수 */
-  const logCount = logFeed.state === 'ok' ? logFeed.total : undefined;
+  /** 기념일 당일 「돌아보기」 1·2장 — 이 방문자에게 보이는 LOG 글 (목록을 못 읽으면 없음) */
+  const recapLogs = logFeed.state === 'ok' ? logFeed.items : undefined;
+  /** 「돌아보기」 2장 쌓인 로어북 — 이 방문자에게 보이는 LOREBOOK 글 수 */
+  const loreCount = loreFeed.state === 'ok' ? loreFeed.total : undefined;
   // 전신이 하나도 등록되지 않았으면 전신 모드를 두지 않는다 —
   // 빈 자리에 「○○ 전신」 자리표시자를 세우는 대신 대표 일러스트만 보여 준다 (사용자 확정)
   const fullRefOf = (cid: string) =>
@@ -556,7 +558,7 @@ export default function RelDetailPage() {
       {/* 모바일 — 기념일은 이름 아래 가로 띠 (PC는 왼쪽 카드 아래 세로 타임라인) */}
       {isDuo && annivOn && (
         <div className="rw-m rw-m-strip">
-          <RelAnnivStrip startDate={ddayDate} firstLog={firstLog} logCount={logCount} color={auSt.ddayColor} tab={auSt.wgtColor} />
+          <RelAnnivStrip startDate={ddayDate} firstLog={firstLog} logs={recapLogs} loreCount={loreCount} color={auSt.ddayColor} tab={auSt.wgtColor} />
         </div>
       )}
 
@@ -576,7 +578,7 @@ export default function RelDetailPage() {
               : <EmptyCard isAdmin={isAdmin} onAdd={() => openMember()} />}
           {annivOn && (
             <div className="rw-slot rw-pc">
-              <RelAnnivColumn startDate={ddayDate} firstLog={firstLog} logCount={logCount} color={auSt.ddayColor} tab={auSt.wgtColor} />
+              <RelAnnivColumn startDate={ddayDate} firstLog={firstLog} logs={recapLogs} loreCount={loreCount} color={auSt.ddayColor} tab={auSt.wgtColor} />
             </div>
           )}
           </div>

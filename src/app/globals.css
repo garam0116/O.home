@@ -1182,11 +1182,22 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-recap-ttl small{font-size:calc(13px*var(--fs,1));margin-left:4px;opacity:.75}
 .rw-recap-x{display:inline-flex;align-items:center;gap:4px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;font-size:calc(11.5px*var(--fs,1));opacity:.6;cursor:pointer}
 .rw-recap-x:hover,.rw-recap-x:focus-visible{opacity:1}
+/* 장 이름 (v3.8 사용자 확정 · 시안 V2) — 제목 아래 작게, 고른 장은 디데이색 밑줄 */
+.rw-recap-tabs{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:2px}
+.rw-recap-tabs button{background:none;border:0;padding:2px 0;color:inherit;font:inherit;font-size:calc(11.5px*var(--fs,1));cursor:pointer;opacity:.5;border-bottom:1px solid transparent}
+.rw-recap-tabs button[aria-selected="true"]{opacity:1;color:var(--rw-hot);border-bottom-color:color-mix(in srgb,var(--rw-hot) 45%,transparent)}
+.rw-recap-tabs button:hover{opacity:.9}
+.rw-recap-tabs button:focus{outline:none}
+.rw-recap-tabs button:focus-visible{opacity:1}
 .rw-recap dl{margin:0;display:flex;flex-direction:column;gap:9px}
 .rw-recap dl > div{display:flex;align-items:baseline;gap:8px;font-size:calc(12.5px*var(--fs,1))}
 .rw-recap dt{opacity:.7;white-space:nowrap}
 .rw-recap dl i{flex:1;min-width:12px;border-bottom:1px dotted color-mix(in srgb,currentColor 35%,transparent);transform:translateY(-3px)}
-.rw-recap dd{margin:0;white-space:nowrap}
+.rw-recap dl > div{min-width:0}
+.rw-recap dd{margin:0;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 「N 전 이맘때」 로그 제목 — 눌러서 그 글로 간다 */
+.rw-recap dd a{color:inherit;text-decoration:none;border-bottom:1px solid color-mix(in srgb,currentColor 40%,transparent)}
+.rw-recap dd a:hover{border-bottom-color:currentColor}
 .rw-recap .num{font-family:var(--serif);font-weight:600;font-size:calc(17px*var(--fs,1));font-variant-numeric:lining-nums tabular-nums}
 .rw-recap .num.sub{font-size:calc(13px*var(--fs,1));opacity:.6}
 .rw-recap dd small{font-size:calc(11px*var(--fs,1));opacity:.7;margin-left:2px}
