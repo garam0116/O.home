@@ -1157,6 +1157,46 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-strip li b{display:block;font-family:var(--serif);font-weight:600;font-size:calc(15px*var(--fs,1));font-variant-numeric:tabular-nums}
 .rw-strip li .when,.rw-strip li .lb{display:block;margin-left:0}
 .rw-strip li.today .rw-big{display:block;font-size:calc(32px*var(--fs,1))}
+/* 기념일 당일 — 그날 기념일을 오늘 칸에 합치고 「지나온 날 돌아보기」로 장부를 연다 (v3.7 사용자 확정 · 시안 P1 「장부 한 장」)
+   숫자는 반듯한 숫자꼴로 — 세리프의 옛 숫자꼴은 「444일」의 4가 작게 내려앉는다 */
+.rw-tl li.today.is-anniv{flex:2 1 auto}
+.rw li.is-anniv .rw-big{color:var(--rw-hot)}
+.rw-tl li.is-anniv::before,.rw-strip li.is-anniv::before{box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 22%,transparent),0 0 0 9px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 10%,transparent)}
+.rw-td{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.rw-eyebrow{font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.32em;font-weight:600;color:var(--rw-hot);font-variant-numeric:lining-nums}
+.rw-msg{font-size:calc(12px*var(--fs,1));line-height:1.4;opacity:.75}
+.rw-ic{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.rw-recap-btn{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:2px 0;border:0;border-bottom:1px solid color-mix(in srgb,var(--rw-hot) 45%,transparent);
+  background:none;color:var(--rw-hot);font:inherit;font-size:calc(12px*var(--fs,1));cursor:pointer}
+.rw-recap-btn:hover{border-bottom-color:var(--rw-hot)}
+.rw-nx{font-family:var(--serif);font-size:calc(9.5px*var(--fs,1));letter-spacing:.24em;opacity:.55;margin-right:6px;vertical-align:1px}
+.rw-strip li.today.is-anniv{width:170px;padding-right:8px}
+.rw-strip li.is-anniv .rw-eyebrow,.rw-strip li.is-anniv .rw-msg{display:block}
+.rw-strip li.is-anniv .rw-msg{margin-top:2px}
+.rw-strip .rw-nx{display:block;margin:0 0 1px}
+.rw-recap{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;margin:10px 0 8px}
+.rw-recap::-webkit-scrollbar{display:none}
+.rw-recap-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rw-recap-h .t{display:flex;flex-direction:column;gap:4px}
+.rw-recap-ttl{font-family:var(--serif);font-weight:500;font-size:calc(26px*var(--fs,1));line-height:1;color:var(--rw-hot);font-variant-numeric:lining-nums}
+.rw-recap-ttl small{font-size:calc(13px*var(--fs,1));margin-left:4px;opacity:.75}
+.rw-recap-x{display:inline-flex;align-items:center;gap:4px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;font-size:calc(11.5px*var(--fs,1));opacity:.6;cursor:pointer}
+.rw-recap-x:hover,.rw-recap-x:focus-visible{opacity:1}
+.rw-recap dl{margin:0;display:flex;flex-direction:column;gap:9px}
+.rw-recap dl > div{display:flex;align-items:baseline;gap:8px;font-size:calc(12.5px*var(--fs,1))}
+.rw-recap dt{opacity:.7;white-space:nowrap}
+.rw-recap dl i{flex:1;min-width:12px;border-bottom:1px dotted color-mix(in srgb,currentColor 35%,transparent);transform:translateY(-3px)}
+.rw-recap dd{margin:0;white-space:nowrap}
+.rw-recap .num{font-family:var(--serif);font-weight:600;font-size:calc(17px*var(--fs,1));font-variant-numeric:lining-nums tabular-nums}
+.rw-recap .num.sub{font-size:calc(13px*var(--fs,1));opacity:.6}
+.rw-recap dd small{font-size:calc(11px*var(--fs,1));opacity:.7;margin-left:2px}
+.rw-recap .hot dd{color:var(--rw-hot)}
+.rw-recap-m{margin:14px 0 0;overflow:visible}
+.rw-recap-m dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px 22px}
+@media (prefers-reduced-motion:no-preference){.rw-recap dl > div{animation:rw-rise .4s ease-out both}
+  .rw-recap dl > div:nth-child(2){animation-delay:.05s}.rw-recap dl > div:nth-child(3){animation-delay:.1s}
+  .rw-recap dl > div:nth-child(4){animation-delay:.15s}.rw-recap dl > div:nth-child(5){animation-delay:.2s}.rw-recap dl > div:nth-child(6){animation-delay:.25s}}
+@keyframes rw-rise{0%{opacity:0;transform:translateY(5px)}100%{opacity:1;transform:none}}
 /* 간단 프로필 카드 */
 .mini-prof{padding:0;overflow:hidden}
 .side-slot-card{padding:0;overflow:hidden;text-align:center;position:relative}

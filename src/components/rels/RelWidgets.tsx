@@ -2,6 +2,7 @@
 /**
  * 자관 상세 위젯 (v3.3 사용자 확정 시안)
  *  - 기념일: PC는 양옆 카드 아래 세로 타임라인(「오늘 마디」 + 꼬리말 L), 모바일은 이름 아래 가로 띠(N3)
+ *    기념일 당일에는 그날 기념일을 오늘 칸에 합치고, 「지나온 날 돌아보기」로 장부를 연다 (v3.7 · 시안 P1)
  *  - LOG / LOREBOOK: 오른쪽 카드 아래 탭 위젯(M1) — 자관 수정의 LOG·LOREBOOK 주소가 가리키는 이 홈 안의
  *    목록에서 글을 읽는다. 「ALL →」은 열린 탭의 주소로 간다 (예전 자관명 위 버튼 대신)
  *
@@ -18,7 +19,7 @@ import { visibleText } from './widgetExcerpt';
 import { itemPath } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
-import { anniversaries, annivBadge, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
+import { anniversaries, annivBadge, annivMessage, fmtWidgetDate, parseLocalDate, type Anniv } from '@/lib/relAnniv';
 import { relDday, relDdayDate } from '@/lib/relStore';
 import { AppLink } from '@/components/ui/AppLink';
 
@@ -153,6 +154,8 @@ function useFitDrop(ref: React.RefObject<HTMLElement | null>, max: number, activ
 interface AnnivProps {
   startDate?: string;
   firstLog?: number;
+  /** LOG 목록에서 이 방문자에게 보이는 글 수 — 기념일 당일 「돌아보기」의 남긴 로그 (목록을 못 읽으면 없음) */
+  logCount?: number;
   /** 디데이 글씨색 (자관 수정 「디데이 글씨색」) — 가까운 기념일 강조에 쓴다 */
   color?: string;
   /** 위젯 탭 색 (자관 수정 「위젯 탭 색」) — 오늘 표시 점 */
@@ -175,13 +178,103 @@ function useAnniv(startDate?: string, firstLog?: number) {
 
 const near = (x: Anniv) => x.diff >= 0 && x.diff <= 7;
 
+/** 오늘이 기념일이면 그 기념일 (anniversaries의 future 맨 앞이 diff 0) */
+const todayOf = (a: { future: Anniv[] } | null) => (a?.future[0]?.diff === 0 ? a.future[0] : undefined);
+
+/** 연도까지 — 2025.2.8 */
+const fullDate = (d: Date) => `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+
+/** 선 아이콘 — 글자색을 따라간다. 문자 기호(▾ ↩ 등)는 기기마다 이모지로 바뀔 수 있어 쓰지 않는다 */
+const RwIcon = ({ d }: { d: string }) => (
+  <svg className="rw-ic" viewBox="0 0 12 12" aria-hidden="true"><path d={d} /></svg>
+);
+const IC_RIGHT = 'M4.5 3 7.5 6 4.5 9';
+const IC_UP = 'M3 7.5 6 4.5 9 7.5';
+const IC_CLOSE = 'M3.5 3.5 8.5 8.5M8.5 3.5 3.5 8.5';
+
+/**
+ * 기념일 당일의 오늘 칸 (v3.7 사용자 확정 — 시안 P1 「장부 한 장」).
+ * 그날 기념일은 따로 한 줄로 두지 않고 오늘 칸에 합친다: 「TODAY · 이름」 + 날수 + 한마디 + 돌아보기 링크.
+ */
+function TodayAnniv({ x, days, strip, open, onToggle, btnRef }: {
+  x: Anniv; days: number; strip?: boolean; open: boolean; onToggle: () => void;
+  btnRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  return (
+    <>
+      <span className="rw-eyebrow">TODAY · {x.label}</span>
+      <span className="rw-big">{days}{!strip && <small>DAYS</small>}</span>
+      <span className="rw-msg">{annivMessage(x.label)}</span>
+      <button type="button" className="rw-recap-btn" ref={btnRef} aria-expanded={open} onClick={onToggle}>
+        {open ? '접기' : '지나온 날 돌아보기'}<RwIcon d={open ? IC_UP : IC_RIGHT} />
+      </button>
+    </>
+  );
+}
+
+/**
+ * 「지나온 N일」 장부 — 기념일 당일 돌아보기를 누르면 PC는 타임라인 자리에, 모바일은 띠 아래에 펼친다.
+ * 항목과 값 사이는 점선으로 잇는다. 값이 없는 줄(로그 목록을 못 읽음·지난 기념일 없음)은 뺀다.
+ */
+function AnnivRecap({ a, x, now, firstLog, logCount, strip, onClose, closeRef }: {
+  a: { past: Anniv[]; future: Anniv[]; dayCount: number }; x: Anniv; now: Date;
+  firstLog?: number; logCount?: number; strip?: boolean; onClose: () => void;
+  closeRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const last = a.past[0];
+  const next = a.future[1];
+  const rows: { k: string; v: React.ReactNode; hot?: boolean }[] = [
+    { k: '함께한 날', v: <><span className="num">{a.dayCount}</span><small>일</small></> },
+  ];
+  if (a.past.length) rows.push({ k: '지나온 기념일', v: <><span className="num">{a.past.length}</span><small>개</small></> });
+  if (logCount != null) rows.push({ k: '남긴 로그', v: <><span className="num">{logCount}</span><small>편</small></> });
+  if (firstLog != null) rows.push({ k: '첫 로그', v: <span className="num">{fullDate(new Date(firstLog))}</span> });
+  if (last) rows.push({ k: '가장 최근 기념일', v: <>{last.label} <span className="num sub">{fmtWidgetDate(last.date, now)}</span></> });
+  if (next) rows.push({ k: '다음 기념일', hot: true, v: <>{next.label} <span className="num">{annivBadge(next.diff)}</span></> });
+  return (
+    <div className={`rw-recap${strip ? ' rw-recap-m' : ''}`}>
+      <div className="rw-recap-h">
+        <span className="t">
+          <span className="rw-eyebrow">TODAY · {x.label}</span>
+          <span className="rw-recap-ttl">지나온 {a.dayCount}<small>일</small></span>
+        </span>
+        <button type="button" className="rw-recap-x" ref={closeRef} onClick={onClose}>닫기<RwIcon d={IC_CLOSE} /></button>
+      </div>
+      <dl>
+        {rows.map(r => (
+          <div key={r.k} className={r.hot ? 'hot' : undefined}><dt>{r.k}</dt><i aria-hidden="true" /><dd>{r.v}</dd></div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/** 돌아보기 여닫기 — 누른 뒤에는 반대쪽 버튼(닫기 ↔ 돌아보기)으로 초점을 옮긴다 */
+function useRecap() {
+  const [open, setOpen] = useState(false);
+  const openRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const moved = useRef(false);
+  useEffect(() => {
+    if (!moved.current) return;
+    moved.current = false;
+    (open ? closeRef : openRef).current?.focus();
+  }, [open]);
+  const toggle = useCallback(() => { moved.current = true; setOpen(o => !o); }, []);
+  return { open, toggle, openRef, closeRef };
+}
+
 /** PC — 카드 아래 세로 타임라인. 넘치면 지난 것(오래된 것부터) → 다가올 것(먼 것부터) 순서로 뺀다 */
-export function RelAnnivColumn({ startDate, firstLog, color, tab }: AnnivProps) {
+export function RelAnnivColumn({ startDate, firstLog, logCount, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
   const box = useRef<HTMLDivElement>(null);
+  const { open, toggle, openRef, closeRef } = useRecap();
+  const todayA = todayOf(a);
   const past = a ? a.past.slice(0, 2).reverse() : [];
-  const future = a ? a.future.slice(0, 4) : [];
-  const { drop, gone } = useFitDrop(box, past.length + future.length, true, `${startDate}|${firstLog}`);
+  // 오늘 기념일은 오늘 칸에 합치므로 다가올 목록에서 뺀다
+  const future = a ? a.future.slice(todayA ? 1 : 0, todayA ? 5 : 4) : [];
+  const recapOn = !!todayA && open;
+  const { drop, gone } = useFitDrop(box, past.length + future.length, !recapOn, `${startDate}|${firstLog}|${recapOn}`);
   if (!a) return null;
   const cutPast = Math.min(drop, past.length);
   const cutFuture = Math.max(0, drop - past.length);
@@ -192,25 +285,31 @@ export function RelAnnivColumn({ startDate, firstLog, color, tab }: AnnivProps) 
   return (
     <div className={`rw rw-anniv${gone ? ' rw-gone' : ''}`} ref={box} style={rwVars(color, tab)}>
       <div className="rw-lbl"><span>ANNIVERSARY</span></div>
-      <ul className="rw-tl">
-        {shownPast.map(x => (
-          <li key={x.date.getTime()} className="past">
-            <span>{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span></span>
-            <b>{annivBadge(x.diff)}</b>
+      {recapOn ? (
+        <AnnivRecap a={a} x={todayA} now={now} firstLog={firstLog} logCount={logCount} onClose={toggle} closeRef={closeRef} />
+      ) : (
+        <ul className="rw-tl">
+          {shownPast.map(x => (
+            <li key={x.date.getTime()} className="past">
+              <span>{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span></span>
+              <b>{annivBadge(x.diff)}</b>
+            </li>
+          ))}
+          <li className={`today${todayA ? ' is-anniv' : ''}`}>
+            {todayA
+              ? <span className="rw-td"><TodayAnniv x={todayA} days={a.dayCount} open={false} onToggle={toggle} btnRef={openRef} /></span>
+              : a.dayCount > 0
+                ? <span className="rw-big">{a.dayCount}<small>DAYS</small></span>
+                : <span className="rw-big">{dd}</span>}
           </li>
-        ))}
-        <li className="today">
-          {a.dayCount > 0
-            ? <span className="rw-big">{a.dayCount}<small>DAYS</small></span>
-            : <span className="rw-big">{dd}</span>}
-        </li>
-        {shownFuture.map(x => (
-          <li key={x.date.getTime()}>
-            <span>{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span></span>
-            <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b>
-          </li>
-        ))}
-      </ul>
+          {shownFuture.map((x, i) => (
+            <li key={x.date.getTime()}>
+              <span>{todayA && i === 0 && <span className="rw-nx">NEXT</span>}{x.label}<span className="when">{fmtWidgetDate(x.date, now)}</span></span>
+              <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="rw-foot"><span>SINCE {since}</span><span>{dd}</span></div>
     </div>
   );
@@ -219,35 +318,51 @@ export function RelAnnivColumn({ startDate, firstLog, color, tab }: AnnivProps) 
 /** 띠의 SINCE는 늘 연도까지 — 2025.2.8 */
 const sinceFull = (v?: string) => {
   const d = parseLocalDate(v);
-  return d ? `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}` : '';
+  return d ? fullDate(d) : '';
 };
 
-/** 모바일 — 이름 아래 가로 띠 (옆으로 밀어 보기) */
-export function RelAnnivStrip({ startDate, firstLog, color, tab }: AnnivProps) {
+/** 모바일 — 이름 아래 가로 띠 (옆으로 밀어 보기). 기념일 당일 돌아보기는 띠 아래에 펼친다 */
+export function RelAnnivStrip({ startDate, firstLog, logCount, color, tab }: AnnivProps) {
   const { now, a } = useAnniv(startDate, firstLog);
+  const { open, toggle, openRef, closeRef } = useRecap();
   if (!a) return null;
+  const todayA = todayOf(a);
   const past = a.past.slice(0, 1);
-  const future = a.future.slice(0, 6);
+  const future = a.future.slice(todayA ? 1 : 0, todayA ? 7 : 6);
   return (
-    <div className="rw rw-strip" style={rwVars(color, tab)}
-      role="region" aria-label="기념일 — 옆으로 밀어 보기">
-      <ol>
-        {past.map(x => (
-          <li key={x.date.getTime()} className="past">
-            <b>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
-          </li>
-        ))}
-        <li className="today">
-          <span className="rw-big">{a.dayCount > 0 ? a.dayCount : relDday(startDate, now)}</span>
-          <span className="when">SINCE {sinceFull(startDate)}</span>
-        </li>
-        {future.map(x => (
-          <li key={x.date.getTime()}>
-            <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
+    <>
+      <div className="rw rw-strip" style={rwVars(color, tab)}
+        role="region" aria-label="기념일 — 옆으로 밀어 보기">
+        <ol>
+          {past.map(x => (
+            <li key={x.date.getTime()} className="past">
+              <b>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
+            </li>
+          ))}
+          {todayA ? (
+            <li className="today is-anniv">
+              <TodayAnniv x={todayA} days={a.dayCount} strip open={open} onToggle={toggle} btnRef={openRef} />
+            </li>
+          ) : (
+            <li className="today">
+              <span className="rw-big">{a.dayCount > 0 ? a.dayCount : relDday(startDate, now)}</span>
+              <span className="when">SINCE {sinceFull(startDate)}</span>
+            </li>
+          )}
+          {future.map((x, i) => (
+            <li key={x.date.getTime()}>
+              {todayA && i === 0 && <span className="rw-nx">NEXT</span>}
+              <b className={near(x) ? 'near' : ''}>{annivBadge(x.diff)}</b><span className="lb">{x.label}</span><span className="when">{fmtWidgetDate(x.date, now)}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      {todayA && open && (
+        <div className="rw" style={rwVars(color, tab)}>
+          <AnnivRecap a={a} x={todayA} now={now} firstLog={firstLog} logCount={logCount} strip onClose={toggle} closeRef={closeRef} />
+        </div>
+      )}
+    </>
   );
 }
 

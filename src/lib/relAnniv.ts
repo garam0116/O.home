@@ -49,6 +49,19 @@ export interface Anniv {
   diff: number;
 }
 
+/**
+ * 기념일 당일 오늘 칸에 붙는 한마디 — 기념일 이름(anniversaries가 만든 label)으로 종류를 가린다.
+ * 「첫 로그 N주년」을 「N주년」보다 먼저 봐야 한다 (둘 다 주년으로 끝남).
+ */
+export function annivMessage(label: string): string {
+  let m: RegExpExecArray | null;
+  if ((m = /^첫 로그 (\d+)주년$/.exec(label))) return `첫 로그를 남긴 지 ${m[1]}년`;
+  if ((m = /^(\d+)주년$/.exec(label))) return `함께한 지 ${m[1]}년이 되는 날`;
+  if ((m = /^(\d+)일$/.exec(label))) return `함께한 지 ${m[1]}일째 되는 날`;
+  if (/(봄|여름|가을|겨울)$/.test(label)) return `함께 맞는 ${label}의 첫날`;
+  return '오늘은 기념일';
+}
+
 /** D-5 · D-DAY · D+34 (지난 기념일은 홈 D-DAY 위젯처럼 지난 날수) */
 export const annivBadge = (diff: number) => (diff === 0 ? 'D-DAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`);
 
