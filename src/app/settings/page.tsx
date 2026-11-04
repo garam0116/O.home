@@ -62,14 +62,15 @@ import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
 import { AppLink } from '@/components/ui/AppLink';
+import { ShortcutUsePane, ShortcutKeysPane, ShortcutWritePane } from '@/components/settings/ShortcutPanes';
 
 /** 드래그 효과 드롭다운 이름 (v3.8) */
 const SEL_FX_LABEL: Record<SelFx, string> = { fog: '안개', ghost: '삼중 잔상', block: '포인트 블록', tint: '연회색 바탕', half: '반칸 형광펜' };
 
-/* ---------- 환경설정 구성 (v3.1 사용자 요청 — 전체 화면 · 4그룹 · 저장 하나) ----------
+/* ---------- 환경설정 구성 (v3.1 사용자 요청 — 전체 화면 · 4그룹 · 저장 하나, 단축키 그룹 추가로 5그룹) ----------
    예전 탭 11개를 그룹 4개로 묶었다. 그룹을 고르면 그 그룹의 항목이 한 장으로 이어지고, 옆 목차가 스크롤을 따라간다.
    주소는 /settings/그룹 — 예전 탭 주소(/settings/menu 등)로 들어와도 해당 그룹의 그 항목으로 간다. */
-type GroupId = 'site' | 'design' | 'content' | 'manage';
+type GroupId = 'site' | 'design' | 'content' | 'manage' | 'shortcuts';
 interface SetSection { id: string; label: string }
 const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[] }[] = [
   { id: 'site', label: '사이트', icon: '◇', sections: [
@@ -86,6 +87,10 @@ const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[]
   ] },
   { id: 'manage', label: '관리', icon: '⚙', sections: [
     { id: 'members', label: '회원·보안' }, { id: 'backup', label: '데이터 백업' },
+  ] },
+  // 단축키 (사용자 요청) — 1차 메뉴로 따로. 값은 lib/shortcutStore, 화면은 components/settings/ShortcutPanes
+  { id: 'shortcuts', label: '단축키', icon: '⌘', sections: [
+    { id: 'scuse', label: '사용 설정' }, { id: 'sckeys', label: '단축키 목록' }, { id: 'scwrite', label: '글쓰기 선택 창' },
   ] },
 ];
 /** 주소 한 칸 → 그룹·항목. 그룹 이름이면 그 그룹 맨 위, 예전 탭 주소(menu·bgm…)면 그 항목으로 */
@@ -112,11 +117,12 @@ function routeOf(slug: string | null | undefined): { group: GroupId; section?: s
 const DRAFT_KEYS: readonly string[] = [
   'ohome.main.v1', 'ohome.fonts.v2', 'ohome.menuset.v1', 'ohome.links.v1', 'ohome.sections.v1',
   'ohome.boards.v1', 'ohome.boardset.v1', 'ohome.threadset.v1', 'ohome.pagetext.v1', 'ohome.bgm.v1',
-  'ohome.invite.v1', 'ohome.repo.v1',
+  'ohome.invite.v1', 'ohome.repo.v1', 'ohome.shortcuts.v1',
 ];
 /** 저장 안 된 키 → 그룹 (메뉴의 「저장 안 된 변경」 점) */
 const KEY_GROUP: Record<string, GroupId> = {
   'ohome.main.v1': 'site', 'ohome.fonts.v2': 'design', 'ohome.invite.v1': 'manage', 'ohome.repo.v1': 'manage',
+  'ohome.shortcuts.v1': 'shortcuts',
 };
 /** 사이트 드래프트 칸 중 레이아웃(디자인 그룹)에 있는 것 — 나머지(탭 제목·로고 등)는 사이트 그룹 */
 const SITE_LAYOUT_FIELDS = ['boardW', 'mNav', 'mNavCovers', 'mCard'];
@@ -3301,6 +3307,9 @@ function SettingsInner() {
       case 'bgm': return <BgmPane />;
       case 'members': return <MemberPane />;
       case 'backup': return <DataPane />;
+      case 'scuse': return <ShortcutUsePane />;
+      case 'sckeys': return <ShortcutKeysPane />;
+      case 'scwrite': return <ShortcutWritePane />;
       default: return null;
     }
   };

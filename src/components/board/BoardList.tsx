@@ -11,7 +11,7 @@ import {
   CommentRow, COMMENT_KEY, COMMENT_SEED, commentsFor, postMatches,
 } from '@/lib/postStore';
 import {
-  useBoardSettings, useBoardBoxStyle, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, BoardPerm, perPageOf,
+  useBoardSettings, useBoardBoxStyle, useBoards, boardBadgeStyle, boardHref, MAIN_BOARD_ID, perPageOf, canBoardWrite,
   findBoardByKey, postNumbers, postHref,
 } from '@/lib/boardStore';
 import { useMenuSettings, canViewHref } from '@/lib/menuStore';
@@ -100,9 +100,6 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
   const searchable = new Set(boards.filter(b => canViewHref(menuSet, boardHref(b.id, boards), viewer)).map(b => b.id));
   const boardKey = [...searchable].join(',');
 
-  // 권한 3단계 — mock 단계에선 로그인 전제 (로드뷰 4.10과 동일 규칙)
-  const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
-
   const visible = useMemo(() => {
     const inBoard = searchAll
       ? (id: string) => boardKey.split(',').includes(id)
@@ -153,7 +150,7 @@ export function BoardInner({ searchAll = false }: { searchAll?: boolean }) {
     <button key={c} className={cat === c ? 'on' : ''} onClick={() => { setCat(c); setPage(1); }}>{c}</button>
   ));
   const search = <SearchBar key={searchAll ? q : bid} initial={q} onSearch={v => setUrl({ q: v, page: 1 })} />;
-  const canWrite = !searchAll && allow(board.permWrite) && !!user;
+  const canWrite = !searchAll && canBoardWrite(board.permWrite, { loggedIn: !!user, isAdmin });
   const goWrite = () => router.push(board.id === MAIN_BOARD_ID ? '/board/write' : `${boardHref(board.id, boards)}/write`);
   const penIcon = (
     <svg viewBox="0 0 24 24" aria-hidden className="bh-ico"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
