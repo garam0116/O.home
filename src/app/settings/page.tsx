@@ -5,7 +5,7 @@ import React, { Suspense, useEffect, useReducer, useRef, useState } from 'react'
 import { useAuth, inviteCode, setInviteCode } from '@/lib/auth';
 import { useMembers, memberNumbers, memberPath } from '@/lib/members';
 import { useTheme } from '@/lib/ThemeProvider';
-import { ThemeVars, BG_DIM, CARD_ALPHA } from '@/lib/theme';
+import { ThemeVars, BG_DIM, CARD_ALPHA, SEL_FX, type SelFx } from '@/lib/theme';
 import { hexToHsl } from '@/lib/color';
 import { ColorField } from '@/components/ui/ColorField';
 import { KStep, KToggle, KInput, LiveInput, KTextarea, KSelect, KCheck, Pager } from '@/components/ui/Kit';
@@ -62,6 +62,9 @@ import { migrateTo, findOrphanFiles } from '@/lib/transfer';
 import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
 import { AppLink } from '@/components/ui/AppLink';
+
+/** 드래그 효과 드롭다운 이름 (v3.8) */
+const SEL_FX_LABEL: Record<SelFx, string> = { fog: '안개', ghost: '삼중 잔상', block: '포인트 블록', tint: '연회색 바탕', half: '반칸 형광펜' };
 
 /* ---------- 환경설정 구성 (v3.1 사용자 요청 — 전체 화면 · 4그룹 · 저장 하나) ----------
    예전 탭 11개를 그룹 4개로 묶었다. 그룹을 고르면 그 그룹의 항목이 한 장으로 이어지고, 옆 목차가 스크롤을 따라간다.
@@ -589,14 +592,13 @@ function DetailPane() {
         </Ctl>
       </div>
 
-      {/* 드래그 효과 (v3.7 사용자 요청) — 글자를 끌어 선택했을 때의 모양. 모드를 바꿔도 유지(SHARED_KEYS) */}
+      {/* 드래그 효과 (v3.7 사용자 요청, v3.8 드롭다운 + 3종 추가) — 글자를 끌어 선택했을 때의 모양.
+          모드를 바꿔도 유지(SHARED_KEYS). 목록의 이름은 그 효과 모양으로 미리 칠해진다(.sel-sw) */}
       <div className="set-row">
-        <div className="l"><b>드래그 효과</b><small>글자를 끌어서 선택했을 때의 모양 — 바탕은 그대로 두고 글자만 흐려집니다<br />안개: 글자색으로 번짐 · 삼중 잔상: 포인트 색과 푸른 회색이 엇갈림 · 아이폰은 시스템 색 고정</small></div>
+        <div className="l"><b>드래그 효과</b><small>글자를 끌어서 선택했을 때의 모양<br />안개·삼중 잔상: 글자만 흐려짐 · 포인트 블록·반칸 형광펜: 글자는 그대로, 포인트색으로 칠함 · 연회색 바탕: 포인트색 글씨 · 아이폰은 시스템 색 고정</small></div>
         <Ctl>
-          <div className="mini-seg">
-            <button className={(state.vars.selFx ?? 'fog') === 'fog' ? 'on' : ''} onClick={() => setVar('selFx', 'fog')}>안개</button>
-            <button className={state.vars.selFx === 'ghost' ? 'on' : ''} onClick={() => setVar('selFx', 'ghost')}>삼중 잔상</button>
-          </div>
+          <KSelect minWidth={150} value={state.vars.selFx ?? 'fog'} onChange={v => setVar('selFx', v as SelFx)}
+            options={SEL_FX.map(v => ({ value: v, label: <span className={`sel-sw fx-${v}`}>{SEL_FX_LABEL[v]}</span> }))} />
           <Item label="미리보기"><div className="sel-pv">끌어서 확인 — <span className="fk">이 부분이 선택된 모양</span>입니다</div></Item>
         </Ctl>
       </div>
