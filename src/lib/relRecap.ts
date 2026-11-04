@@ -1,6 +1,6 @@
 /**
  * 자관 기념일 당일 「지나온 날 돌아보기」 장부의 숫자 (v3.8 사용자 확정 — 장 세 개, 장마다 6줄).
- *  - 1장 그때 그 로그   남긴 로그 · N 전 이맘때 · 가장 많이 쓴 달 · 마지막 로그 · 첫 로그
+ *  - 1장 그때 그 로그   남긴 로그 · N 전 이맘때(멀면 무렵) · 가장 많이 쓴 달 · 마지막 로그 · 첫 로그
  *  - 2장 기록 습관      한 달 평균 · 즐겨 쓴 요일 · 가장 길었던 공백 · 올해 쓴 로그 · 쌓인 로어북
  *  - 3장 함께 맞은 것들 은하를 따라 흘러간 거리 · 함께 본 보름달 · 함께 보낸 주말 · 함께 넘긴 새해 · 지나온 계절
  * 어느 장이든 맨 아래 줄은 「다음 기념일」 (RelWidgets가 붙인다).
@@ -72,22 +72,36 @@ export function logRecap(logs: RecapLog[] | undefined, startStr: string | undefi
   };
 }
 
+/** 「이맘때」라고 부를 수 있는 거리 — 이보다 멀면 「무렵」으로 부르고 날짜를 붙인다 (v3.9 사용자 확정 · 시안 L3) */
+const NEAR_DAYS = 45;
+
 /**
- * 「N 전 이맘때」 — 오늘 기념일에서 한 바퀴 전 같은 무렵(앞뒤 14일 안)에 쓴 로그 한 편.
- * 100일 단위 기념일이면 100일 전, 그 밖(주년·계절·숫자 놀이·첫 로그 주년)은 1년 전.
+ * 「N 전 이맘때」 — 오늘 기념일에서 한 바퀴 전 그 날과 가장 가까운 로그 한 편 (v3.9 사용자 확정 · 시안 L3).
+ * 줄이 빠지지 않게 범위를 두지 않는다: 앞뒤 45일 안이면 「이맘때」, 그보다 멀면 「무렵」 + 날짜(far).
+ * 같은 거리면 더 최근 글. 한 바퀴는 100일 단위 기념일이면 100일, 그 밖(주년·계절·숫자 놀이)은 1년.
+ * 1년 전이 시작일보다 앞이면(1년이 안 된 자관) 100일 전으로, 그것도 앞이면 처음 남긴 로그로.
  */
-export function lookback(logs: RecapLog[] | undefined, x: Anniv, now = new Date()) {
+export function lookback(logs: RecapLog[] | undefined, x: Anniv, startStr: string | undefined, now = new Date()) {
   if (!logs?.length) return undefined;
+  const today = dayOf(now);
+  const start = parseLocalDate(startStr);
   const m = /^(\d+)일$/.exec(x.label);
-  const hundred = !!m && +m[1] % 100 === 0 && +m[1] > 100;
-  const target = hundred ? addDays(dayOf(now), -100) : addMonths(dayOf(now), -12);
-  let pick: RecapLog | undefined;
-  let bestGap = 15;
+  const spans: [string, Date][] = [['1년 전', addMonths(today, -12)], ['100일 전', addDays(today, -100)]];
+  if (m && +m[1] % 100 === 0 && +m[1] > 100) spans.reverse();
+  const span = spans.find(([, t]) => !start || t >= start);
+  if (!span) {
+    const first = logs.reduce((a, b) => (b.time < a.time ? b : a));
+    return { label: '처음 남긴 로그', log: first, far: false };
+  }
+  const [name, target] = span;
+  let pick = logs[0];
+  let best = Infinity;
   for (const l of logs) {
     const g = Math.abs(daysBetween(target, new Date(l.time)));
-    if (g < bestGap || (g === bestGap && pick && l.time > pick.time)) { pick = l; bestGap = g; }
+    if (g < best || (g === best && l.time > pick.time)) { pick = l; best = g; }
   }
-  return pick ? { label: hundred ? '100일 전 이맘때' : '1년 전 이맘때', log: pick } : undefined;
+  const far = best > NEAR_DAYS;
+  return { label: `${name} ${far ? '무렵' : '이맘때'}`, log: pick, far };
 }
 
 /* ---------- 3장 — 날짜만으로 ---------- */

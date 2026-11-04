@@ -199,19 +199,27 @@ const IC_CLOSE = 'M3.5 3.5 8.5 8.5M8.5 3.5 3.5 8.5';
 /**
  * 기념일 당일의 오늘 칸 (v3.7 사용자 확정 — 시안 P1 「장부 한 장」).
  * 그날 기념일은 따로 한 줄로 두지 않고 오늘 칸에 합친다: 「TODAY · 이름」 + 날수 + 한마디 + 돌아보기 링크.
- * 모바일 띠는 꼬리말이 없어 평소처럼 날수 아래에 SINCE를 둔다 (v3.8 사용자 확정 · 시안 M1).
- * PC는 꼬리말에 SINCE가 늘 있으니 넣지 않는다.
+ * 모바일 띠는 꼬리말이 없어 오늘 칸에 SINCE를 둔다 — 날수 오른쪽에 「SINCE / 날짜」 두 줄로,
+ * 오른쪽 끝을 오늘 칸에서 가장 긴 줄 끝에 맞춘다 (v3.9 사용자 확정 · 시안 S2-R). PC는 꼬리말에 SINCE가 늘 있으니 넣지 않는다.
  */
 function TodayAnniv({ x, days, strip, since, open, onToggle, btnRef }: {
   x: Anniv; days: number; strip?: boolean; since?: string; open: boolean; onToggle: () => void;
   btnRef: React.RefObject<HTMLButtonElement | null>;
 }) {
+  const head = <span className="rw-eyebrow">TODAY · {x.label}</span>;
+  const msg = <span className="rw-msg">{annivMessage(x.label)}</span>;
   return (
     <>
-      <span className="rw-eyebrow">TODAY · {x.label}</span>
-      <span className="rw-big">{days}{!strip && <small>DAYS</small>}</span>
-      {strip && since && <span className="when">SINCE {since}</span>}
-      <span className="rw-msg">{annivMessage(x.label)}</span>
+      {strip ? (
+        <span className="rw-td-m">
+          {head}
+          <span className="rw-td-num">
+            <span className="rw-big">{days}</span>
+            {since && <span className="rw-since"><b>SINCE</b><span>{since}</span></span>}
+          </span>
+          {msg}
+        </span>
+      ) : <>{head}<span className="rw-big">{days}<small>DAYS</small></span>{msg}</>}
       <button type="button" className="rw-recap-btn" ref={btnRef} aria-expanded={open} onClick={onToggle}>
         {open ? '접기' : '지나온 날 돌아보기'}<RwIcon d={open ? IC_UP : IC_RIGHT} />
       </button>
@@ -232,14 +240,19 @@ function recapPages(p: {
 }): { name: string; rows: RecapRow[] }[] {
   const { x, now } = p;
   const lg = logRecap(p.logs, p.startDate, now);
-  const back = lookback(p.logs, x, now);
+  const back = lookback(p.logs, x, p.startDate, now);
   const sky = skyRecap(p.startDate, now);
   const r1: RecapRow[] = [];
   if (lg) {
     r1.push({ k: '남긴 로그', v: num(lg.total, '편') });
-    if (back) r1.push({ k: back.label, v: back.log.href
-      ? <AppLink href={back.log.href}>No.{back.log.no} {back.log.title}</AppLink>
-      : <>No.{back.log.no} {back.log.title}</> });
+    if (back) {
+      const t = <>No.{back.log.no} {back.log.title}</>;
+      r1.push({ k: back.label, v: <>
+        {back.log.href ? <AppLink href={back.log.href}>{t}</AppLink> : t}
+        {/* 멀리 떨어진 글(「무렵」)이면 언제 글인지 날짜를 붙인다 */}
+        {back.far && <span className="num sub"> {fmtWidgetDate(back.log.time, now)}</span>}
+      </> });
+    }
     if (lg.peak) r1.push({ k: '가장 많이 쓴 달', v: <>{num(`${lg.peak.y}.${lg.peak.m}`)} <small>{lg.peak.n}편</small></> });
     if (lg.lastAgo != null) r1.push({ k: '마지막 로그', v: lg.lastAgo === 0 ? '오늘' : num(lg.lastAgo, '일 전') });
     if (lg.first) r1.push({ k: '첫 로그', v: num(fullDate(new Date(lg.first.time))) });

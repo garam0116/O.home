@@ -1173,6 +1173,14 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-strip li.today.is-anniv{width:170px;padding-right:8px}
 .rw-strip li.is-anniv .rw-eyebrow,.rw-strip li.is-anniv .rw-msg{display:block}
 .rw-strip li.is-anniv .rw-msg{margin-top:2px}
+/* 모바일 당일 SINCE (v3.9 사용자 확정 · 시안 S2-R) — 날수 오른쪽에 「SINCE / 날짜」 두 줄.
+   묶음 폭은 오늘 칸에서 가장 긴 줄(보통 한마디, 때로 TODAY · 이름)이 정하고, 날수 줄은 양끝으로 벌려 SINCE를 그 끝에 맞춘다 */
+.rw-td-m{display:flex;flex-direction:column;width:max-content;max-width:100%}
+.rw-td-num{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.rw-strip li.today .rw-td-num .rw-big{display:inline-block}
+.rw-since{display:flex;flex-direction:column;align-items:flex-end;padding-bottom:2px;font-family:var(--serif);font-size:calc(11px*var(--fs,1));line-height:1.15;opacity:.55;white-space:nowrap;font-variant-numeric:lining-nums tabular-nums}
+/* SINCE 글자 자간만큼 당겨 날짜 끝과 맞춘다 */
+.rw-strip .rw-since b{display:block;font-weight:inherit;font-size:calc(9.5px*var(--fs,1));letter-spacing:.24em;margin-right:-.24em}
 .rw-strip .rw-nx{display:block;margin:0 0 1px}
 .rw-recap{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;margin:10px 0 8px}
 .rw-recap::-webkit-scrollbar{display:none}
