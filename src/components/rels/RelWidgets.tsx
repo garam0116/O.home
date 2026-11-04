@@ -232,14 +232,19 @@ function recapPages(p: {
 }): { name: string; rows: RecapRow[] }[] {
   const { x, now } = p;
   const lg = logRecap(p.logs, p.startDate, now);
-  const back = lookback(p.logs, x, now);
+  const back = lookback(p.logs, x, p.startDate, now);
   const sky = skyRecap(p.startDate, now);
   const r1: RecapRow[] = [];
   if (lg) {
     r1.push({ k: '남긴 로그', v: num(lg.total, '편') });
-    if (back) r1.push({ k: back.label, v: back.log.href
-      ? <AppLink href={back.log.href}>No.{back.log.no} {back.log.title}</AppLink>
-      : <>No.{back.log.no} {back.log.title}</> });
+    if (back) {
+      const t = <>No.{back.log.no} {back.log.title}</>;
+      r1.push({ k: back.label, v: <>
+        {back.log.href ? <AppLink href={back.log.href}>{t}</AppLink> : t}
+        {/* 멀리 떨어진 글(「무렵」)이면 언제 글인지 날짜를 붙인다 */}
+        {back.far && <span className="num sub"> {fmtWidgetDate(back.log.time, now)}</span>}
+      </> });
+    }
     if (lg.peak) r1.push({ k: '가장 많이 쓴 달', v: <>{num(`${lg.peak.y}.${lg.peak.m}`)} <small>{lg.peak.n}편</small></> });
     if (lg.lastAgo != null) r1.push({ k: '마지막 로그', v: lg.lastAgo === 0 ? '오늘' : num(lg.lastAgo, '일 전') });
     if (lg.first) r1.push({ k: '첫 로그', v: num(fullDate(new Date(lg.first.time))) });
