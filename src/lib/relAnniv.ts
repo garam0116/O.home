@@ -14,15 +14,15 @@
 const DAY = 86400000;
 
 /** 그 날 현지 자정 */
-const dayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+export const dayOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 /** 달을 더하되 없는 날짜(1/31 + 1개월)는 그 달 마지막 날로 */
-function addMonths(d: Date, n: number): Date {
+export function addMonths(d: Date, n: number): Date {
   const y = d.getFullYear(), m = d.getMonth() + n;
   const last = new Date(y, m + 1, 0).getDate();
   return new Date(y, m, Math.min(d.getDate(), last));
 }
-const daysBetween = (a: Date, b: Date) => Math.round((dayOf(b).getTime() - dayOf(a).getTime()) / DAY);
+export const daysBetween = (a: Date, b: Date) => Math.round((dayOf(b).getTime() - dayOf(a).getTime()) / DAY);
 
 /** YYYY-MM-DD → 현지 날짜 */
 export function parseLocalDate(v?: string): Date | undefined {
