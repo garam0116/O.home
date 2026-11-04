@@ -284,7 +284,7 @@ function recapData(p: {
     r1.push({ k: '남긴 로그', v: num(lg.total, '편') });
     if (back) {
       const t = back.log.title;
-      r1.push({ k: back.label, v: back.log.href ? <AppLink href={back.log.href}>{t}</AppLink> : t });
+      r1.push({ k: back.label, v: back.log.href ? <AppLink className="rw-ttl" href={back.log.href}>{t}</AppLink> : <span className="rw-ttl">{t}</span> });
     }
     if (lg.peak) r1.push({ k: '가장 많이 쓴 달', v: <>{num(`${lg.peak.y}.${lg.peak.m}`)} <small>{lg.peak.n}편</small></> });
     if (lg.lastAgo != null) r1.push({ k: '마지막 로그', v: lg.lastAgo === 0 ? '오늘' : num(lg.lastAgo, '일 전') });
@@ -292,7 +292,7 @@ function recapData(p: {
   }
   const again = pickAgain(p.logs, [back?.log, lg?.first], p.startDate, now);
   const t1 = again?.title;
-  const foot1: RecapRow | undefined = again && { k: '다시 꺼내 볼 로그', hot: true, v: again.href ? <AppLink href={again.href}>{t1}</AppLink> : t1 };
+  const foot1: RecapRow | undefined = again && { k: '다시 꺼내 볼 로그', hot: true, v: again.href ? <AppLink className="rw-ttl" href={again.href}>{t1}</AppLink> : <span className="rw-ttl">{t1}</span> };
   const r2: RecapRow[] = [];
   if (lg?.avg) r2.push({ k: '한 달 평균', v: num(lg.avg, '편') });
   if (lg?.weekday) r2.push({ k: '즐겨 쓴 요일', v: <>{WEEKDAYS[lg.weekday.day]} <small>{lg.weekday.n}편</small></> });
