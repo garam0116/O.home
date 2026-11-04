@@ -1105,7 +1105,9 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 기념일 — 세로 타임라인 (남는 높이만큼 줄 간격을 벌려 끝선에서 끝난다) */
 /* 세로선은 한 줄로 긋지 않고 줄마다 점 위아래만 그린다 — 속이 빈 점 위로 선이 지나가 관통해 보였다 (v3.3 사용자 제보).
    줄(li)이 남는 높이를 나눠 가져 서로 붙어 있으므로 조각이 이어져 한 줄로 보인다 */
-.rw-tl{flex:1;display:flex;flex-direction:column;list-style:none;margin:6px 0 8px;padding:0 0 0 18px;position:relative}
+/* 왼쪽 여백 27px = 점 자리 18px + 오늘 점 고리(기념일 당일 9px)가 번질 자리 — 위젯은 끝선을 넘지 않게 바깥을 잘라내서(overflow:hidden),
+   18px이면 맨 왼쪽에 붙은 점의 고리가 반쯤 잘려 반달처럼 보였다 (v4.1 사용자 제보 · 시안 A) */
+.rw-tl{flex:1;display:flex;flex-direction:column;list-style:none;margin:6px 0 8px;padding:0 0 0 27px;position:relative}
 .rw-tl li{flex:1 1 auto;position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;font-size:calc(13px*var(--fs,1))}
 .rw-tl li::after{content:"";position:absolute;left:-13.5px;top:0;bottom:0;width:1px;
   background:linear-gradient(to bottom,var(--rw-line) calc(50% - 10px),transparent calc(50% - 10px),transparent calc(50% + 10px),var(--rw-line) calc(50% + 10px))}
@@ -1162,13 +1164,23 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-tl li.today.is-anniv{flex:2 1 auto}
 .rw li.is-anniv .rw-big{color:var(--rw-hot)}
 .rw-tl li.is-anniv::before,.rw-strip li.is-anniv::before{box-shadow:0 0 0 4px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 22%,transparent),0 0 0 9px color-mix(in srgb,var(--rw-tab,var(--rw-pt)) 10%,transparent)}
-.rw-td{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.rw-td{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;max-width:100%}
 .rw-eyebrow{font-family:var(--serif);font-size:calc(11px*var(--fs,1));letter-spacing:.32em;font-weight:600;color:var(--rw-hot);font-variant-numeric:lining-nums}
 .rw-msg{font-size:calc(12px*var(--fs,1));line-height:1.4;opacity:.75}
 .rw-ic{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .rw-recap-btn{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:2px 0;border:0;border-bottom:1px solid color-mix(in srgb,var(--rw-hot) 45%,transparent);
   background:none;color:var(--rw-hot);font:inherit;font-size:calc(12px*var(--fs,1));cursor:pointer}
 .rw-recap-btn:hover{border-bottom-color:var(--rw-hot)}
+/* 오늘의 한 줄 (v4.1 사용자 확정 · 시안 C-3) — 날수 아래 「이름 값 ›」, 값만 밑줄. 길면 값이 말줄임된다.
+   모바일 띠는 칸이 좁아 이름을 윗줄, 값 + 화살표를 아랫줄로 */
+.rw-peek{display:inline-flex;align-items:center;gap:5px;max-width:100%;min-width:0;margin-top:4px;padding:2px 0;border:0;background:none;
+  color:var(--rw-hot);font:inherit;font-size:calc(12px*var(--fs,1));cursor:pointer;text-align:left}
+.rw-peek .k{opacity:.7;white-space:nowrap}
+.rw-peek .v{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--serif);font-weight:600;font-size:calc(13.5px*var(--fs,1));
+  font-variant-numeric:lining-nums;border-bottom:1px solid color-mix(in srgb,var(--rw-hot) 45%,transparent)}
+.rw-peek:hover .v{border-bottom-color:var(--rw-hot)}
+.rw-strip .rw-peek{display:grid;grid-template-columns:minmax(0,auto) auto;justify-content:start;column-gap:3px;row-gap:1px;width:100%}
+.rw-strip .rw-peek .k{grid-column:1 / -1;overflow:hidden;text-overflow:ellipsis}
 .rw-nx{font-family:var(--serif);font-size:calc(9.5px*var(--fs,1));letter-spacing:.24em;opacity:.55;margin-right:6px;vertical-align:1px}
 .rw-strip li.today.is-anniv{width:170px;padding-right:8px}
 .rw-strip li.is-anniv .rw-eyebrow,.rw-strip li.is-anniv .rw-msg{display:block}
@@ -1207,7 +1219,6 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-recap dd a{color:inherit;text-decoration:none;border-bottom:1px solid color-mix(in srgb,currentColor 40%,transparent)}
 .rw-recap dd a:hover{border-bottom-color:currentColor}
 .rw-recap .num{font-family:var(--serif);font-weight:600;font-size:calc(17px*var(--fs,1));font-variant-numeric:lining-nums tabular-nums}
-.rw-recap .num.sub{font-size:calc(13px*var(--fs,1));opacity:.6}
 .rw-recap dd small{font-size:calc(11px*var(--fs,1));opacity:.7;margin-left:2px}
 .rw-recap .hot dd{color:var(--rw-hot)}
 .rw-recap-m{margin:14px 0 0;overflow:visible}
