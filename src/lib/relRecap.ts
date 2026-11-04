@@ -1,5 +1,6 @@
 /**
- * 자관 기념일 당일 「지나온 날 돌아보기」 장부의 숫자 (v3.8 사용자 확정 — 장 세 개, 장마다 6줄).
+ * 자관 「지나온 날 돌아보기」 장부의 숫자 (v3.8 사용자 확정 — 장 세 개, 장마다 6줄).
+ * 처음엔 기념일 당일에만 열렸지만, v4.1부터 평소에도 연다 (사용자 확정 · 시안 C-3 「날마다 바뀌는 한 줄」).
  *  - 1장 그때 그 로그   남긴 로그 · N 전 이맘때(멀면 무렵) · 가장 많이 쓴 달 · 마지막 로그 · 첫 로그
  *  - 2장 기록 습관      한 달 평균 · 즐겨 쓴 요일 · 가장 길었던 공백 · 올해 쓴 로그 · 쌓인 로어북
  *  - 3장 함께 맞은 것들 은하를 따라 흘러간 거리 · 함께 본 보름달 · 함께 보낸 주말 · 함께 넘긴 새해 · 지나온 계절
@@ -77,16 +78,16 @@ export function logRecap(logs: RecapLog[] | undefined, startStr: string | undefi
 const NEAR_DAYS = 45;
 
 /**
- * 「N 전 이맘때」 — 오늘 기념일에서 한 바퀴 전 그 날과 가장 가까운 로그 한 편 (v3.9 사용자 확정 · 시안 L3).
- * 줄이 빠지지 않게 범위를 두지 않는다: 앞뒤 45일 안이면 「이맘때」, 그보다 멀면 「무렵」 + 날짜(far).
- * 같은 거리면 더 최근 글. 한 바퀴는 100일 단위 기념일이면 100일, 그 밖(주년·계절·숫자 놀이)은 1년.
+ * 「N 전 이맘때」 — 오늘에서 한 바퀴 전 그 날과 가장 가까운 로그 한 편 (v3.9 사용자 확정 · 시안 L3).
+ * 줄이 빠지지 않게 범위를 두지 않는다: 앞뒤 45일 안이면 「이맘때」, 그보다 멀면 「무렵」(far).
+ * 같은 거리면 더 최근 글. 한 바퀴는 오늘이 100일 단위 기념일이면 100일, 그 밖(주년·계절·숫자 놀이·평소 날 — x 없음)은 1년.
  * 1년 전이 시작일보다 앞이면(1년이 안 된 자관) 100일 전으로, 그것도 앞이면 처음 남긴 로그로.
  */
-export function lookback(logs: RecapLog[] | undefined, x: Anniv, startStr: string | undefined, now = new Date()) {
+export function lookback(logs: RecapLog[] | undefined, x: Anniv | undefined, startStr: string | undefined, now = new Date()) {
   if (!logs?.length) return undefined;
   const today = dayOf(now);
   const start = parseLocalDate(startStr);
-  const m = /^(\d+)일$/.exec(x.label);
+  const m = x && /^(\d+)일$/.exec(x.label);
   const spans: [string, Date][] = [['1년 전', addMonths(today, -12)], ['100일 전', addDays(today, -100)]];
   if (m && +m[1] % 100 === 0 && +m[1] > 100) spans.reverse();
   const span = spans.find(([, t]) => !start || t >= start);
@@ -114,7 +115,7 @@ function hash(s: string) {
 
 /**
  * 1장 맨 아래 「다시 꺼내 볼 로그」 — 무작위 한 편 (v4.0 사용자 확정 · 시안 F, 기준 「무작위」).
- * 오늘 날짜 + 자관 시작일을 씨앗으로 골라, 같은 날에는 새로고침해도 같은 글이고 날이 바뀌면(= 다음 기념일) 다른 글이다.
+ * 오늘 날짜 + 자관 시작일을 씨앗으로 골라, 같은 날에는 새로고침해도 같은 글이고 날이 바뀌면 다른 글이다 (평소에도 장부를 열 수 있어 날마다 바뀐다).
  * 같은 장에 이미 나온 글(exclude — 「이맘때」·첫 로그)은 뺀다. 남는 글이 없으면 undefined.
  * 후보는 이 방문자에게 보이는 글이라 비밀글이 있으면 방문자마다 다른 글이 나올 수 있다 (사용자 확인).
  */
@@ -122,8 +123,19 @@ export function pickAgain(logs: RecapLog[] | undefined, exclude: (RecapLog | und
   if (!logs?.length) return undefined;
   const pool = logs.filter(l => !exclude.includes(l)).sort((a, b) => a.time - b.time || a.no - b.no);
   if (!pool.length) return undefined;
-  const seed = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}|${startStr ?? ''}`;
-  return pool[hash(seed) % pool.length];
+  return pool[hash(daySeed(now, startStr)) % pool.length];
+}
+
+/** 오늘 날짜 + 자관 시작일 — 같은 날엔 같은 값, 날이 바뀌면 다른 값 */
+const daySeed = (now: Date, startStr: string | undefined) => `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}|${startStr ?? ''}`;
+
+/**
+ * 하루 한 개 고르기 — 오늘의 한 줄(평소 날 오늘 칸 미리보기, v4.1 사용자 확정 · 시안 C-3)에 쓴다.
+ * pickAgain과 같은 씨앗을 쓰되 앞에 표시를 붙여, 두 고르기가 같은 순번에 묶이지 않게 한다.
+ */
+export function pickDaily<T>(items: T[], startStr: string | undefined, now = new Date()): T | undefined {
+  if (!items.length) return undefined;
+  return items[hash(`daily|${daySeed(now, startStr)}`) % items.length];
 }
 
 /** 「이 속도라면」을 보여 줄 가장 먼 거리 — 이보다 멀면 줄을 만들지 않는다 */
