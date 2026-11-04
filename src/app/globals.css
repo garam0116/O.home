@@ -1137,21 +1137,24 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-big small{font-size:calc(12px*var(--fs,1));letter-spacing:.3em;margin-left:6px;opacity:.6}
 /* LOG / LOREBOOK */
 .rw-pane{flex:1;min-height:0;display:flex;flex-direction:column}
+/* 위젯 글꼴 규칙 (v4.3 사용자 확정 시안 B) — 글 제목(큰 제목·목록 제목·돌아보기 글 제목)은 타이틀 폰트(--serif),
+   요약·안내는 사이트 본문 폰트(--sans). 위젯이 자관 「본문 폰트」가 걸린 .rel-body 안에 있어도 물려받지 않게 둘 다 적어 둔다
+   — 그러지 않으면 자관마다 위젯 글꼴이 달라진다. 범위는 자관 상세 위젯만(자관 목록 카드는 그대로) */
 .rw-feat{display:block;padding:6px 0 9px;border-bottom:1px solid var(--rw-line);color:inherit;text-decoration:none}
 .rw-feat .meta{display:flex;gap:9px;font-family:var(--serif);font-size:calc(10.5px*var(--fs,1));letter-spacing:.22em;opacity:.6}
 .rw-feat .t{display:block;font-family:var(--serif);font-size:calc(16px*var(--fs,1));line-height:1.45;margin:4px 0 3px}
-.rw-feat .x{font-size:calc(12.5px*var(--fs,1));line-height:1.7;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rw-feat .x{font-family:var(--sans);font-size:calc(12.5px*var(--fs,1));line-height:1.7;opacity:.72;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rw-feat:hover .t,.rw-row:hover .ttl{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rw-line)}
 .rw-row{display:flex;align-items:baseline;gap:10px;padding:8px 0 7px;border-bottom:1px solid var(--rw-line);color:inherit;text-decoration:none}
 /* 꼬리말 바로 위 줄은 밑줄을 빼서 꼬리말 선과 두 겹이 되지 않게 (사용자 제보 — 모바일에서 두 줄로 보임) */
 .rw-row:has(+ .rw-foot),.rw-feat:has(+ .rw-foot){border-bottom:0}
 .rw-row .cat{flex-shrink:0;font-family:var(--serif);font-size:calc(10px*var(--fs,1));letter-spacing:.24em;opacity:.55;white-space:nowrap}
 .rw-row .cat:empty{display:none}
-.rw-row .ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(13.5px*var(--fs,1))}
+.rw-row .ttl{font-family:var(--serif);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:calc(13.5px*var(--fs,1))}
 .rw-row .dt{flex-shrink:0;font-family:var(--serif);font-size:calc(12.5px*var(--fs,1));opacity:.65;font-variant-numeric:tabular-nums}
-.rw-ext{display:block;padding:12px 0;color:inherit;font-size:calc(13px*var(--fs,1));text-decoration:none;border-bottom:1px solid var(--rw-line)}
+.rw-ext{font-family:var(--sans);display:block;padding:12px 0;color:inherit;font-size:calc(13px*var(--fs,1));text-decoration:none;border-bottom:1px solid var(--rw-line)}
 .rw-ext:hover{text-decoration:underline;text-underline-offset:4px}
-.rw-empty{margin:0;padding:12px 0;font-size:calc(12.5px*var(--fs,1));opacity:.55}
+.rw-empty{font-family:var(--sans);margin:0;padding:12px 0;font-size:calc(12.5px*var(--fs,1));opacity:.55}
 /* 모바일 가로 띠 */
 .rw-strip{overflow-x:auto;scrollbar-width:none;margin:0 calc(-1*var(--rw-gutter,14px));padding:0 var(--rw-gutter,14px)}
 .rw-strip::-webkit-scrollbar{display:none}
@@ -1225,7 +1228,8 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rw-recap dl i{flex:1;min-width:12px;border-bottom:1px dotted color-mix(in srgb,currentColor 35%,transparent);transform:translateY(-3px)}
 .rw-recap dl > div{min-width:0}
 .rw-recap dd{margin:0;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* 「N 전 이맘때」 로그 제목 — 눌러서 그 글로 간다 */
+/* 「N 전 이맘때」 로그 제목 — 눌러서 그 글로 간다. 글 제목이라 세리프(아래 위젯 글꼴 규칙) */
+.rw-recap .rw-ttl{font-family:var(--serif)}
 .rw-recap dd a{color:inherit;text-decoration:none;border-bottom:1px solid color-mix(in srgb,currentColor 40%,transparent)}
 .rw-recap dd a:hover{border-bottom-color:currentColor}
 .rw-recap .num{font-family:var(--serif);font-weight:600;font-size:calc(17px*var(--fs,1));font-variant-numeric:lining-nums tabular-nums}
@@ -2325,65 +2329,104 @@ body.no-topbar .topbar{display:none}
 
 /* Thread — 상자 없이 점선 실과 ◆ 마디. 대메뉴에 올리면 이름 끝에서 점선이 하위 메뉴까지 뻗음(--lw = 이름 폭, MenuCard가 잼).
    하위 메뉴는 위젯 가로 끝에 바로 붙여 연다(간격 0 — 실선 길이가 위젯 폭을 따라감).
-   이음새는 '테두리 줄기'(사용자 확정 시안 A2): 하위 메뉴 왼쪽 경계선 전체가 금색 점선 줄기이고, 가로 점선 끝의 작은 ◇가
+   이음새는 '테두리 줄기'(사용자 확정 시안 A2): 하위 메뉴 왼쪽 경계선이 금색 점선 줄기이고, 가로 점선 끝의 작은 ◇가
    그 줄기 위 연결 마디가 된다. 첫 하위 항목의 ◇는 이 마디와 겹치므로 숨긴다. 펼칠 때 줄기에서 바깥쪽으로 그려지듯 열림.
    큰 ◆(.mc-star)는 줄기 위를 미끄러지며 마우스를 올린 하위 항목을 가리키고, 손을 떼면 선택한 항목(없으면 첫 항목)으로
    돌아간다(사용자 확정 시안 C — 위치는 MenuCard useCardMotion이 --sy로 잰다). 별이 앉은 항목의 작은 ◇는 숨긴다(.at).
-   하위 메뉴는 본문 위젯 위에 겹쳐도 읽히도록 드롭다운 배경을 옅게 깐다 */
-.mc-s-thread{--mc-gap:0px;padding:6px 0 4px 22px;background:none;border:0;border-radius:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-.mc-s-thread::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:1px;opacity:.5;pointer-events:none;
-  background:linear-gradient(180deg,var(--top-fg) 50%,transparent 0) 0 0/1px 5px repeat-y;
-  -webkit-mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent);mask:linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent)}
+   하위 메뉴는 본문 위젯 위에 겹쳐도 읽히도록 드롭다운 배경을 옅게 깐다.
+
+   마디와 줄기 (v4.4 사용자 확정 시안 B-1 · D-2 + 큰 마름모 정리) — 1px 선 위의 마름모는 반 픽셀만 어긋나도 비뚤어 보인다.
+   - 줄기는 한 줄로 긋지 않고 **마디와 마디 사이 구간마다** 따로 긋는다(대메뉴 = .mc-item::before, 하위 = button::after).
+     마디 속을 바탕색으로 덮어 줄기를 가리지 않아도 되고(배경 그림이 비침), 모든 꼭짓점 앞 간격이 3px로 같다.
+     구간마다 점선 칸(5px 안에 3px 선)을 background-repeat:space로 놓아 양 끝이 늘 같은 모양으로 끝난다.
+   - 마름모는 회전 사각형 대신 픽셀 격자 그림(--mc-d*: 꼭짓점이 픽셀 한가운데)을 mask로 칠한다. 크기는 홀수(7·9·11px)이고
+     가운데가 줄기 가운데(1px 선의 x.5)에 오도록 놓는다. 세로는 round()로 정수 픽셀에 맞춘다(줄 높이가 홀수여도 번지지 않게).
+   - 올리기·선택은 scale로 키우지 않고(소수 픽셀 → 번짐) 11px 그림으로 바꿔 끼운다. 선택 빛은 mask에 잘리므로 .mc-top::after로 따로.
+   - 가로 점선은 연결 마디 앞 5px에서 멈춘다. 하위 메뉴 높이는 MenuCard가 재서(--sub-dy) 첫 항목 가운데를 대메뉴 가운데에 맞춘다.
+   - 하위 줄기는 첫 마디에서 시작해 마지막 마디에서, 대메뉴 줄기는 바닥 ◆에서 끝난다(꼬리 없음). 대메뉴 맨 위만 흐리게 들어온다.
+   이 규칙의 수치(구간 시작·끝 7/8/9px, 바닥 줄기 -10px)는 아래 크기·여백(.mc-foot margin-top 14px, ::before top -1px)에 묶여 있다 */
+.mc-s-thread{--mc-gap:0px;padding:6px 0 4px 22px;background:none;border:0;border-radius:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;
+  --mc-line:color-mix(in srgb,var(--top-fg) 50%,transparent);
+  --mc-dash:linear-gradient(transparent 1px,var(--gold) 1px 4px,transparent 4px) 0 0/1px 5px;
+  --mc-dash-top:linear-gradient(transparent 1px,var(--mc-line) 1px 4px,transparent 4px) 0 0/1px 5px;
+  --mc-d7:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Cpath d='M3.5 .5 6.5 3.5 3.5 6.5 .5 3.5Z' fill='none' stroke='%23000'/%3E%3C/svg%3E");
+  --mc-d7f:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Cpath d='M3.5 0 7 3.5 3.5 7 0 3.5Z'/%3E%3C/svg%3E");
+  --mc-d9:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath d='M4.5 .5 8.5 4.5 4.5 8.5 .5 4.5Z' fill='none' stroke='%23000'/%3E%3C/svg%3E");
+  --mc-d11:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11'%3E%3Cpath d='M5.5 .5 10.5 5.5 5.5 10.5 .5 5.5Z' fill='none' stroke='%23000'/%3E%3C/svg%3E");
+  --mc-d11f:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11'%3E%3Cpath d='M5.5 0 11 5.5 5.5 11 0 5.5Z'/%3E%3C/svg%3E")}
 .mc-s-thread .mc-brand{padding:0 0 4px}
 .mc-s-thread .mc-hr{height:10px;margin:0;background:none}
 .mc-s-thread .mc-list{gap:0}
 .mc-s-thread .mc-top{position:relative;padding:8px 0;border-radius:0}
 .mc-s-thread .mc-item:hover > .mc-top,.mc-s-thread .mc-item.on > .mc-top{background:none}
 .mc-s-thread .mc-grp > .mc-top::after{content:none}
-.mc-s-thread .mc-grp > .mc-top{z-index:6} /* 점선 끝 연결 ◆가 하위 메뉴(z 5)의 줄기 위에 온전히 보이게 */
-.mc-s-thread .mc-top::before{content:"";position:absolute;left:-21px;top:50%;width:7px;height:7px;margin-top:-3.5px;transform:rotate(45deg);
-  background:var(--bg-g2,#121418);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--top-fg) 70%,transparent);transition:.25s}
-.mc-s-thread .mc-item:hover > .mc-top::before{box-shadow:inset 0 0 0 1px var(--gold);transform:rotate(45deg) scale(1.2)}
-.mc-s-thread .mc-item.on > .mc-top::before{background:var(--gold);box-shadow:0 0 12px 2px color-mix(in srgb,var(--gold) 55%,transparent);transform:rotate(45deg) scale(1.25)}
+.mc-s-thread .mc-grp > .mc-top{z-index:6} /* 점선 끝 연결 ◇가 하위 메뉴(z 5) 위에 온전히 보이게 */
+/* 대메뉴 줄기 — 앞 마디 아래 3px부터 이 마디 위 3px까지 (9px 마디: 가운데 c+.5, 위아래 끝 c-4 · c+5) */
+.mc-s-thread .mc-list > .mc-item::before{content:"";position:absolute;left:-18px;width:1px;pointer-events:none;
+  top:calc(round(down,50%,1px) - 100% + 8px);bottom:calc(100% - round(down,50%,1px) + 7px);background:var(--mc-dash-top);background-repeat:no-repeat space}
+.mc-s-thread .mc-list > .mc-item:first-child::before{top:-16px;-webkit-mask:linear-gradient(transparent,#000 70%);mask:linear-gradient(transparent,#000 70%)}
+.mc-s-thread .mc-list > .mc-item:last-child::after{content:"";position:absolute;left:-18px;width:1px;pointer-events:none;
+  top:calc(round(down,50%,1px) + 8px);bottom:-10px;background:var(--mc-dash-top);background-repeat:no-repeat space}
+/* 대메뉴 마디 */
+.mc-s-thread .mc-top::before{content:"";position:absolute;left:-22px;top:round(down,50%,1px);width:9px;height:9px;margin-top:-4px;
+  background:color-mix(in srgb,var(--top-fg) 75%,transparent);-webkit-mask:var(--mc-d9) center/100% no-repeat;mask:var(--mc-d9) center/100% no-repeat}
+.mc-s-thread .mc-item:hover > .mc-top::before,.mc-s-thread .mc-item.on > .mc-top::before{left:-23px;width:11px;height:11px;margin-top:-5px;background:var(--gold);
+  -webkit-mask-image:var(--mc-d11);mask-image:var(--mc-d11)}
+.mc-s-thread .mc-item.on > .mc-top::before{-webkit-mask-image:var(--mc-d11f);mask-image:var(--mc-d11f)}
+.mc-s-thread .mc-item.on > .mc-top::after,.mc-s-thread .mc-item.on.mc-grp > .mc-top::after{content:"";position:absolute;left:-29px;top:round(down,50%,1px);width:23px;height:23px;margin-top:-11px;
+  pointer-events:none;background:radial-gradient(closest-side,color-mix(in srgb,var(--gold) 45%,transparent),transparent)}
 .mc-s-thread .mc-top .mc-lbl{transition:transform .25s}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(3px)}
-.mc-s-thread .mc-wire{position:absolute;top:50%;right:calc(-1 * var(--mc-gap));width:calc(100% - var(--lw,40px) - 10px + var(--mc-gap));
-  border-top:1px dashed var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.3,.8,.25,1);pointer-events:none}
-.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-3px;top:-3px;width:5px;height:5px;transform:rotate(45deg);
-  background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
+/* 가로 점선 — 연결 마디(7px, 하위 줄기 위) 앞 5px에서 멈춘다 */
+.mc-s-thread .mc-wire{position:absolute;top:round(down,50%,1px);right:calc(8px - var(--mc-gap));width:calc(100% - var(--lw,40px) - 18px + var(--mc-gap));height:1px;
+  background:linear-gradient(90deg,transparent 1px,var(--gold) 1px 4px,transparent 4px) 0 0/5px 1px;background-repeat:space no-repeat;
+  transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.3,.8,.25,1);pointer-events:none}
+.mc-s-thread .mc-wire::after{content:"";position:absolute;right:-12px;top:-3px;width:7px;height:7px;
+  background:var(--gold);-webkit-mask:var(--mc-d7) center/100% no-repeat;mask:var(--mc-d7) center/100% no-repeat}
 .mc-s-thread .mc-grp:hover > .mc-top .mc-wire,.mc-s-thread .mc-grp:has(:focus-visible) > .mc-top .mc-wire{transform:scaleX(1)}
 .mc-s-thread .mc-item.shut > .mc-top .mc-wire{transform:scaleX(0)}
-.mc-s-thread .mc-sub{top:-2px;min-width:150px;padding:4px 14px 4px 18px;border:0;border-radius:0 10px 10px 0;box-shadow:none;
+.mc-s-thread .mc-sub{top:var(--sub-dy,-2px);min-width:150px;padding:4px 14px 4px 18px;border:0;border-radius:0 10px 10px 0;box-shadow:none;
   background:color-mix(in srgb,var(--dd-bg) 82%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.mc-s-thread .mc-sub::after{content:"";position:absolute;left:0;top:0;bottom:0;border-left:1px dashed var(--gold)}
 .mc-s-thread .mc-item:hover > .mc-sub,.mc-s-thread .mc-item:has(:focus-visible) > .mc-sub{animation:mcThreadOpen .32s .14s cubic-bezier(.3,.8,.25,1) backwards}
 @keyframes mcThreadOpen{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
 .mc-s-thread .mc-sub button{position:relative;padding:8px 0;border-radius:0;opacity:.85}
 .mc-s-thread .mc-sub button:hover,.mc-s-thread .mc-sub button.on{background:none;opacity:1}
-.mc-s-thread .mc-sub button::before{content:"";position:absolute;left:-21px;top:50%;width:5px;height:5px;margin-top:-2.5px;transform:rotate(45deg);
-  background:var(--dd-bg);box-shadow:inset 0 0 0 1px var(--gold)}
-.mc-s-thread .mc-sub button.on::before{background:var(--gold);box-shadow:0 0 8px color-mix(in srgb,var(--gold) 70%,transparent)}
+/* 하위 줄기 — 앞 마디 아래 3px부터 이 마디 위 3px까지 (7px 마디: c-3 · c+4). 별(7px 회전, 반경 약 5px)이 앉은 칸은 더 띄운다 */
+.mc-s-thread .mc-sub button::after{content:"";position:absolute;left:-18px;width:1px;pointer-events:none;
+  top:calc(round(down,50%,1px) - 100% + 7px);bottom:calc(100% - round(down,50%,1px) + 6px);background:var(--mc-dash);background-repeat:no-repeat space}
+.mc-s-thread .mc-sub button:first-child::after{content:none}
+.mc-s-thread .mc-sub button.at::after{bottom:calc(100% - round(down,50%,1px) + 8px)}
+.mc-s-thread .mc-sub button.at + button::after{top:calc(round(down,50%,1px) - 100% + 9px)}
+/* 하위 마디 */
+.mc-s-thread .mc-sub button::before{content:"";position:absolute;left:-21px;top:round(down,50%,1px);width:7px;height:7px;margin-top:-3px;
+  background:var(--gold);-webkit-mask:var(--mc-d7) center/100% no-repeat;mask:var(--mc-d7) center/100% no-repeat}
+.mc-s-thread .mc-sub button.on::before{-webkit-mask-image:var(--mc-d7f);mask-image:var(--mc-d7f)}
 .mc-s-thread .mc-sub button:first-child::before,.mc-s-thread .mc-sub button.at::before{visibility:hidden}
 .mc-s-thread .mc-item.star0 > .mc-top .mc-wire::after{visibility:hidden} /* 별이 첫 항목(마디 자리)에 있으면 마디는 별 뒤로 */
 .mc-star{display:none}
-.mc-s-thread .mc-star{display:block;position:absolute;left:0;top:var(--sy,20px);width:8px;height:8px;z-index:2;pointer-events:none;
-  transform:translate(-50%,-50%) rotate(45deg);background:var(--gold);box-shadow:0 0 10px 2px color-mix(in srgb,var(--gold) 60%,transparent);
+/* 별은 빛이 있어 회전 사각형 그대로 — 7px를 정수 칸에 놓아 가운데가 줄기 가운데(x.5)에 온다 */
+.mc-s-thread .mc-star{display:block;position:absolute;left:0;top:var(--sy,20px);width:7px;height:7px;margin:-3px 0 0 -3px;z-index:2;pointer-events:none;
+  transform:rotate(45deg);background:var(--gold);box-shadow:0 0 10px 2px color-mix(in srgb,var(--gold) 60%,transparent);
   transition:top .38s cubic-bezier(.3,.8,.25,1)}
 .mc-s-thread .mc-sub button.on{color:var(--gold)}
 .mc-s-thread .mc-cnt{color:var(--gold);opacity:.85}
 .mc-s-thread .mc-foot{position:relative;margin-top:14px;padding-top:10px;border-top:0}
-.mc-s-thread .mc-foot::before{content:"";position:absolute;left:-21px;top:-1px;width:5px;height:5px;transform:rotate(45deg);background:var(--gold)}
-/* 오른쪽 열 — 실을 카드 오른쪽으로, 점선은 이름 앞에서 왼쪽으로 */
+.mc-s-thread .mc-foot::before{content:"";position:absolute;left:-21px;top:-1px;width:7px;height:7px;
+  background:var(--gold);-webkit-mask:var(--mc-d7f) center/100% no-repeat;mask:var(--mc-d7f) center/100% no-repeat}
+/* 오른쪽 열 — 실을 카드 오른쪽으로, 점선은 이름 앞에서 왼쪽으로 (위 위치를 left ↔ right로 그대로 뒤집음) */
 .mc-s-thread.mc-right{padding:6px 22px 4px 0}
-.mc-s-thread.mc-right::before{left:auto;right:4px}
 .mc-s-thread.mc-right .mc-top,.mc-s-thread.mc-right .mc-sub button{flex-direction:row-reverse}
-.mc-s-thread.mc-right .mc-top::before,.mc-s-thread.mc-right .mc-sub button::before{left:auto;right:-21px}
-.mc-s-thread.mc-right .mc-wire{right:auto;left:calc(-1 * var(--mc-gap));transform-origin:right}
-.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-3px}
-.mc-s-thread.mc-right .mc-star{left:auto;right:0;transform:translate(50%,-50%) rotate(45deg)}
+.mc-s-thread.mc-right .mc-list > .mc-item::before,.mc-s-thread.mc-right .mc-list > .mc-item:last-child::after,
+.mc-s-thread.mc-right .mc-sub button::after{left:auto;right:-18px}
+.mc-s-thread.mc-right .mc-top::before{left:auto;right:-22px}
+.mc-s-thread.mc-right .mc-item:hover > .mc-top::before,.mc-s-thread.mc-right .mc-item.on > .mc-top::before{left:auto;right:-23px}
+.mc-s-thread.mc-right .mc-item.on > .mc-top::after,.mc-s-thread.mc-right .mc-item.on.mc-grp > .mc-top::after{left:auto;right:-29px}
+.mc-s-thread.mc-right .mc-sub button::before{left:auto;right:-21px}
+.mc-s-thread.mc-right .mc-wire{right:auto;left:calc(8px - var(--mc-gap));transform-origin:right}
+.mc-s-thread.mc-right .mc-wire::after{right:auto;left:-12px}
+.mc-s-thread.mc-right .mc-star{left:auto;right:0;margin:-3px -3px 0 0}
 .mc-s-thread.mc-right .mc-grp:hover > .mc-top .mc-lbl{transform:translateX(-3px)}
 .mc-s-thread.mc-right .mc-sub{padding:4px 18px 4px 14px;border-radius:10px 0 0 10px}
-.mc-s-thread.mc-right .mc-sub::after{left:auto;right:0}
 .mc-s-thread.mc-right .mc-item:hover > .mc-sub,.mc-s-thread.mc-right .mc-item:has(:focus-visible) > .mc-sub{animation-name:mcThreadOpenR}
 @keyframes mcThreadOpenR{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
 @media (prefers-reduced-motion:reduce){.mc-s-thread .mc-item > .mc-sub{animation:none !important}.mc-s-thread .mc-star{transition:none}}

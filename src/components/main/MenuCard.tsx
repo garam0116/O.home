@@ -163,6 +163,8 @@ function roman(n: number): string {
  *  · prism:  빛줄기(.mc-glow/.mc-beam)를 마우스가 올라간 대메뉴로, 손을 떼면 현재 메뉴로(없으면 숨김)
  *  · thread: 대메뉴 이름 폭을 --lw로 — 하위 메뉴로 뻗는 점선이 이름 끝에서 시작하게(이름을 덮지 않게, 사용자 요청)
  *            큰 ◆(.mc-star)의 높이를 --sy로 — 마우스를 올린 하위 항목, 손을 떼면 선택한 항목(없으면 첫 항목) (사용자 확정 시안 C)
+ *            하위 메뉴 높이를 --sub-dy로 — 첫 하위 항목 가운데를 대메뉴 가운데(가로 점선)에 픽셀 단위로 맞춘다.
+ *            두 값 모두 CSS 마디 위치(round(down, 50%, 1px))와 같은 방식으로 정수 픽셀을 쓴다 (v4.4 시안 D-2)
  */
 function useCardMotion(style: MenuCardStyle, cardRef: React.RefObject<HTMLDivElement | null>, listRef: React.RefObject<HTMLElement | null>, key: string) {
   useEffect(() => {
@@ -234,11 +236,21 @@ function useCardMotion(style: MenuCardStyle, cardRef: React.RefObject<HTMLDivEle
         const place = (b?: HTMLElement) => {
           const t = b ?? btns.find(x => x.classList.contains('on')) ?? btns[0];
           if (!t) return;
-          sub.style.setProperty('--sy', `${t.offsetTop + t.offsetHeight / 2}px`);
+          sub.style.setProperty('--sy', `${t.offsetTop + Math.floor(t.offsetHeight / 2)}px`);
           btns.forEach(x => x.classList.toggle('at', x === t));
           item.classList.toggle('star0', t === btns[0]);
         };
-        on(item, 'mouseenter', () => place());
+        // 첫 하위 항목의 마디 줄(버튼 위 + 높이 절반 내림)을 대메뉴 마디 줄에 맞춘다 — 펼쳐져 있어야 잴 수 있다
+        const align = () => {
+          const top = item.querySelector<HTMLElement>(':scope > .mc-top'), b0 = btns[0];
+          if (!top || !b0 || !sub.offsetParent) return;
+          const want = top.getBoundingClientRect().top + Math.floor(top.offsetHeight / 2);
+          const got = b0.getBoundingClientRect().top + Math.floor(b0.offsetHeight / 2);
+          const cur = parseFloat(getComputedStyle(sub).top) || 0;
+          if (Math.round(want - got)) sub.style.setProperty('--sub-dy', `${Math.round(cur + want - got)}px`);
+        };
+        on(item, 'mouseenter', () => { align(); place(); });
+        on(item, 'focusin', () => align());
         on(item, 'focusin', e => { const b = (e.target as HTMLElement).closest?.('.mc-sub > button') as HTMLElement | null; place(b ?? undefined); });
         btns.forEach(b => on(b, 'mouseenter', () => place(b)));
         on(sub, 'mouseleave', () => place());
