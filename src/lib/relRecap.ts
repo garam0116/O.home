@@ -5,7 +5,7 @@
  *  - 2장 기록 습관      한 달 평균 · 즐겨 쓴 요일 · 가장 길었던 공백 · 올해 쓴 로그 · 쌓인 로어북
  *  - 3장 함께 맞은 것들 은하를 따라 흘러간 거리 · 함께 본 보름달 · 함께 보낸 주말 · 함께 넘긴 새해 · 지나온 계절
  * 장마다 맨 아래 줄이 하나씩 따로 있다 (v4.0 사용자 확정 — RelWidgets가 붙인다, PC에서 칸이 모자라도 남긴다):
- *  - 1장 다시 꺼내 볼 로그 (pickAgain)   - 2장 이 속도라면 (paceTo)   - 3장 다음 기념일
+ *  - 1장 다시 꺼내 볼 로그 (pickAgain)   - 2장 이 속도라면 (paceTo · paceAt — 누를 때마다 셈이 바뀐다)   - 3장 다음 기념일
  *
  * 로그 숫자는 LOG 위젯이 읽은 목록(이 방문자에게 보이는 글)으로 센다 — 위젯 LOG 탭과 같은 글이다.
  * 날짜 숫자는 자관 디데이 기준일 하나로 센다. 값이 0이거나 셀 수 없는 줄은 만들지 않는다.
@@ -142,16 +142,40 @@ export function pickDaily<T>(items: T[], startStr: string | undefined, now = new
 const PACE_MAX_MONTHS = 24;
 
 /**
- * 2장 맨 아래 「이 속도라면」 — 한 달 평균대로 쓰면 다음 100단위 편수(100·200…)에 닿는 달 (v4.0 사용자 확정 · 시안 A의 2장).
+ * 2장 맨 아래 「이 속도라면」 — 한 달 평균대로 쓰면 다음 목표 편수에 닿는 달 (v4.0 사용자 확정 · 시안 A의 2장).
+ * 목표는 100편 전까지 10편 단위(20·30…), 100편부터 100편 단위 (v4.2 사용자 확정 · 시안 A — 100편 단위만으로는 너무 멀었다).
  * 평균이 없거나 2년보다 멀면 undefined.
  */
 export function paceTo(total: number, avg: number | undefined, now = new Date()) {
   if (!avg || avg <= 0) return undefined;
-  const target = (Math.floor(total / 100) + 1) * 100;
+  const step = total < 100 ? 10 : 100;
+  const target = (Math.floor(total / step) + 1) * step;
   const months = (target - total) / avg;
   if (months > PACE_MAX_MONTHS) return undefined;
   const at = addDays(dayOf(now), Math.round(months * 30.44));
   return { target, y: at.getFullYear(), m: at.getMonth() + 1 };
+}
+
+/** 그 기념일까지 한 달 평균대로 쓰면 늘어날 편수 (반올림) */
+const gainBy = (a: Anniv, avg: number) => Math.round((a.diff / 30.44) * avg);
+
+/**
+ * 「이 속도라면」의 다른 셈 두 가지 (v4.2 사용자 확정 · 시안 B·C) — 장부 맨 아래 줄을 누를 때마다 paceTo → big → year 순으로 돈다.
+ *  - big   다음 큰 기념일(100일 단위·N주년)엔 몇 편 — 1편도 늘지 않는 날은 건너뛰고 그다음 큰 기념일로
+ *  - year  다음 N주년엔 몇 편 · 몇 편 더 — 1편도 늘지 않으면 없다. big과 같은 날이면 겹치니 뺀다
+ * 계절·숫자 놀이·첫 로그 주년은 보지 않는다. future는 anniversaries().future(가까운 순), 오늘(diff 0)은 뺀다.
+ */
+export function paceAt(total: number, avg: number | undefined, future: Anniv[]) {
+  if (!avg || avg <= 0) return {};
+  const ahead = future.filter(a => a.diff > 0);
+  const isYear = (a: Anniv) => /^\d+주년$/.test(a.label);
+  const isBig = (a: Anniv) => isYear(a) || /^\d+00일$/.test(a.label);
+  const bigA = ahead.find(a => isBig(a) && gainBy(a, avg) >= 1);
+  const yearA = ahead.find(isYear);
+  const big = bigA && { label: bigA.label, n: total + gainBy(bigA, avg) };
+  const yearGain = yearA ? gainBy(yearA, avg) : 0;
+  const year = yearA && yearGain >= 1 && yearA !== bigA ? { label: yearA.label, n: total + yearGain, gain: yearGain } : undefined;
+  return { big, year };
 }
 
 /* ---------- 3장 — 날짜만으로 ---------- */
