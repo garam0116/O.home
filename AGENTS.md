@@ -18,3 +18,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **같은 판정을 두 곳에 복사하지 않는다.** 이름이 다른 함수가 같은 답을 내야 하면 한쪽이 다른 쪽을 부르게 한다 (예: `canAccessHref` → `canViewHref`).
 - **백엔드 두 개(Firebase·Supabase)는 같은 결과를 내야 한다.** 한쪽을 고치면 다른 쪽(`lib/backend/*Backend.ts`)과 규칙(`firebase/*.rules`, `supabase/schema.sql`)도 같이 확인한다. 규칙을 고친 뒤에는 `node scripts/sync-rules.mjs`로 설치 화면용 사본을 갱신한다.
 - **동작을 바꾸면 그 동작을 설명하는 주석도 같이 고친다.** 다음 작업자는 주석을 믿고 판단한다.
+- **커밋·PR에 AI 표시를 넣지 않는다.** 커밋 메시지에 `Co-Authored-By`·`Claude-Session` 같은 줄을, PR 본문에 "Generated with …" 같은 줄을 붙이지 않는다. 비공개 저장소로 옮기면 Vercel 무료(Hobby) 요금제가 저장소 주인이 아닌 공동 작성자가 있는 커밋의 배포를 막을 수 있기 때문이다. Claude Code는 `.claude/settings.json`의 `attribution` 설정으로도 끈다.
+  - 커밋 작성자(git `user.name`·`user.email`)는 저장소 주인 계정으로 한다. AI 환경이 작성자를 자기 이름으로 잡아 두는 경우가 있으니 커밋 전에 확인한다.
+  - GitHub에서 squash 머지하면 브랜치 커밋 작성자들이 `Co-authored-by` 줄로 자동으로 붙는다. 머지할 때 커밋 메시지를 직접 지정해 이 줄을 뺀다.
