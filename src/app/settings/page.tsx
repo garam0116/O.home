@@ -208,12 +208,12 @@ function BgmStyleRow() {
   return (
     <div className="set-row" style={{ flexWrap: 'wrap' }}>
       <div className="l"><b>플레이어 색</b>
-        <small>화면 구석 미니 플레이어와 팝업 리스트의 색</small></div>
+        <small>화면 구석 레코드판과 팝업 플레이어의 색 · 고리·선 같은 포인트는 곡 커버에서 뽑은 색을 쓰고, 커버 색을 읽지 못할 때만 「예비 포인트」를 씀</small></div>
       <div className="cp-grid2">
         <CP label="배경" k="bgmBg" />
         <CP label="글씨" k="bgmFg" />
         <CP label="아이콘" k="bgmIc" />
-        <CP label="볼륨바" k="bgmVol" />
+        <CP label="예비 포인트" k="bgmVol" />
       </div>
     </div>
   );
