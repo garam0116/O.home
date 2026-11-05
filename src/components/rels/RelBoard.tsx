@@ -26,6 +26,7 @@ import { CroppedBlobImg } from '@/components/ui/CropEditor';
 import { AppLink } from '@/components/ui/AppLink';
 import { KCheck, KInput, KRadio, KTextarea } from '@/components/ui/Kit';
 import { Modal, useConfirmDelete } from '@/components/ui/Modal';
+import { CodeEditor } from '@/components/ui/CodeEditor';
 
 export interface BoardCtx {
   relName: string;
@@ -182,6 +183,7 @@ function WidgetEditor({ w, ctx, onClose, onSave }: {
   w: RelWidget; ctx: BoardCtx; onClose: () => void; onSave: (w: RelWidget) => void;
 }) {
   const [d, setD] = useState<RelWidget>(w);
+  const [htmlView, setHtmlView] = useState<'code' | 'pv' | 'both'>('code');
   const [urls, setUrls] = useState<Record<string, string>>(() =>
     Object.fromEntries((w.tracks ?? []).map(t => [t.id, `https://youtu.be/${t.videoId}`])));
   const patch = (p: Partial<RelWidget>) => setD(x => ({ ...x, ...p }));
@@ -215,11 +217,31 @@ function WidgetEditor({ w, ctx, onClose, onSave }: {
         <KInput placeholder={d.kind === 'theme' ? `위젯 제목 (선택 — 비우면 플레이어에 「${ctx.relName}」)` : '위젯 제목 (선택)'}
           value={d.title ?? ''} onChange={e => patch({ title: e.target.value })} />
 
+        {/* HTML — 게시판 글쓰기와 같은 코드 편집기 + 미리보기 (시안 C). 편집기는 내용만큼 늘다가 일정 높이부터 안에서 스크롤 */}
         {d.kind === 'html' && (
           <>
-            <p className="hint">입력한 HTML은 출력할 때 안전하게 정리됩니다(스크립트 제외).</p>
-            <KTextarea autoGrow={false} placeholder="<p>HTML</p>" value={d.html ?? ''} onChange={e => patch({ html: e.target.value })}
-              style={{ height: 260, resize: 'vertical', fontFamily: 'monospace' }} />
+            <div className="rb-htmlbar">
+              <p className="hint">입력한 HTML은 출력할 때 안전하게 정리됩니다(스크립트 제외).</p>
+              <div className="mini-seg" role="group" aria-label="보기">
+                {([['code', '코드'], ['pv', '미리보기'], ['both', '나란히']] as const).map(([k, l]) => (
+                  <button key={k} type="button" className={htmlView === k ? 'on' : ''} aria-pressed={htmlView === k} onClick={() => setHtmlView(k)}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className={`rb-htmled${htmlView === 'both' ? ' both' : ''}`}>
+              {htmlView !== 'pv' && (
+                <CodeEditor fit fileName="widget.html" placeholder="<div>HTML 코드를 작성/붙여넣기...</div>"
+                  value={d.html ?? ''} onChange={v => patch({ html: v })} />
+              )}
+              {htmlView !== 'code' && (
+                <div className="rb-htmlpv">
+                  <div className="lb">PREVIEW</div>
+                  {d.html?.trim()
+                    ? <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(d.html) }} />
+                    : <p className="rb-empty">아직 내용이 없습니다</p>}
+                </div>
+              )}
+            </div>
           </>
         )}
 

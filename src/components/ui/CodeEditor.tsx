@@ -3,6 +3,7 @@
 // 외부 라이브러리 없이: 투명한 textarea 위에 입력하고, 같은 글자 크기의 <pre>가 뒤에서 색을 입힌다.
 // 긴 줄은 자동 줄바꿈(가로 스크롤 없음) — 줄 번호는 실제 줄(엔터) 기준, 줄바꿈된 부분은 번호 없이 이어짐
 // 줄 번호 · 현재 줄 강조 · Tab 들여쓰기 · 하단 상태 표시줄(줄/열)
+// fit을 주면 높이가 내용만큼 늘다가 .ce-wrap.fit의 최대 높이를 넘으면 안에서 스크롤 (자관 HTML 위젯 — 사용자 요청)
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -58,11 +59,13 @@ const Moon = () => (
   </svg>
 );
 
-export function CodeEditor({ value, onChange, placeholder, fileName = 'post.html' }: {
+export function CodeEditor({ value, onChange, placeholder, fileName = 'post.html', fit = false }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   fileName?: string;
+  /** 높이를 내용에 맞춘다 — 최소·최대는 CSS(.ce-wrap.fit .ce-main)가 정한다. 기본은 고정 높이(게시판 글쓰기) */
+  fit?: boolean;
 }) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -100,6 +103,8 @@ export function CodeEditor({ value, onChange, placeholder, fileName = 'post.html
 
   // 줄 번호 높이·현재 줄 강조 위치를 실제로 줄바꿈된 높이에 맞춘다
   const [heights, setHeights] = useState<number[]>([]);
+  // fit일 때 내용 높이 = 줄 높이 합 + 위아래 여백(--ce-pad 14px × 2). 재기 전에는 줄 수 × 22px로 어림
+  const fitH = fit ? (heights.length ? heights.reduce((a, b) => a + b, 0) : lineHtml.length * 22) + 28 : undefined;
   const measure = () => {
     const pre = preRef.current;
     if (!pre) return;
@@ -157,7 +162,7 @@ export function CodeEditor({ value, onChange, placeholder, fileName = 'post.html
   };
 
   return (
-    <div className={`ce-wrap ${dark ? 'dark' : 'light'} ${focused ? 'focus' : ''}`}>
+    <div className={`ce-wrap ${dark ? 'dark' : 'light'} ${focused ? 'focus' : ''}${fit ? ' fit' : ''}`}>
       <div className="ce-tabs">
         <span className="ce-dots" aria-hidden><i /><i /><i /></span>
         <span className="ce-tab"><span className="ce-ico">&lt;/&gt;</span>{fileName}</span>
@@ -166,7 +171,7 @@ export function CodeEditor({ value, onChange, placeholder, fileName = 'post.html
           {dark ? <Sun /> : <Moon />}
         </button>
       </div>
-      <div className="ce-main">
+      <div className="ce-main" style={fitH ? { height: fitH } : undefined}>
         <div className="ce-gutter" ref={gutterRef} aria-hidden style={{ width: `calc(${gw} + 24px)` }}>
           {lineHtml.map((_, i) => (
             <div key={i} className={focused && i + 1 === cur.ln ? 'on' : ''} style={{ height: heights[i] || undefined }}>{i + 1}</div>
