@@ -16,9 +16,12 @@ export const WIDGET_PRESETS: Record<Exclude<RelWidgetPreset, 'custom'>, { label:
   line: { label: '투명', a: 35, r: 0 },
   pill: { label: '알약', a: 80, r: 32 },
 };
-/** 12칸 격자에서 고를 수 있는 너비 — 휴대폰(620px 이하)에서는 늘 가로 전체 */
-export const WIDGET_WIDTHS = [3, 4, 6, 8, 12] as const;
-export type RelWidgetWidth = typeof WIDGET_WIDTHS[number];
+/** 격자 칸 수 (v4.7 사용자 요청 — 12칸 직사각형 → 24칸 정사각형). 휴대폰(620px 이하)에서는 늘 가로 전체 */
+export const GRID_COLS = 24;
+/** 위젯 최소 너비 (24칸 중) */
+export const SPAN_MIN = 4;
+/** 예전(12칸 격자) 너비 값 — 읽을 때만 쓴다. 새로 저장하면 span으로 바뀐다 */
+export type RelWidgetWidth = 3 | 4 | 6 | 8 | 12;
 export const WIDGET_H_MIN = 80;
 export const WIDGET_H_MAX = 600;
 
@@ -31,8 +34,14 @@ export interface RelWidget {
   id: string;
   kind: RelWidgetKind;
   title?: string;
-  /** 12칸 중 몇 칸 (기본 12) */
+  /** 예전 12칸 격자의 너비 — span이 없을 때만 ×2로 읽는다 (spanOf) */
   w?: RelWidgetWidth;
+  /** 24칸 중 몇 칸 (기본 24). 묶음 안 위젯이면 묶음 너비를 넘지 않는다 */
+  span?: number;
+  /** 앞 위젯 아래에 붙는다 — 앞 위젯의 세로 묶음에 들어간다 (v4.7 시안 A · 세로 묶음) */
+  under?: boolean;
+  /** 묶음 안에서 시작 칸 (0부터, 묶음 왼쪽 기준). 없으면 빈자리에 차례로 */
+  col?: number;
   /** 고정 높이 px (없으면 내용대로). 넘치는 내용은 위젯 안에서 스크롤 */
   h?: number;
   preset?: RelWidgetPreset;
@@ -80,26 +89,75 @@ export function widgetLook(w: RelWidget): { line: boolean; a: number; r: number 
   return { line: p === 'line', a: p === 'line' ? (w.a ?? base.a) : base.a, r: base.r };
 }
 
-/** 남은 칸에 맞는 너비 — 고를 수 있는 너비 중 남은 칸 이하에서 가장 큰 것 (최소 3) */
-export const fitWidth = (free: number): RelWidgetWidth =>
-  ([...WIDGET_WIDTHS].reverse().find(w => w <= free) ?? 3) as RelWidgetWidth;
+/** 위젯 너비(24칸 중) — 예전 12칸 값은 두 배로 */
+export const spanOf = (w: RelWidget): number =>
+  Math.max(SPAN_MIN, Math.min(GRID_COLS, Math.round(w.span ?? (w.w ?? 12) * 2)));
 
-/** 마지막 줄에 남은 칸 수 (0이면 꽉 참) — 위젯이 줄을 넘기면 다음 줄에서 다시 센다(CSS grid와 같은 규칙) */
-export function lastRowFree(list: RelWidget[]): number {
-  let used = 0;
+/** 세로 묶음 — 첫 위젯(head)이 너비를 정하고, under 위젯들이 그 아래에 쌓인다 */
+export interface RelStack { span: number; items: RelWidget[] }
+
+/** 순서대로 묶는다 — under는 바로 앞 묶음에 들어가고, 맨 앞 위젯의 under는 무시한다 */
+export function stacksOf(list: RelWidget[]): RelStack[] {
+  const out: RelStack[] = [];
   for (const w of list) {
-    const span = w.w ?? 12;
-    if (used + span > 12) used = 0;
-    used += span;
-    if (used === 12) used = 0;
+    const last = out[out.length - 1];
+    if (w.under && last) last.items.push(w);
+    else out.push({ span: spanOf(w), items: [w] });
   }
-  return used === 0 ? 0 : 12 - used;
+  return out;
 }
 
-/** 오늘의 한 줄 — 글 요약을 문장으로 나눈다. 너무 짧은 조각(제목·날짜 줄)은 뺀다 */
-export function sentencesOf(text: string): string[] {
-  return text
-    .split(/(?<=[.!?。…」』])\s+|\n+/)
-    .map(s => s.trim())
-    .filter(s => s.length >= 12);
+/** 묶음 안 위젯의 너비·시작 칸 — 묶음을 넘지 않게 줄인다. head는 늘 묶음 전체 */
+export function placeIn(st: RelStack, w: RelWidget): { span: number; col?: number } {
+  if (w.id === st.items[0].id) return { span: st.span };
+  const col = w.col != null ? Math.max(0, Math.min(st.span - SPAN_MIN, w.col)) : undefined;
+  return { span: Math.min(spanOf(w), st.span - (col ?? 0)), col };
+}
+
+/** 마지막 줄에 남은 칸 수 (0이면 꽉 참) — 묶음이 줄을 넘기면 다음 줄에서 다시 센다(CSS grid와 같은 규칙) */
+export function lastRowFree(list: RelWidget[]): number {
+  let used = 0;
+  for (const st of stacksOf(list)) {
+    if (used + st.span > GRID_COLS) used = 0;
+    used += st.span;
+    if (used === GRID_COLS) used = 0;
+  }
+  return used === 0 ? 0 : GRID_COLS - used;
+}
+
+/* ---------- 오늘의 한 줄 — 본문에서 한글 문장 하나 (v4.7 사용자 요청: 상태창 말고 로그 본문의 한글 한 문장만) ---------- */
+
+/** 상태창·머리말 줄 — 날짜(2026/07/18) · 시각(11:04) · 요일 괄호 · 「장소: …」 같은 이름표 */
+const STATUS_LINE = /\d{2,4}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{1,2}|\d{1,2}\s*:\s*\d{2}|\((?:MON|TUE|WED|THU|FRI|SAT|SUN|월|화|수|목|금|토|일)\)|^[^\s:：]{1,8}\s*[:：|]/i;
+const SENTENCE_MIN = 12;
+const SENTENCE_MAX = 140;
+/** 한 글에서 후보로 남길 문장 수 — 긴 글도 메모리를 너무 쓰지 않게 */
+const SENTENCE_CAP = 60;
+
+/**
+ * 글의 문단들(widgetExcerpt.visibleParts) → 「오늘의 한 줄」 후보 문장.
+ * 문단 안에서 . ! ? … 」 』 " ” 뒤를 끊고, 아래 문장만 남긴다.
+ *  - 상태창·머리말 줄(STATUS_LINE)이 아님
+ *  - 글자(숫자·문장부호·기호 제외)의 70% 이상이 한글 — 영어 가사·상태창 영문은 빠진다
+ *  - 12~140자 — 제목·이름표 조각과 여러 문장이 붙은 덩어리는 빠진다
+ *  - 마침표류로 끝남 — 마침표 없이 한글로 끝나면 20자 이상일 때만 (「시모어 하우스, 모닝 룸」 같은 장소 줄을 빼려고)
+ */
+export function bodySentences(parts: string[]): string[] {
+  const out: string[] = [];
+  for (const p of parts) {
+    const clean = p
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+    for (const raw of clean.split(/(?<=[.!?。…」』"”])\s+/)) {
+      const s = raw.replace(/^[-–—•·*>\s]+/, '').replace(/\s+/g, ' ').trim();
+      if (s.length < SENTENCE_MIN || s.length > SENTENCE_MAX || STATUS_LINE.test(s)) continue;
+      const letters = s.replace(/[\s\d\p{P}\p{S}]/gu, '');
+      const ko = s.match(/[가-힣]/g)?.length ?? 0;
+      if (!letters.length || ko / letters.length < 0.7) continue;
+      if (!/[.!?…。」』"”~]$/.test(s) && !(s.length >= 20 && /[가-힣]$/.test(s))) continue;
+      out.push(s);
+      if (out.length >= SENTENCE_CAP) return out;
+    }
+  }
+  return out;
 }

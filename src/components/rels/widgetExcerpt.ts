@@ -37,6 +37,17 @@ function isHidden(el: HTMLElement): boolean {
 
 /** 브라우저 밖(서버 렌더)에서는 null — 부르는 쪽이 예전 방식으로 대신한다 */
 export function visibleText(body: string): string | null {
+  const parts = visibleParts(body);
+  return parts && parts.join(' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')   // 마크다운 이미지·링크는 글자만
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+}
+
+/**
+ * 눈에 보이는 글자를 문단(블록 요소) 단위로 — 「오늘의 한 줄」이 상태창 줄과 본문 문장을 따로 보려고 쓴다.
+ * 브라우저 밖에서는 null.
+ */
+export function visibleParts(body: string): string[] | null {
   if (typeof DOMParser === 'undefined') return null;
   const doc = new DOMParser().parseFromString(`<body>${body}</body>`, 'text/html');
   const parts: string[] = [];
@@ -70,7 +81,5 @@ export function visibleText(body: string): string | null {
   };
   walk(doc.body, false);
   flush();
-  return parts.join(' ')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')   // 마크다운 이미지·링크는 글자만
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+  return parts;
 }
