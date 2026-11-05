@@ -2,11 +2,10 @@
 // 아카이브 (사용자 요청) — 여러 카테고리를 한 페이지에 묶는 게시판.
 // 탭 = 카테고리(환경설정 > 콘텐츠 > 아카이브에서 관리). 탭을 누르면 그 카테고리에 넣은 글만 보인다.
 // 글 모양은 하나 — HTML(상태창 등) 미리보기 + 이름·설명 + HTML 복사. 미리보기는 components/archive/StatusFrame.
-// 이름을 누르면 상세(app/archive/[id]) — 확대 미리보기 · 글자·날짜·시간 고쳐 복사 (원본은 그대로).
+// 이름을 누르면 상세 팝업(components/archive/ArchiveDetail) — 페이지 이동 없이 확대 미리보기 · 글자·날짜·시간 고쳐 복사 (원본은 그대로).
 // 관리자는 카드에서 수정 · 카테고리 이동 · 삭제를 한다. 한 줄 3개(휴대폰 2개).
 // 머리글·탭 줄은 다른 페이지와 같은 .page-head + .toolrow > .seg 라서 「페이지 헤더 모양」 설정을 그대로 따른다.
-import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, newId } from '@/lib/postStore';
 import {
@@ -19,9 +18,10 @@ import { useToast } from '@/components/ui/Toast';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { StatusFrame } from '@/components/archive/StatusFrame';
 import { ArIcon as Icon, copyText, MoveCatModal } from '@/components/archive/archiveUi';
+import { ArchiveDetail } from '@/components/archive/ArchiveDetail';
 
-function ArchiveCard({ it, canEdit, onEdit, onMove, onDelete }: {
-  it: ArchiveItem; canEdit: boolean; onEdit: () => void; onMove: () => void; onDelete: () => void;
+function ArchiveCard({ it, canEdit, onOpen, onEdit, onMove, onDelete }: {
+  it: ArchiveItem; canEdit: boolean; onOpen: () => void; onEdit: () => void; onMove: () => void; onDelete: () => void;
 }) {
   const toast = useToast();
   const [done, setDone] = useState(false);
@@ -46,7 +46,7 @@ function ArchiveCard({ it, canEdit, onEdit, onMove, onDelete }: {
         )}
       </div>
       <div className="ar-meta">
-        <Link className="ar-nm" href={`/archive/${encodeURIComponent(it.id)}`}>{it.name || '이름 없음'}</Link>
+        <button type="button" className="ar-nm" onClick={onOpen}>{it.name || '이름 없음'}</button>
         <div className="ar-ic">
           <button type="button" className={done ? 'on' : ''} onClick={copy}
             aria-label={`${it.name} HTML 복사`} data-tip="HTML 복사">{done ? Icon.done : Icon.copy}</button>
@@ -112,13 +112,8 @@ export default function ArchivePage() {
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<ArchiveItem | null>(null);
   const [moving, setMoving] = useState<ArchiveItem | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
   const del = useConfirmDelete();
-
-  // 상세에서 「← ARCHIVE」로 돌아오면 그 글의 탭을 연다 (/archive?c=카테고리id)
-  useEffect(() => {
-    const c = new URLSearchParams(window.location.search).get('c');
-    if (c) setTab(c);
-  }, []);
 
   const cats = st.cats;
   // 지운 카테고리에 있던 글은 「분류 없음」 탭에 모인다 — 그런 글이 있을 때만 탭이 생긴다
@@ -134,6 +129,10 @@ export default function ArchivePage() {
   }, [items, cats, cur, q]);
 
   if (!loaded) return <section className="page" />;
+
+  // 상세 팝업 — 이전·다음은 지금 보이는 목록(탭·검색 결과) 순서대로
+  const viewing = viewId ? items.find(x => x.id === viewId) : undefined;
+  const vIdx = viewing ? shown.findIndex(x => x.id === viewing.id) : -1;
 
   const openNew = () => setEditing({
     id: '', catId: cur === UNCAT ? (cats[0]?.id ?? UNCAT) : cur, name: '', desc: '', html: '',
@@ -179,6 +178,7 @@ export default function ArchivePage() {
         <div className="ar-grid">
           {shown.map(it => (
             <ArchiveCard key={it.id} it={it} canEdit={isAdmin}
+              onOpen={() => setViewId(it.id)}
               onEdit={() => setEditing(it)}
               onMove={() => setMoving(it)}
               onDelete={() => del.ask(`「${it.name}」을(를) 삭제하시겠습니까?`,
@@ -189,6 +189,13 @@ export default function ArchivePage() {
 
       {editing && (
         <ArchiveEditor init={editing} cats={cats} onSave={save} onClose={() => setEditing(null)} />
+      )}
+      {viewing && (
+        // 글이 바뀌면(이전·다음, 수정) 고치던 내용을 버리고 새로 시작한다
+        <ArchiveDetail key={viewing.id + '\n' + viewing.html} it={viewing}
+          prev={vIdx > 0 ? shown[vIdx - 1] : undefined} next={vIdx >= 0 ? shown[vIdx + 1] : undefined}
+          catLabel={cats.find(c => c.id === tabOf(viewing, cats))?.label ?? '분류 없음'}
+          canMove={isAdmin} onMove={() => setMoving(viewing)} onNav={setViewId} onClose={() => setViewId(null)} />
       )}
       {moving && (
         <MoveCatModal name={moving.name} catId={tabOf(moving, cats)} cats={cats}
