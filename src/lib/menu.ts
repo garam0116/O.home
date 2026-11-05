@@ -19,6 +19,7 @@ export const FEATURES: { href: string; label: string }[] = [
   { href: '/trpg', label: '로그 백업' },
   { href: '/diary', label: '다이어리' },
   { href: '/threads', label: '감상타래' },
+  { href: '/archive', label: '아카이브' },
 ];
 
 export const DEFAULT_MENU: MenuItem[] = [

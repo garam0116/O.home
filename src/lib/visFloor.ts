@@ -27,6 +27,7 @@ const AREA: Record<string, { kind?: SectionKind; href?: string; board?: boolean 
   diary: { kind: 'diary' },
   threads: { kind: 'threads' },
   relations: { kind: 'rels' },
+  archive: { href: '/archive' },
 };
 
 /** 이 항목이 걸린 메뉴 주소 — 어디에도 안 걸리는 컬렉션(댓글·답변 등)은 null */

@@ -20,6 +20,7 @@ import {
   useBoards, Board, BoardPerm, MAIN_BOARD_ID, BOARD_SKINS, BOARD_PER_PAGE, perPageOf, BOARD_BOX_DEF, boxAlphaOf,
   boardHref, boardKeys, findBoardByKey,
 } from '@/lib/boardStore';
+import { useArchiveSettings, ArchiveItem, ARCHIVE_KEY, ARCHIVE_SEED } from '@/lib/archiveStore';
 import { useThreadSettings, ThreadWork, THREAD_SEED, ThreadCat, threadBadgeStyle, threadCats, threadCatsPatch } from '@/lib/threadStore';
 import {
   useMenuSettings, MenuSettings, MenuPerm, MenuVis,
@@ -83,7 +84,7 @@ const GROUPS: { id: GroupId; label: string; icon: string; sections: SetSection[]
   ] },
   { id: 'content', label: '콘텐츠', icon: '▤', sections: [
     { id: 'menu', label: '메뉴' }, { id: 'board', label: '카테고리' }, { id: 'trpg', label: 'TRPG' },
-    { id: 'threads', label: '감상타래' }, { id: 'bgm', label: 'BGM' },
+    { id: 'threads', label: '감상타래' }, { id: 'archive', label: '아카이브' }, { id: 'bgm', label: 'BGM' },
   ] },
   { id: 'manage', label: '관리', icon: '⚙', sections: [
     { id: 'members', label: '회원·보안' }, { id: 'backup', label: '데이터 백업' },
@@ -117,7 +118,7 @@ function routeOf(slug: string | null | undefined): { group: GroupId; section?: s
 const DRAFT_KEYS: readonly string[] = [
   'ohome.main.v1', 'ohome.fonts.v2', 'ohome.menuset.v1', 'ohome.links.v1', 'ohome.sections.v1',
   'ohome.boards.v1', 'ohome.boardset.v1', 'ohome.threadset.v1', 'ohome.pagetext.v1', 'ohome.bgm.v1',
-  'ohome.invite.v1', 'ohome.repo.v1', 'ohome.shortcuts.v1',
+  'ohome.invite.v1', 'ohome.repo.v1', 'ohome.shortcuts.v1', 'ohome.archiveset.v1',
 ];
 /** 저장 안 된 키 → 그룹 (메뉴의 「저장 안 된 변경」 점) */
 const KEY_GROUP: Record<string, GroupId> = {
@@ -2604,6 +2605,54 @@ function TrpgPane() {
   );
 }
 
+/** 아카이브 (사용자 요청) — 카테고리(= 게시판 위 탭) 관리. 이름 · ⠿ 드래그로 순서 · 추가/삭제.
+ *  게시판 이름은 다른 메뉴처럼 「메뉴」에서 정하고, 설명은 페이지에서 바로 고친다.
+ *  카테고리를 지워도 글은 남는다 — 게시판에 「분류 없음」 탭이 생겨 그쪽에 모인다 (lib/archiveStore) */
+function ArchivePane() {
+  const [st, patch] = useArchiveSettings();
+  const [items] = useLocalList<ArchiveItem>(ARCHIVE_KEY, ARCHIVE_SEED);
+  const del = useConfirmDelete();
+  const cats = st.cats;
+  const setCats = (next: typeof cats) => patch({ cats: next });
+  return (
+    <div className="set-sec">
+      <h3>카테고리</h3>
+      <div className="d">
+        아카이브 게시판 위 탭 — 탭을 누르면 그 카테고리에 넣은 글만 보입니다 · 이름 · ⠿ 드래그로 순서 · 추가/삭제
+        <br />맨 앞 카테고리가 처음 열리는 탭입니다
+      </div>
+      <DragList items={cats} keyOf={c => c.id} onReorder={next => setCats(next)}
+        render={c => (
+          <div className="set-row" style={{ width: '100%' }}>
+            <div className="l" style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
+              <span className="drag-h">⠿</span>
+              <KInput value={c.label} style={{ width: 180 }}
+                onChange={e => setCats(cats.map(x => (x.id === c.id ? { ...x, label: e.target.value } : x)))} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <small style={{ color: 'var(--faint)' }}>글 {items.filter(it => it.catId === c.id).length}</small>
+              <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 10.5 }}
+                onClick={() => {
+                  if (cats.length <= 1) { del.ask('카테고리는 하나 이상 있어야 합니다', () => {}, undefined, '확인'); return; }
+                  const used = items.filter(it => it.catId === c.id).length;
+                  del.ask(`카테고리 「${c.label}」를 삭제하시겠습니까?`,
+                    () => setCats(cats.filter(x => x.id !== c.id)),
+                    used > 0 ? `이 카테고리의 글 ${used}개는 지워지지 않고 「분류 없음」 탭으로 옮겨집니다.` : undefined);
+                }}>DELETE</button>
+            </div>
+          </div>
+        )} />
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="btn btn-ghost" style={{ padding: '5px 12px', fontSize: 11 }}
+          onClick={() => setCats([...cats, { id: newId(), label: '새 카테고리' }])}>
+          ＋ ADD
+        </button>
+      </div>
+      {del.element}
+    </div>
+  );
+}
+
 /** 감상타래 탭 (4.17) — 분류 리스트 관리 + 기본 보기 */
 function ThreadPane() {
   const [settings, patch] = useThreadSettings();
@@ -3304,6 +3353,7 @@ function SettingsInner() {
       case 'board': return <BoardPane />;
       case 'trpg': return <TrpgPane />;
       case 'threads': return <ThreadPane />;
+      case 'archive': return <ArchivePane />;
       case 'bgm': return <BgmPane />;
       case 'members': return <MemberPane />;
       case 'backup': return <DataPane />;
