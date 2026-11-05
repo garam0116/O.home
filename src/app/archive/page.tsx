@@ -2,44 +2,26 @@
 // 아카이브 (사용자 요청) — 여러 카테고리를 한 페이지에 묶는 게시판.
 // 탭 = 카테고리(환경설정 > 콘텐츠 > 아카이브에서 관리). 탭을 누르면 그 카테고리에 넣은 글만 보인다.
 // 글 모양은 하나 — HTML(상태창 등) 미리보기 + 이름·설명 + HTML 복사. 미리보기는 components/archive/StatusFrame.
+// 이름을 누르면 상세(app/archive/[id]) — 확대 미리보기 · 글자·날짜·시간 고쳐 복사 (원본은 그대로).
+// 관리자는 카드에서 수정 · 카테고리 이동 · 삭제를 한다. 한 줄 3개(휴대폰 2개).
 // 머리글·탭 줄은 다른 페이지와 같은 .page-head + .toolrow > .seg 라서 「페이지 헤더 모양」 설정을 그대로 따른다.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useLocalList, newId } from '@/lib/postStore';
 import {
   ArchiveItem, ARCHIVE_KEY, ARCHIVE_SEED, UNCAT, tabOf, useArchiveSettings,
 } from '@/lib/archiveStore';
-import { SearchBar, KInput, KTextarea, KSelect } from '@/components/ui/Kit';
+import { SearchBar, KInput, KSelect } from '@/components/ui/Kit';
+import { CodeEditor } from '@/components/ui/CodeEditor';
 import { Modal, useConfirmDelete } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { StatusFrame } from '@/components/archive/StatusFrame';
+import { ArIcon as Icon, copyText, MoveCatModal } from '@/components/archive/archiveUi';
 
-const Icon = {
-  copy: (
-    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.2" />
-      <path d="M15.5 8.5V6.7a2.2 2.2 0 0 0-2.2-2.2H6.7a2.2 2.2 0 0 0-2.2 2.2v6.6a2.2 2.2 0 0 0 2.2 2.2h1.8" /></svg>
-  ),
-  done: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>,
-  edit: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h3.5L18.5 9 15 5.5 5 15.5z" /></svg>,
-  del: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></svg>,
-};
-
-/** 클립보드 — 막힌 환경(오래된 브라우저·일부 앱 화면)에서는 숨긴 입력칸으로 복사한다 */
-async function copyText(text: string): Promise<boolean> {
-  try { await navigator.clipboard.writeText(text); return true; } catch { /* 아래로 */ }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    return ok;
-  } catch { return false; }
-}
-
-function ArchiveCard({ it, canEdit, onEdit, onDelete }: {
-  it: ArchiveItem; canEdit: boolean; onEdit: () => void; onDelete: () => void;
+function ArchiveCard({ it, canEdit, onEdit, onMove, onDelete }: {
+  it: ArchiveItem; canEdit: boolean; onEdit: () => void; onMove: () => void; onDelete: () => void;
 }) {
   const toast = useToast();
   const [done, setDone] = useState(false);
@@ -53,17 +35,18 @@ function ArchiveCard({ it, canEdit, onEdit, onDelete }: {
     <article className="ar-card">
       <div className="ar-fwrap">
         <StatusFrame html={it.html} title={it.name} />
-        {/* 수정·삭제는 관리자에게만, 미리보기 오른쪽 아래(상태창이 칸 바닥에 붙으므로 늘 상태창 위)에 — 마우스를 올리면 보인다(터치 기기는 늘 보임).
+        {/* 수정·이동·삭제는 관리자에게만, 미리보기 오른쪽 아래(상태창이 칸 바닥에 붙으므로 늘 상태창 위)에 — 마우스를 올리면 보인다(터치 기기는 늘 보임).
             제목 줄에는 복사 아이콘 하나만 두어 이름이 덜 잘린다 */}
         {canEdit && (
           <div className="ar-adm">
             <button type="button" onClick={onEdit} aria-label={`${it.name} 수정`} data-tip="수정">{Icon.edit}</button>
+            <button type="button" onClick={onMove} aria-label={`${it.name} 카테고리 이동`} data-tip="카테고리 이동">{Icon.move}</button>
             <button type="button" onClick={onDelete} aria-label={`${it.name} 삭제`} data-tip="삭제">{Icon.del}</button>
           </div>
         )}
       </div>
       <div className="ar-meta">
-        <div className="ar-nm">{it.name || '이름 없음'}</div>
+        <Link className="ar-nm" href={`/archive/${encodeURIComponent(it.id)}`}>{it.name || '이름 없음'}</Link>
         <div className="ar-ic">
           <button type="button" className={done ? 'on' : ''} onClick={copy}
             aria-label={`${it.name} HTML 복사`} data-tip="HTML 복사">{done ? Icon.done : Icon.copy}</button>
@@ -102,10 +85,11 @@ function ArchiveEditor({ init, cats, onSave, onClose }: {
           <label className="ar-f"><span>설명</span>
             <KInput value={it.desc} onChange={e => set({ desc: e.target.value })} placeholder="한 줄 설명" />
           </label>
-          <label className="ar-f"><span>HTML</span>
-            <KTextarea autoGrow={false} className="ar-code" spellCheck={false} value={it.html}
-              onChange={e => set({ html: e.target.value })} placeholder="상태창 HTML을 붙여 넣으세요" />
-          </label>
+          {/* HTML 코드 편집기 — 내용만큼 늘다가 최대 높이(.ce-wrap.fit)를 넘으면 안에서 스크롤 (사용자 요청) */}
+          <div className="ar-f"><span>HTML</span>
+            <CodeEditor fit fileName="archive.html" value={it.html}
+              onChange={v => set({ html: v })} placeholder="<div>상태창 HTML을 붙여 넣으세요</div>" />
+          </div>
         </div>
         <div className="ar-ed-r">
           <span className="ar-f"><span>미리보기</span></span>
@@ -127,7 +111,14 @@ export default function ArchivePage() {
   const [tab, setTab] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<ArchiveItem | null>(null);
+  const [moving, setMoving] = useState<ArchiveItem | null>(null);
   const del = useConfirmDelete();
+
+  // 상세에서 「← ARCHIVE」로 돌아오면 그 글의 탭을 연다 (/archive?c=카테고리id)
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get('c');
+    if (c) setTab(c);
+  }, []);
 
   const cats = st.cats;
   // 지운 카테고리에 있던 글은 「분류 없음」 탭에 모인다 — 그런 글이 있을 때만 탭이 생긴다
@@ -154,6 +145,12 @@ export default function ArchivePage() {
     setEditing(null);
     if (it.catId !== cur && it.catId !== UNCAT) setTab(it.catId);
     toast(it.id ? '수정했습니다' : '보관했습니다');
+  };
+  /** 카테고리 이동 (사용자 요청) — catId만 바꾼다. 옮긴 뒤에도 지금 탭에 머문다 */
+  const move = (it: ArchiveItem, catId: string) => {
+    setItems(items.map(x => (x.id === it.id ? { ...x, catId } : x)));
+    setMoving(null);
+    toast(`「${cats.find(c => c.id === catId)?.label ?? ''}」(으)로 옮겼습니다`);
   };
 
   return (
@@ -183,6 +180,7 @@ export default function ArchivePage() {
           {shown.map(it => (
             <ArchiveCard key={it.id} it={it} canEdit={isAdmin}
               onEdit={() => setEditing(it)}
+              onMove={() => setMoving(it)}
               onDelete={() => del.ask(`「${it.name}」을(를) 삭제하시겠습니까?`,
                 () => setItems(items.filter(x => x.id !== it.id)), '삭제하면 복구할 수 없습니다.')} />
           ))}
@@ -191,6 +189,10 @@ export default function ArchivePage() {
 
       {editing && (
         <ArchiveEditor init={editing} cats={cats} onSave={save} onClose={() => setEditing(null)} />
+      )}
+      {moving && (
+        <MoveCatModal name={moving.name} catId={tabOf(moving, cats)} cats={cats}
+          onMove={c => move(moving, c)} onClose={() => setMoving(null)} />
       )}
       {del.element}
     </section>
