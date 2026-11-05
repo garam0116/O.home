@@ -128,10 +128,12 @@ export function MenuCard({ conf }: { conf: WidgetConf }) {
               </button>
               {m.children && (
                 <div className="mc-sub">
-                  {m.children.map(c => {
+                  {m.children.map((c, j) => {
                     const n = counts.get(c.href);
                     return (
-                      <button key={c.href} className={isCur(c.href) ? 'on' : ''} onClick={() => go(m.label, c.href)}>
+                      // --i: 하위 항목 순번 — Thread에서 마디(◇)가 위에서부터 차례로 맺히는 지연에 쓴다
+                      <button key={c.href} className={isCur(c.href) ? 'on' : ''} onClick={() => go(m.label, c.href)}
+                        style={{ '--i': j } as React.CSSProperties}>
                         <span className="mc-lbl">{c.label}</span>{countOf(c.href)}
                         {style === 'ink' && n != null && <span className="mc-bar" aria-hidden><i style={{ width: `${Math.round(n / max * 100)}%` }} /></span>}
                       </button>
