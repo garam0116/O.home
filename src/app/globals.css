@@ -1409,6 +1409,14 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 /* 왼쪽 위: 뒤로가기 + 관리자 버튼 (v2.8) — 뒤로가기는 누구에게나, 관리자 버튼은 그 오른쪽 */
 .page-rel-detail > .rel-tl{position:absolute;top:20px;left:28px;z-index:6;display:flex;gap:10px;align-items:center}
 .rel-admin-actions{display:flex;gap:8px}
+/* EDIT 메뉴 (시안 B) — 같은 검은 버튼이 EDIT 아래로 세로로 쌓인다. 화면 수정 중이면 「끝내기」가 금색 테두리로 남는다 */
+.rel-edit-menu{position:relative}
+.rel-edit-menu > .btn .car{font-size:calc(9px*var(--fs,1));opacity:.7;transition:transform .15s}
+.rel-edit-menu > .btn[aria-expanded="true"] .car{transform:rotate(180deg)}
+.rel-edit-stack{position:absolute;top:calc(100% + 6px);left:0;z-index:20;display:grid;gap:6px}
+.rel-edit-stack .btn{width:max-content;height:30px;padding:0 13px;font-size:calc(11px*var(--fs,1));box-shadow:var(--sh-dd)}
+.rel-edit-stack .btn.on{background:var(--dd-bg);color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold),var(--sh-dd)}
+@media (prefers-reduced-motion:reduce){.rel-edit-menu > .btn .car{transition:none}}
 .au-item.add{border-style:dashed;display:grid;place-items:center;color:rgba(255,255,255,.75);font-size:calc(16px*var(--fs,1));background:rgba(255,255,255,.06)}
 .au-item{width:48px;aspect-ratio:1;border-radius:11px;cursor:pointer;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,.25);transition:.15s}
 .au-item:hover{border-color:rgba(255,255,255,.6)}

@@ -817,7 +817,7 @@ export function RelForm({ initial, auId, memberNames, existingIds, onSave, onCan
               </div>
             )}
             {/* 하단 자유 공간은 자관 페이지에서 바로 고친다 (v4.6 — 선택 위젯 · 시안 W-1). 예전 HTML 블록은 「HTML」 위젯이 되었다 */}
-            <p className="hint" style={{ margin: 0 }}>하단 자유 공간(테마곡·메모·HTML 등 위젯)은 자관 페이지의 「배치 편집」에서 추가하고 고칩니다.</p>
+            <p className="hint" style={{ margin: 0 }}>하단 자유 공간(테마곡·메모·HTML 등 위젯)은 자관 페이지의 EDIT › 「화면 수정」에서 추가하고 고칩니다.</p>
             <KInput placeholder="캐치프레이즈" value={catchphrase} onChange={e => setCatchphrase(e.target.value)} />
             {/* 자관명·캐치프레이즈 글씨색 (v1.9 사용자 요청) — 기본은 테마색. AU마다 따로 정할 수 있다 (v2.0) */}
             {(

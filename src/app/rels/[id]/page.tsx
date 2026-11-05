@@ -215,6 +215,25 @@ export default function RelDetailPage() {
   const [delAsk, setDelAsk] = useState(false);   // 자관 삭제 확인
   const [auDelAsk, setAuDelAsk] = useState<string | null>(null);  // AU 삭제 확인 (v2.0 — 자관 삭제와 별개)
   const del = useConfirmDelete();                // 멤버·AU 등 개별 삭제 확인
+  /* EDIT 메뉴 (시안 B 사용자 확정) — EDIT을 누르면 아래로 「정보 수정」(수정 화면으로 이동)과
+     「화면 수정」(위젯 배치 편집)이 쌓여 나온다. 예전엔 배치 편집 토글이 위젯 칸 바로 위에 있어서
+     모바일·2단 레이아웃에서 켜지지 않았다(사용자 보고) — 늘 보이는 왼쪽 위로 옮겼다.
+     화면 수정 중에는 메뉴 자리에 「화면 수정 끝내기」가 남는다 */
+  const [editMenu, setEditMenu] = useState(false);
+  const [boardEdit, setBoardEdit] = useState(false);
+  const editMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!editMenu) return;
+    const close = (e: PointerEvent) => { if (!editMenuRef.current?.contains(e.target as Node)) setEditMenu(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setEditMenu(false); };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', key); };
+  }, [editMenu]);
+  // 화면 수정을 켜면 위젯 칸으로 내려 준다 — 휴대폰에선 버튼에서 한참 아래라 켜진 줄 모른다
+  useEffect(() => {
+    if (boardEdit) document.querySelector('.page-rel-detail .rb')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [boardEdit]);
 
   // 별명 주소로도 열린다 (v2.0 사용자 요청 — 주소를 나중에 바꿔도 옛 주소가 살아 있게)
   const rel = findByKey(rels, id);
@@ -492,11 +511,31 @@ export default function RelDetailPage() {
       <BackArrow to={tt.href} label="자관 목록으로" />
       {isAdmin && (
         <div className="rel-admin-actions">
-          {/* AU 선택 중이면 그 AU의 일러·캐치프레이즈를 편집 (v1.9) */}
-          <button className="btn btn-dark" style={{ height: 30, padding: '0 13px', fontSize: 11 }}
-            onClick={() => router.push(`${relPath(rel)}${isBaseAu ? '' : `/au/${auKeyOf(rel, au!.id)}`}/edit`)}>
-            {isBaseAu ? 'EDIT' : `EDIT ${au!.label}`}
-          </button>
+          {/* EDIT 메뉴 — 정보 수정 / 화면 수정 (위 editMenu 주석).
+              정보 수정은 AU 선택 중이면 그 AU의 일러·캐치프레이즈를 편집 (v1.9) */}
+          <div className="rel-edit-menu" ref={editMenuRef}>
+            <button className="btn btn-dark" style={{ height: 30, padding: '0 13px', fontSize: 11 }}
+              aria-haspopup="menu" aria-expanded={editMenu || boardEdit}
+              onClick={() => setEditMenu(v => !v)}>
+              {isBaseAu ? 'EDIT' : `EDIT ${au!.label}`}<span className="car" aria-hidden>▾</span>
+            </button>
+            {boardEdit ? (
+              <div className="rel-edit-stack">
+                <button className="btn btn-dark on" onClick={() => setBoardEdit(false)}>화면 수정 끝내기</button>
+              </div>
+            ) : editMenu && (
+              <div className="rel-edit-stack" role="menu">
+                <button className="btn btn-dark" role="menuitem"
+                  onClick={() => router.push(`${relPath(rel)}${isBaseAu ? '' : `/au/${auKeyOf(rel, au!.id)}`}/edit`)}>
+                  정보 수정
+                </button>
+                <button className="btn btn-dark" role="menuitem"
+                  onClick={() => { setEditMenu(false); setBoardEdit(true); }}>
+                  화면 수정
+                </button>
+              </div>
+            )}
+          </div>
           {/* AU를 보는 중이면 지워지는 것도 그 AU다 (v2.0 사용자 발견 — 자관이 통째로 지워졌다).
               EDIT은 AU를 따라가는데 DELETE만 안 따라가서, AU 화면에서 누르면 자관 전체가 날아갔다.
               버튼 글씨에도 무엇이 지워지는지 그대로 쓴다 */}
@@ -724,8 +763,9 @@ export default function RelDetailPage() {
       {/* LOG·LOREBOOK 목록을 불러오는 보이지 않는 부품 */}
       {feedSources}
 
-      {/* 자관 선택 위젯 (v4.6) — 관리자는 「배치 편집」으로 넣고 크기·모양을 바꾼다 */}
+      {/* 자관 선택 위젯 (v4.6) — 관리자는 EDIT › 「화면 수정」으로 넣고 크기·모양을 바꾼다 */}
       <RelBoard widgets={widgets} isAdmin={isAdmin} onChange={saveWidgets}
+        edit={isAdmin && boardEdit} onEditEnd={() => setBoardEdit(false)}
         ctx={{
           relName: (isBaseAu ? undefined : au?.name) || rel.name,
           members: rel.members.map(m => auMember(m, au)),
