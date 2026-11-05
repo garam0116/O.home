@@ -35,7 +35,9 @@ export function StatusFrame({ html, fit = 'box', title }: {
     const f = frameRef.current;
     const doc = f?.contentDocument;
     if (!f || !doc?.body) return;
-    const w = Math.max(BASE_W, Math.ceil(doc.documentElement.scrollWidth));
+    // 바깥 문서는 overflow:hidden이라 documentElement.scrollWidth가 넘친 폭을 놓칠 때가 있다 —
+    // body의 scrollWidth도 함께 본다 (width:400px + 안쪽 여백처럼 기본 폭을 넘는 상태창의 오른쪽이 잘리던 문제)
+    const w = Math.max(BASE_W, Math.ceil(doc.documentElement.scrollWidth), Math.ceil(doc.body.scrollWidth));
     if (Math.abs(f.offsetWidth - w) > 1) f.style.width = `${w}px`;
     const h = Math.ceil(Math.max(doc.body.scrollHeight, doc.body.getBoundingClientRect().height));
     setSize(s => (s && s.w === w && s.h === h ? s : { w, h: Math.max(1, h) }));
