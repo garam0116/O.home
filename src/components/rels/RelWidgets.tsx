@@ -18,7 +18,8 @@ import { useSections } from '@/lib/sectionStore';
 import { useMenuSettings, canAccessHref } from '@/lib/menuStore';
 import { postHref, postNumbers } from '@/lib/boardStore';
 import { postBodyText, type Post } from '@/lib/postStore';
-import { visibleText } from './widgetExcerpt';
+import { visibleParts, visibleText } from './widgetExcerpt';
+import { bodySentences } from '@/lib/relWidgets';
 import { itemPath } from '@/lib/itemNo';
 import { safeLink } from '@/lib/link';
 import { parseTarget, pickRows, rowTime, Source, type Row, type SrcKind } from '@/lib/relUpdates';
@@ -37,6 +38,8 @@ export interface FeedItem {
   no: number;
   cat?: string;
   excerpt?: string;
+  /** 「오늘의 한 줄」 후보 — 본문 전체에서 고른 한글 문장 (상태창·날짜 줄 제외, relWidgets.bodySentences) */
+  lines?: string[];
   href?: string;
 }
 
@@ -51,12 +54,15 @@ type FeedRow = Row & {
   tags?: string[]; no?: number;
 };
 
-const excerptOf = (kind: SrcKind, r: FeedRow): string | undefined => {
+/** 미리보기 글(앞 160자)과 「오늘의 한 줄」 후보 문장 */
+const excerptOf = (kind: SrcKind, r: FeedRow): { excerpt?: string; lines?: string[] } => {
   const raw = kind === 'gallery' ? r.desc : (kind === 'board' || kind === 'diary' || kind === 'trpg') ? r.body : undefined;
-  if (typeof raw !== 'string') return undefined;
+  if (typeof raw !== 'string') return {};
   // 숨긴 글자는 뺀다 — 이 위젯 전용 (검색은 postBodyText로 모든 글자를 찾는다)
+  const parts = visibleParts(raw) ?? postBodyText(raw).split('\n');
   const txt = (visibleText(raw) ?? postBodyText(raw)).trim();
-  return txt ? txt.slice(0, 160) : undefined;
+  const lines = bodySentences(parts);
+  return { excerpt: txt ? txt.slice(0, 160) : undefined, lines: lines.length ? lines : undefined };
 };
 
 /**
@@ -108,7 +114,7 @@ export function useRelFeeds(urls: (string | undefined)[]) {
         time,
         no: idx + 1,
         cat: locked ? undefined : r.tags?.[0],
-        excerpt: locked ? undefined : excerptOf(t.kind, r),
+        ...(locked ? {} : excerptOf(t.kind, r)),
         href: t.kind === 'board' ? postHref({ id: r.id! }, nums!)
           : t.kind === 'loadb' ? href
           : r.id ? itemPath(`/${t.kind}`, { id: r.id, no: r.no }) : href,

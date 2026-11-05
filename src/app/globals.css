@@ -1278,10 +1278,29 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rb-toggle{border:1px solid var(--line-dark);border-radius:999px;padding:4px 13px;font-size:calc(11.5px*var(--fs,1));letter-spacing:.06em;color:var(--page-title)}
 .rb-toggle:hover{border-color:var(--gold)}
 .rb-toggle.on{border-color:var(--gold);color:var(--gold)}
-.rb-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start}
-.rb-edit .rb-grid{padding-top:48px;background-origin:content-box;background-clip:content-box;
-  background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--gold) 9%,transparent) 0 calc((100% - 154px) / 12),transparent 0 calc((100% - 154px) / 12 + 14px))}
-.rb-w,.rb-slot{position:relative;grid-column:span var(--rb-w,12);min-width:0}
+/* 24칸 격자 (v4.7 — 12칸 직사각형 → 24칸 정사각형). 크기를 끄는 동안(.rb-resizing) 바탕에 한 변이 --rb-cell(한 칸 너비)인
+   정사각형 칸을 깐다 — 타일 하나 = 칸 + 간격 14px이고, conic-gradient로 타일 왼쪽 위 칸 부분만 칠한다.
+   평소 편집 중에는 묶음 아래 빈칸(.rb-fill)만 칸으로 보인다 (바탕 칸과 겹치면 어지럽다) */
+.rb-grid{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:14px;align-items:start}
+.rb-edit .rb-grid{padding-top:48px}
+.rb-resizing .rb-grid{background-origin:content-box;background-clip:content-box;
+  background-image:conic-gradient(at var(--rb-cell) var(--rb-cell),transparent 75%,color-mix(in srgb,var(--gold) 9%,transparent) 0);
+  background-size:calc(var(--rb-cell) + 14px) calc(var(--rb-cell) + 14px)}
+/* 세로 묶음 (시안 A) — 묶음은 자기 칸 수만큼 차지하고, 안쪽은 subgrid라 붙은 위젯도 같은 24칸 선에 맞는다.
+   편집 중엔 묶음이 줄 높이까지 늘고, 남은 높이(.rb-fill)를 정사각형 칸으로 보여 준다 */
+.rb-stack{grid-column:span var(--rb-w,24);display:grid;grid-template-columns:subgrid;grid-template-rows:auto 1fr;row-gap:14px;min-width:0}
+.rb-edit .rb-stack{align-self:stretch}
+.rb-stack-items{grid-column:1/-1;display:grid;grid-template-columns:subgrid;row-gap:14px;align-items:start;min-width:0}
+.rb-w,.rb-slot{position:relative;grid-column:span var(--rb-w,24);min-width:0}
+.rb-fill{grid-column:1/-1;position:relative}
+.rb-fill-in{position:absolute;inset:0;display:grid;gap:14px;overflow:hidden;align-content:start}
+.rb-fill-in > span{border:1px dashed color-mix(in srgb,var(--gold) 32%,transparent);border-radius:5px;cursor:crosshair;touch-action:none}
+.rb-fill-in > span:hover{border-color:color-mix(in srgb,var(--gold) 70%,transparent);background:color-mix(in srgb,var(--gold) 7%,transparent)}
+.rb-fill-in > span.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 22%,transparent)}
+.rb-fill-size{position:absolute;right:2px;top:-20px;font-family:var(--serif);font-size:calc(11px*var(--fs,1));color:var(--gold);pointer-events:none}
+.rb-fill-kb{position:absolute;left:0;top:0;opacity:0;pointer-events:none;color:var(--gold);font-size:calc(12px*var(--fs,1));padding:4px 8px;border:1px dashed var(--gold);border-radius:8px;background:var(--bg-g2,#121418)}
+.rb-fill-kb:focus-visible{opacity:1}
+.rb-fill .rb-kinds{top:0}
 .rb-in{position:relative;font-family:var(--sans);background:color-mix(in srgb,var(--panel) var(--rb-a,100%),transparent);border-radius:var(--rb-r,14px);
   padding:20px 24px;color:var(--ink);overflow:hidden;scrollbar-width:thin}
 .rb-p-card > .rb-in{box-shadow:var(--sh-md)}
@@ -1322,8 +1341,19 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .rb-kinds button{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 9px;border-radius:7px;text-align:left;font-size:calc(12.5px*var(--fs,1))}
 .rb-kinds button:hover,.rb-kinds button:focus-visible{background:var(--dd-hv)}
 .rb-kinds small{opacity:.6;font-size:calc(11px*var(--fs,1))}
+/* HTML 위젯 편집 — 코드 · 미리보기 · 나란히 (시안 C). 미리보기도 편집기와 같은 최대 높이에서 안에서 스크롤 */
+.mng-box.rb-editor:has(.rb-htmled.both){width:960px}
+.rb-htmlbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.rb-htmled{display:grid;gap:10px;min-width:0}
+.rb-htmled.both{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rb-htmlpv{min-width:0;min-height:160px;max-height:min(50vh,440px);overflow-y:auto;border:1.5px dashed var(--line);border-radius:12px;padding:14px 16px;background:#fff;color:var(--ink);scrollbar-width:thin}
+.rb-htmled.both .rb-htmlpv{max-height:calc(min(50vh,440px) + 66px)}
+.rb-htmlpv .lb{font-size:calc(10px*var(--fs,1));letter-spacing:.16em;color:var(--faint);margin-bottom:8px}
+@media (max-width:720px){.rb-htmled.both{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:620px){
-  .rb-w,.rb-slot{grid-column:span 12}
+  .rb-grid,.rb-stack,.rb-stack-items{grid-template-columns:minmax(0,1fr)}
+  .rb-w,.rb-slot,.rb-stack{grid-column:1/-1 !important}
+  .rb-fill{display:none}
   .rb-edit .rb-grid{background-image:none}
   .rb-handle,.rb-dims{display:none}
   .rb-in{padding:18px}
@@ -1884,6 +1914,8 @@ html.bbox-theme .board-page .brow:hover{background:color-mix(in srgb,var(--bbox-
 .ce-theme:hover{background:var(--ce-cur);color:var(--ce-fg)}
 .ce-theme svg{width:15px;height:15px}
 .ce-main{display:flex;height:var(--ce-h);min-height:320px}
+/* fit — 높이는 내용대로(인라인), 짧으면 6줄 높이부터, 길면 화면 절반(최대 440px)에서 멈추고 안에서 스크롤 */
+.ce-wrap.fit .ce-main{min-height:160px;max-height:min(50vh,440px)}
 .ce-gutter{flex-shrink:0;box-sizing:border-box;padding:var(--ce-pad) 12px var(--ce-pad) 12px;text-align:right;color:var(--ce-ln);overflow:hidden;line-height:var(--ce-lh);user-select:none;background:var(--ce-bg);font-size:12px}
 .ce-gutter>div{min-height:var(--ce-lh);transition:color .1s}
 .ce-gutter .on{color:var(--ce-ln-on)}
