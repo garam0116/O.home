@@ -1,7 +1,10 @@
 'use client';
 // BGM 플레이어 (4.1) — 유튜브 IFrame API, 화면은 숨기고 자체 컨트롤만 표시
-// 평소엔 돌아가는 레코드판(커버 이미지 라벨)만 · 누르면 플레이어 팝업 (v2.1)
-// 팝업: 커버 · now playing · 진행바 · 컨트롤 · 곡 목록 / 모바일은 하단 시트
+// 평소엔 돌아가는 레코드판(커버 이미지 라벨) + 둘레의 진행 고리 · 누르면 플레이어 팝업
+// 팝업 (시안 G2 「금빛 궤도 번짐」): 지금 곡 커버를 흐려 위쪽에 깐 세로 카드 ·
+//   레코드판을 감싼 원형 진행 고리(돌려서 위치 이동) · 명조 제목 · 글자 버튼(셔플·볼륨·목록) ·
+//   목록은 옆으로 넘어가는 플레이리스트 화면 / 모바일은 하단 시트
+// 포인트색(--bgm-pt)은 커버에서 뽑은 색 — 못 뽑으면(교차 출처 이미지 등) 환경설정의 「예비 포인트」(--bgm-vol)
 // 페이지 이동에도 유지(레이아웃 상주) · 브라우저 정책상 소리 재생은 사용자의 첫 클릭부터 시작
 import React, { useEffect, useRef, useState } from 'react';
 import { useBgm, ytThumb, type BgmTrack } from '@/lib/bgmStore';
@@ -74,10 +77,14 @@ const I = {
   vol: <svg viewBox="0 0 24 24" className="st"><path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></svg>,
   mute: <svg viewBox="0 0 24 24" className="st"><path d="M11 5 6 9H2v6h4l5 4z" fill="currentColor" /><path d="m22 9-6 6M16 9l6 6" /></svg>,
   close: <svg viewBox="0 0 24 24" className="st"><path d="m6 9 6 6 6-6" /></svg>,
+  back: <svg viewBox="0 0 24 24" className="st"><path d="m15 6-6 6 6 6" /></svg>,
 };
 
+/** 두 자리 번호 — 곡 번호(03 / 07) */
+const two = (n: number) => String(n).padStart(2, '0');
+
 /** 커버 이미지 — 직접 지정한 이미지 우선, 없으면 유튜브 썸네일.
- *  큰 커버(팝업)는 maxres를 먼저 시도하고 없으면(120px 대체 이미지·오류) hq로 내려감 */
+ *  큰 커버는 maxres를 먼저 시도하고 없으면(120px 대체 이미지·오류) hq로 내려감 */
 function Cover({ track, big, className }: { track?: BgmTrack; big?: boolean; className?: string }) {
   const custom = useBlobUrl(track?.cover);
   const vid = track?.videoId ?? '';
@@ -91,6 +98,70 @@ function Cover({ track, big, className }: { track?: BgmTrack; big?: boolean; cla
       onLoad={e => { if (!custom && big && !fallback && e.currentTarget.naturalWidth <= 120) setFallback(true); }}
       onError={() => { if (!custom && big && !fallback) setFallback(true); }} />
   );
+}
+
+/** 커버에서 포인트색 뽑기 — 작은 캔버스에 그려 채도 높은 픽셀 위주로 평균 낸 뒤 채도·밝기를 고름.
+ *  유튜브 썸네일(i.ytimg.com)은 교차 출처 허용이라 읽힘 · 허용하지 않는 외부 주소는 캔버스가 막혀 null
+ *  → 그때는 CSS가 「예비 포인트」(--bgm-vol)를 쓴다. 결과 "r,g,b" */
+function useCoverTint(track?: BgmTrack): string | null {
+  const custom = useBlobUrl(track?.cover);
+  const vid = track?.videoId ?? '';
+  const src = custom ?? (vid ? ytThumb(vid, 'mqdefault') : undefined);
+  const [tint, setTint] = useState<string | null>(null);
+  useEffect(() => {
+    if (!src) { setTint(null); return; }
+    let alive = true;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const N = 24;
+        const cv = document.createElement('canvas');
+        cv.width = N; cv.height = N;
+        const ctx = cv.getContext('2d', { willReadFrequently: true });
+        if (!ctx) { setTint(null); return; }
+        ctx.drawImage(img, 0, 0, N, N);
+        const d = ctx.getImageData(0, 0, N, N).data;
+        let r = 0, g = 0, b = 0, w = 0, ar = 0, ag = 0, ab = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const R = d[i], G = d[i + 1], B = d[i + 2];
+          const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+          const sat = (mx - mn) / 255, lum = (mx + mn) / 510;
+          const k = sat * sat * (lum > 0.12 && lum < 0.92 ? 1 : 0.1);
+          r += R * k; g += G * k; b += B * k; w += k;
+          ar += R; ag += G; ab += B;
+        }
+        const n = d.length / 4;
+        const [R, G, B] = w > 0.5 ? [r / w, g / w, b / w] : [ar / n, ag / n, ab / n];
+        // HSL로 바꿔 채도는 최소 0.45, 밝기는 0.55로 맞춤 (흑백 커버는 채도를 올리지 않음)
+        const mx = Math.max(R, G, B) / 255, mn = Math.min(R, G, B) / 255, l = (mx + mn) / 2;
+        let h = 0, sat = 0;
+        if (mx !== mn) {
+          const dd = mx - mn;
+          sat = l > 0.5 ? dd / (2 - mx - mn) : dd / (mx + mn);
+          const rr = R / 255, gg = G / 255, bb = B / 255;
+          h = mx === rr ? (gg - bb) / dd + (gg < bb ? 6 : 0) : mx === gg ? (bb - rr) / dd + 2 : (rr - gg) / dd + 4;
+          h /= 6;
+        }
+        const S = sat < 0.08 ? sat : Math.max(sat, 0.45), L = 0.55;
+        const q = L < 0.5 ? L * (1 + S) : L + S - L * S, p = 2 * L - q;
+        const hue = (t: number) => {
+          if (t < 0) t += 1; if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+        setTint([hue(h + 1 / 3), hue(h), hue(h - 1 / 3)].map(v => Math.round(v * 255)).join(','));
+      } catch { setTint(null); } // 교차 출처로 캔버스가 막힘
+    };
+    img.onerror = () => { if (alive) setTint(null); };
+    img.src = src;
+    return () => { alive = false; };
+  }, [src]);
+  return tint;
 }
 
 /** 바 드래그 공통 — 0~1 비율을 돌려줌 (마우스·터치 모두 pointer 이벤트) */
@@ -118,6 +189,32 @@ function useBarDrag(onRatio: (r: number, done: boolean) => void) {
   return { ref, onPointerDown };
 }
 
+/** 원형 고리 드래그 — 고리 가운데 기준 각도(12시 = 0)를 0~1 비율로 돌려줌 */
+function useRingDrag(onRatio: (r: number, done: boolean) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const cb = useRef(onRatio);
+  cb.current = onRatio;
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ratio = (x: number, y: number) => {
+      const r = ref.current!.getBoundingClientRect();
+      const a = Math.atan2(x - (r.left + r.width / 2), -(y - (r.top + r.height / 2)));
+      return ((a / (2 * Math.PI)) + 1) % 1;
+    };
+    cb.current(ratio(e.clientX, e.clientY), false);
+    const mv = (ev: PointerEvent) => cb.current(ratio(ev.clientX, ev.clientY), false);
+    const up = (ev: PointerEvent) => {
+      cb.current(ratio(ev.clientX, ev.clientY), true);
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  };
+  return { ref, onPointerDown };
+}
+
 export function BgmPlayer() {
   const { state, queue, clearQueue } = useBgm();
   const { settings } = state;
@@ -127,7 +224,7 @@ export function BgmPlayer() {
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [open, setOpen] = useState(false);          // 플레이어 팝업
-  const [listOpen, setListOpen] = useState(true);   // 팝업 안 곡 목록
+  const [listPage, setListPage] = useState(false);  // 팝업 안 플레이리스트 화면 (옆으로 넘김)
   const [volOpen, setVolOpen] = useState(false);    // 팝업 안 볼륨 줄
   const [volume, setVolume] = useState(settings.volume);
   const [muted, setMuted] = useState(false);
@@ -136,7 +233,7 @@ export function BgmPlayer() {
   useEffect(() => setShuffle(settings.shuffle), [settings.shuffle]);
   const shuffleRef = useRef(shuffle);
   shuffleRef.current = shuffle;
-  // 진행 상황 (팝업이 열려 있을 때만 갱신)
+  // 진행 상황 (팝업이 열려 있거나 재생 중일 때 갱신 — 닫힌 버튼의 진행 고리도 이 값을 씀)
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
   const [seekPreview, setSeekPreview] = useState<number | null>(null);
@@ -167,16 +264,19 @@ export function BgmPlayer() {
     return () => { window.removeEventListener('pointerdown', down); window.removeEventListener('keydown', key); };
   }, [open]);
 
-  // 팝업을 열면 지금 곡이 목록에서 보이도록
+  // 팝업을 닫으면 다음에 열 때는 재생 화면부터
+  useEffect(() => { if (!open) setListPage(false); }, [open]);
+
+  // 플레이리스트 화면을 열면 지금 곡이 목록에서 보이도록
   useEffect(() => {
-    if (!open || !listOpen) return;
+    if (!open || !listPage) return;
     const el = listRef.current?.querySelector<HTMLElement>('.it.on');
     if (el && listRef.current) listRef.current.scrollTop = el.offsetTop - listRef.current.clientHeight / 2 + el.offsetHeight / 2;
-  }, [open, listOpen, idx]);
+  }, [open, listPage, idx]);
 
-  // 진행바 갱신 — 팝업이 열려 있을 때만 폴링
+  // 진행 갱신 — 팝업이 열려 있거나 재생 중일 때만 폴링 (닫힌 레코드판 둘레 고리용)
   useEffect(() => {
-    if (!open) return;
+    if (!open && !playing) return;
     const tick = () => {
       const p = playerRef.current;
       if (!p || !readyRef.current) return;
@@ -185,7 +285,7 @@ export function BgmPlayer() {
     tick();
     const t = window.setInterval(tick, 500);
     return () => window.clearInterval(t);
-  }, [open, idx]);
+  }, [open, playing, idx]);
 
   // YT API 로드 + 플레이어 생성
   useEffect(() => {
@@ -365,7 +465,7 @@ export function BgmPlayer() {
     playerRef.current?.setVolume(m ? 0 : volume);
   };
 
-  const seekBar = useBarDrag((r, done) => {
+  const seekRing = useRingDrag((r, done) => {
     if (!dur) return;
     if (!done) { setSeekPreview(r * dur); return; }
     setSeekPreview(null);
@@ -373,30 +473,37 @@ export function BgmPlayer() {
     playerRef.current?.seekTo(r * dur, true);
   });
   const shownTime = seekPreview ?? time;
-  const pct = dur ? Math.min(100, (shownTime / dur) * 100) : 0;
+  const ratio = dur ? Math.min(1, shownTime / dur) : 0;
+  const tint = useCoverTint(track);
 
   if (!settings.enabled || tracks.length === 0) return <TopButton anchor={null} left={settings.position === 'bl'} />;
 
   const left = settings.position === 'bl';
   const spin = { animationPlayState: playing ? 'running' : 'paused' } as const;
+  const rootStyle = {
+    visibility: mounted ? undefined : 'hidden',
+    '--bgm-p': ratio,
+    ...(tint ? { '--cover-c': `rgb(${tint})` } : {}),
+  } as React.CSSProperties;
 
   return (
     <>
     <TopButton anchor={rootRef} left={left} hide={open} />
     <div
       ref={rootRef}
-      className={`bgm ${open ? 'open' : ''} ${left ? 'bgm-left' : ''} ${playing ? 'playing' : ''}`}
-      style={{ visibility: mounted ? undefined : 'hidden' }}
+      className={`bgm ${open ? 'open' : ''} ${left ? 'bgm-left' : ''} ${playing ? 'playing' : ''} ${tint ? 'tinted' : ''}`}
+      style={rootStyle}
     >
       {/* 숨겨진 유튜브 플레이어 */}
       <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
         <div ref={holderRef} />
       </div>
 
-      {/* 레코드판 — 라벨 자리에 커버 이미지, 재생 중에만 회전 */}
+      {/* 레코드판 — 라벨 자리에 커버 이미지, 재생 중에만 회전 · 둘레에 진행 고리 */}
       <button type="button" className="disc" aria-label={open ? 'BGM 플레이어 닫기' : 'BGM 플레이어 열기'} aria-expanded={open}
         data-tip={open ? undefined : (track?.title || 'BGM')}
         onClick={() => setOpen(o => !o)}>
+        <svg className="ring" viewBox="0 0 52 52" aria-hidden><circle className="rt" cx="26" cy="26" r="24" /><circle className="rf" cx="26" cy="26" r="24" /></svg>
         <span className="rec" style={spin}>
           <Cover track={track} className="lbl" />
         </span>
@@ -406,64 +513,82 @@ export function BgmPlayer() {
       {open && (
         <>
           <div className="bgm-dim" onClick={() => setOpen(false)} />
-          <div className="bgm-pop" role="dialog" aria-label="BGM 플레이어">
-            <div className="art">
-              <Cover track={track} big />
-              <button type="button" className="x" aria-label="닫기" data-tip="닫기" onClick={() => setOpen(false)}>{I.close}</button>
-            </div>
-            <div className="np">
-              <div className="lb">now playing</div>
-              <Marquee className="tt" text={track?.title ?? ''} active={playing} />
-              {track?.desc && <div className="ds">{track.desc}</div>}
-              {queue && (
-                <div className="bgm-q">
-                  <span><b>{queue.label}</b> 플레이리스트</span>
-                  <button type="button" onClick={clearQueue}>원래 목록</button>
+          <div className={`bgm-pop ${listPage ? 'list' : ''}`} role="dialog" aria-label="BGM 플레이어">
+            <Cover track={track} className="bg" />
+            <div className="bgm-pages">
+              {/* 재생 화면 */}
+              <div className="bgm-pg now" aria-hidden={listPage}>
+                <div className="tp">
+                  <span className="sc">No. <b>{two(idx + 1)}</b> / {two(tracks.length)}</span>
+                  <button type="button" className="x" aria-label="닫기" data-tip="닫기" onClick={() => setOpen(false)}>{I.close}</button>
                 </div>
-              )}
-            </div>
-            <div className="prog">
-              <span className="tm">{fmt(shownTime)}</span>
-              <div className={`bar ${dur ? '' : 'off'}`} ref={seekBar.ref} onPointerDown={seekBar.onPointerDown}>
-                <i style={{ width: `${pct}%` }} />
-              </div>
-              <span className="tm">{fmt(dur)}</span>
-            </div>
-            <div className="ctl">
-              <button type="button" className={`sm ${listOpen ? 'on' : ''}`} aria-pressed={listOpen} data-tip="곡 목록"
-                onClick={() => setListOpen(o => !o)}>{I.list}</button>
-              <div className="mid">
-                <button type="button" data-tip="이전" aria-label="이전" onClick={prev}>{I.prev}</button>
-                <button type="button" className="pp" data-tip={playing ? '일시정지' : '재생'} aria-label={playing ? '일시정지' : '재생'}
-                  onClick={togglePlay}>{playing ? I.pause : I.play}</button>
-                <button type="button" data-tip="다음" aria-label="다음" onClick={next}>{I.next}</button>
-              </div>
-              <button type="button" className={`sm ${shuffle ? 'on' : ''}`} aria-pressed={shuffle} data-tip={shuffle ? '셔플 끄기' : '셔플'}
-                onClick={() => setShuffle(s => !s)}>{I.shuffle}</button>
-              <button type="button" className={`sm ${volOpen ? 'on' : ''}`} data-tip={`볼륨 ${effVol}`} aria-label="볼륨"
-                onClick={() => setVolOpen(o => !o)}>{effVol === 0 ? I.mute : I.vol}</button>
-            </div>
-            {volOpen && (
-              <div className="vrow">
-                <button type="button" className="sm" data-tip={muted ? '음소거 해제' : '음소거'} onClick={toggleMute}>
-                  {effVol === 0 ? I.mute : I.vol}
-                </button>
-                <div className="vol" ref={volBar.ref} onPointerDown={volBar.onPointerDown}>
-                  <i style={{ width: `${effVol}%` }} />
+                <div className={`orbit ${dur ? '' : 'off'}`} ref={seekRing.ref} onPointerDown={seekRing.onPointerDown}
+                  role="slider" aria-label="재생 위치" aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(shownTime)}>
+                  <svg className="ring" viewBox="0 0 212 212" aria-hidden>
+                    <circle className="tick" cx="106" cy="106" r="102" pathLength={400} />
+                    <circle className="rt" cx="106" cy="106" r="102" />
+                    <circle className="rf" cx="106" cy="106" r="102" />
+                  </svg>
+                  <span className="rec" style={spin}><Cover track={track} className="lbl" /></span>
+                  <span className="dw"><i /></span>
                 </div>
-                <span className="tm">{effVol}</span>
+                <div className="np">
+                  <Marquee className="tt" text={track?.title ?? ''} active={playing} />
+                  {track?.desc && <div className="ds">{track.desc}</div>}
+                </div>
+                <div className="tms"><b>{fmt(shownTime)}</b><span>/</span><span>{fmt(dur)}</span></div>
+                {queue && (
+                  <div className="bgm-q">
+                    <span><b>{queue.label}</b> Playlist</span>
+                    <button type="button" onClick={clearQueue}>원래 목록</button>
+                  </div>
+                )}
+                <div className="ctl">
+                  <button type="button" data-tip="이전" aria-label="이전" onClick={prev}>{I.prev}</button>
+                  <button type="button" className="pp" data-tip={playing ? '일시정지' : '재생'} aria-label={playing ? '일시정지' : '재생'}
+                    onClick={togglePlay}>{playing ? I.pause : I.play}</button>
+                  <button type="button" data-tip="다음" aria-label="다음" onClick={next}>{I.next}</button>
+                </div>
+                {volOpen && (
+                  <div className="vrow">
+                    <button type="button" onClick={toggleMute}>{muted ? 'Unmute' : 'Mute'}</button>
+                    <div className="vol" ref={volBar.ref} onPointerDown={volBar.onPointerDown}>
+                      <i style={{ width: `${effVol}%` }} />
+                    </div>
+                    <span className="tm">{effVol}</span>
+                  </div>
+                )}
+                <div className="foot">
+                  <button type="button" aria-pressed={shuffle} onClick={() => setShuffle(s => !s)}>Shuffle <em>{shuffle ? 'On' : 'Off'}</em></button>
+                  <button type="button" className={volOpen ? 'on' : ''} aria-expanded={volOpen} onClick={() => setVolOpen(o => !o)}>Volume <em>{effVol}</em></button>
+                  <button type="button" onClick={() => setListPage(true)}>Tracklist →</button>
+                </div>
               </div>
-            )}
-            {listOpen && (
-              <div className="bgm-list" ref={listRef}>
-                {tracks.map((t, i) => (
-                  <button type="button" key={t.id} className={`it ${i === idx ? 'on' : ''}`}
-                    onClick={() => playAt(i)}>
-                    <b>{t.title}</b>{t.desc && <small>{t.desc}</small>}
-                  </button>
-                ))}
+              {/* 플레이리스트 화면 */}
+              <div className="bgm-pg lst" aria-hidden={!listPage}>
+                <div className="in">
+                  <div className="phd">
+                    <h4>Tracklist</h4>
+                    <button type="button" className="bk" onClick={() => setListPage(false)}>{I.back}Now playing</button>
+                  </div>
+                  <div className="bgm-list" ref={listRef}>
+                    {tracks.map((t, i) => (
+                      <button type="button" key={t.id} className={`it ${i === idx ? 'on' : ''}`}
+                        onClick={() => playAt(i)}>
+                        <span className="n">{two(i + 1)}</span>
+                        <span className="tx"><b>{t.title}</b>{t.desc && <small>{t.desc}</small>}</span>
+                        <span className="eq" aria-hidden><i /><i /><i /></span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="pbt">
+                    <button type="button" className="pp2" aria-label={playing ? '일시정지' : '재생'} onClick={togglePlay}>{playing ? I.pause : I.play}</button>
+                    <span className="t">{track?.title}</span>
+                    <span className="bar"><i style={{ width: `${ratio * 100}%` }} /></span>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </>
       )}
