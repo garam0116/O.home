@@ -4,7 +4,7 @@
  *  - PC는 12칸 격자에 위젯마다 너비(3·4·6·8·12칸)·높이(자동 또는 80~600px)로 놓고, 휴대폰은 늘 가로 전체로 쌓는다.
  *  - 모양 프리셋 카드·유리·투명·알약 (시안 P-1). 투명은 배경 없이 위아래 가로줄만이고, 「⋯」의 막대가 줄 진하기다
  *    (0%면 줄도 없음 · 시안 L-1). 카드·유리·알약에서 막대를 손대면 「직접」으로 바뀐다.
- *  - 관리자: 「배치 편집」을 켜면 격자가 보이고, 위젯을 눌러 도구 막대(프리셋 · ⋯ · 내용 · 순서 · 삭제)를 쓰고,
+ *  - 관리자: 자관 상세 왼쪽 위 EDIT › 「화면 수정」을 켜면(edit) 격자가 보이고, 위젯을 눌러 도구 막대(프리셋 · ⋯ · 내용 · 순서 · 삭제)를 쓰고,
  *    오른쪽 아래 모서리를 끌어 크기를 바꾼다(두 번 누르면 높이 자동). 빈칸의 「＋ 위젯」으로 종류를 골라 넣는다 (시안 W-1).
  *  - 위젯 글꼴은 LOG·LOREBOOK 위젯 규칙을 따른다 — 제목은 타이틀 폰트, 본문은 사이트 본문 폰트.
  */
@@ -314,10 +314,13 @@ function WidgetEditor({ w, ctx, onClose, onSave }: {
 
 function presetOf(w: RelWidget): RelWidgetPreset { return w.preset ?? 'card'; }
 
-export function RelBoard({ widgets, isAdmin, ctx, onChange }: {
+export function RelBoard({ widgets, isAdmin, ctx, onChange, edit, onEditEnd }: {
   widgets: RelWidget[]; isAdmin: boolean; ctx: BoardCtx; onChange: (next: RelWidget[]) => void;
+  /** 편집 중인지 — 켜고 끄는 버튼은 자관 상세의 EDIT 메뉴에 있다 (예전 위젯 칸 위 토글은 모바일·2단에서 안 켜졌다) */
+  edit: boolean;
+  /** 편집 안내 줄의 「화면 수정 끝내기」 — 스크롤해 내려온 자리에서 바로 끌 수 있게 */
+  onEditEnd: () => void;
 }) {
-  const [edit, setEdit] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   const [more, setMore] = useState(false);
   const [editing, setEditing] = useState<RelWidget | null>(null);
@@ -379,12 +382,10 @@ export function RelBoard({ widgets, isAdmin, ctx, onChange }: {
 
   return (
     <section className={`rb${edit ? ' rb-edit' : ''}`}>
-      {isAdmin && (
+      {edit && (
         <div className="rb-bar">
-          <button type="button" className={`rb-toggle${edit ? ' on' : ''}`} onClick={() => setEdit(v => !v)} aria-pressed={edit}>
-            {edit ? '배치 편집 끝내기' : '배치 편집'}
-          </button>
-          {edit && <span>위젯을 눌러 모양·내용을 바꾸고, 오른쪽 아래 모서리를 끌어 크기를 맞춥니다. 모서리를 두 번 누르면 높이가 내용대로 돌아갑니다.</span>}
+          <button type="button" className="rb-toggle on" onClick={onEditEnd}>화면 수정 끝내기</button>
+          <span>위젯을 눌러 모양·내용을 바꾸고, 오른쪽 아래 모서리를 끌어 크기를 맞춥니다. 모서리를 두 번 누르면 높이가 내용대로 돌아갑니다.</span>
         </div>
       )}
       <div className="rb-grid" ref={gridRef}>
