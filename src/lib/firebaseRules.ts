@@ -80,7 +80,7 @@ service cloud.firestore {
       return name in [
         'posts', 'relations', 'gallery', 'roadview',
         'trpg_logs', 'trpg_log_bodies', 'threads',
-        'diary', 'comments'
+        'diary', 'comments', 'archive'
       ];
     }
 

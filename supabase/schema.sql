@@ -67,7 +67,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ── 6. 콘텐츠 테이블 9종 ─────────────────────────────────────
+-- ── 6. 콘텐츠 테이블 10종 ─────────────────────────────────────
 -- 항목 하나 = 행 하나 (행 단위 권한·실시간). 항목의 세부 필드는 data(jsonb)에 담고,
 -- 권한·정렬·필터에 쓰는 값만 별도 컬럼으로 뽑아 둔다.
 do $$
@@ -81,7 +81,8 @@ declare content_tables text[] := array[
   'trpg_log_bodies',  -- TRPG 로그 본문 (v2.0, 목록과 분리 저장 — 나만보기 로그의 본문 보호용)
   'threads',      -- 감상타래
   'diary',        -- 다이어리
-  'comments'      -- 댓글 (v2.0 — 글 안이 아니라 자기 행으로. 글을 수정하지 않고 댓글을 달 수 있게)
+  'comments',     -- 댓글 (v2.0 — 글 안이 아니라 자기 행으로. 글을 수정하지 않고 댓글을 달 수 있게)
+  'archive'       -- 아카이브 (카테고리 묶음 게시판)
 ];
 begin
   foreach t in array content_tables loop
